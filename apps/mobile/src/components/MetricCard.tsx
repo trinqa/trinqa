@@ -1,3 +1,4 @@
+import { StyleSheet, View } from 'react-native';
 import { Host, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
@@ -8,7 +9,7 @@ import {
   padding,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, radius, typography } from '@/theme';
+import { cardShadow, colors, radius, typography } from '@/theme';
 
 interface MetricCardProps {
   label: string;
@@ -17,34 +18,45 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value }: MetricCardProps) {
   return (
-    <Host style={{ flex: 1 }}>
-      <VStack
-        spacing={6}
-        alignment="leading"
-        modifiers={[
-          background(colors.surface),
-          cornerRadius(radius.lg),
-          padding({ all: 14 }),
-          frame({ maxWidth: Infinity }),
-        ]}
-      >
-        <Text
+    <View style={[styles.container, cardShadow, styles.flex]}>
+      <Host style={styles.flex}>
+        <VStack
+          spacing={6}
+          alignment="leading"
           modifiers={[
-            font({ size: typography.caption }),
-            foregroundStyle(colors.textSecondary),
+            background(colors.surface),
+            cornerRadius(radius.lg),
+            padding({ all: 14 }),
+            frame({ maxWidth: Infinity, minHeight: 72 }),
           ]}
         >
-          {label}
-        </Text>
-        <Text
-          modifiers={[
-            font({ size: typography.body, weight: 'semibold' }),
-            foregroundStyle(colors.textPrimary),
-          ]}
-        >
-          {value}
-        </Text>
-      </VStack>
-    </Host>
+          <Text
+            modifiers={[
+              font({ size: typography.caption }),
+              foregroundStyle(colors.textSecondary),
+            ]}
+          >
+            {label}
+          </Text>
+          <Text
+            modifiers={[
+              font({ size: typography.body, weight: 'semibold' }),
+              foregroundStyle(colors.textPrimary),
+            ]}
+          >
+            {value}
+          </Text>
+        </VStack>
+      </Host>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: radius.lg,
+  },
+  flex: {
+    flex: 1,
+  },
+});

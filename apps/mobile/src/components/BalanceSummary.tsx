@@ -1,3 +1,4 @@
+import { StyleSheet, View } from 'react-native';
 import { Host, HStack, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
@@ -8,7 +9,7 @@ import {
   padding,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, radius, typography } from '@/theme';
+import { cardShadow, colors, radius, typography } from '@/theme';
 
 interface BalanceSummaryProps {
   totalLabel: string;
@@ -28,93 +29,84 @@ export function BalanceSummary({
   rightValue,
 }: BalanceSummaryProps) {
   return (
-    <Host matchContents>
-      <VStack
-        spacing={16}
-        alignment="leading"
-        modifiers={[
-          background(colors.surface),
-          cornerRadius(radius.xl),
-          padding({ all: 18 }),
-        ]}
-      >
-        <VStack spacing={6} alignment="leading">
-          <Text
-            modifiers={[
-              font({ size: typography.caption }),
-              foregroundStyle(colors.textSecondary),
-            ]}
-          >
-            {totalLabel}
-          </Text>
-          <Text
-            modifiers={[
-              font({ size: typography.balanceMedium, weight: 'bold' }),
-              foregroundStyle(colors.textPrimary),
-            ]}
-          >
-            ${totalValue}
-          </Text>
+    <View style={[styles.container, cardShadow]}>
+      <Host matchContents>
+        <VStack
+          spacing={18}
+          alignment="leading"
+          modifiers={[
+            background(colors.surface),
+            cornerRadius(radius.xl),
+            padding({ all: spacingValues.cardPadding }),
+          ]}
+        >
+          <VStack spacing={8} alignment="leading">
+            <Text
+              modifiers={[
+                font({ size: typography.caption }),
+                foregroundStyle(colors.textSecondary),
+              ]}
+            >
+              {totalLabel}
+            </Text>
+            <Text
+              modifiers={[
+                font({ size: typography.balanceHero, weight: 'bold' }),
+                foregroundStyle(colors.textPrimary),
+              ]}
+            >
+              ${totalValue}
+            </Text>
+          </VStack>
+
+          <HStack spacing={12}>
+            <SubMetric label={leftLabel} value={leftValue} />
+            <SubMetric label={rightLabel} value={rightValue} />
+          </HStack>
         </VStack>
-
-        <HStack spacing={12}>
-          <VStack
-            spacing={4}
-            alignment="leading"
-            modifiers={[
-              background(colors.surfaceSecondary),
-              cornerRadius(radius.lg),
-              padding({ all: 14 }),
-              frame({ maxWidth: Infinity }),
-            ]}
-          >
-            <Text
-              modifiers={[
-                font({ size: typography.caption }),
-                foregroundStyle(colors.textSecondary),
-              ]}
-            >
-              {leftLabel}
-            </Text>
-            <Text
-              modifiers={[
-                font({ size: typography.body, weight: 'semibold' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
-            >
-              ${leftValue}
-            </Text>
-          </VStack>
-
-          <VStack
-            spacing={4}
-            alignment="leading"
-            modifiers={[
-              background(colors.surfaceSecondary),
-              cornerRadius(radius.lg),
-              padding({ all: 14 }),
-              frame({ maxWidth: Infinity }),
-            ]}
-          >
-            <Text
-              modifiers={[
-                font({ size: typography.caption }),
-                foregroundStyle(colors.textSecondary),
-              ]}
-            >
-              {rightLabel}
-            </Text>
-            <Text
-              modifiers={[
-                font({ size: typography.body, weight: 'semibold' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
-            >
-              ${rightValue}
-            </Text>
-          </VStack>
-        </HStack>
-      </VStack>
-    </Host>
+      </Host>
+    </View>
   );
 }
+
+function SubMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <VStack
+      spacing={4}
+      alignment="leading"
+      modifiers={[
+        background(colors.surfaceSecondary),
+        cornerRadius(radius.lg),
+        padding({ all: 14 }),
+        frame({ maxWidth: Infinity }),
+      ]}
+    >
+      <Text
+        modifiers={[
+          font({ size: typography.caption }),
+          foregroundStyle(colors.textSecondary),
+        ]}
+      >
+        {label}
+      </Text>
+      <Text
+        modifiers={[
+          font({ size: typography.body, weight: 'semibold' }),
+          foregroundStyle(colors.textPrimary),
+        ]}
+      >
+        ${value}
+      </Text>
+    </VStack>
+  );
+}
+
+const spacingValues = {
+  cardPadding: 18,
+};
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: radius.xl,
+  },
+});

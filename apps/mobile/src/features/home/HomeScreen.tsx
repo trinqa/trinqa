@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Host, ScrollView, VStack } from '@expo/ui/swift-ui';
 import { padding } from '@expo/ui/swift-ui/modifiers';
 
@@ -19,7 +19,13 @@ export function HomeScreen() {
           <VStack
             spacing={spacing.sectionGap}
             alignment="leading"
-            modifiers={[padding({ horizontal: spacing.screenHorizontal })]}
+            modifiers={[
+              padding({
+                horizontal: spacing.screenHorizontal,
+                top: spacing.headerTop,
+                bottom: spacing.scrollBottom,
+              }),
+            ]}
           >
             <ScreenHeader />
 

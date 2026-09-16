@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Button, Host, ScrollView, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, ScrollView, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
   cornerRadius,
@@ -15,7 +15,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { SectionHeader } from '@/components/SectionHeader';
 import { TransactionRow } from '@/components/TransactionRow';
 import { earnActivity, earnSummary } from '@/data/mocks/earn';
-import { colors, radius, spacing, typography } from '@/theme';
+import { cardShadow, colors, radius, spacing, typography } from '@/theme';
 
 export function EarnScreen() {
   const todayItems = earnActivity.filter((item) => item.group === 'today');
@@ -30,7 +30,13 @@ export function EarnScreen() {
           <VStack
             spacing={spacing.sectionGap}
             alignment="leading"
-            modifiers={[padding({ horizontal: spacing.screenHorizontal })]}
+            modifiers={[
+              padding({
+                horizontal: spacing.screenHorizontal,
+                top: spacing.headerTop,
+                bottom: spacing.scrollBottom,
+              }),
+            ]}
           >
             <ScreenHeader />
 
@@ -43,43 +49,99 @@ export function EarnScreen() {
               rightValue={earnSummary.earning}
             />
 
-            <VStack
-              spacing={14}
-              alignment="leading"
-              modifiers={[
-                background(colors.surface),
-                cornerRadius(radius.xl),
-                padding({ all: spacing.cardPadding }),
-              ]}
-            >
-              <Text
-                modifiers={[
-                  font({ size: typography.sectionTitle, weight: 'semibold' }),
-                  foregroundStyle(colors.textPrimary),
-                ]}
-              >
-                Earning Balance
-              </Text>
+            <View style={[styles.strategyCard, cardShadow]}>
+              <Host matchContents>
+                <VStack
+                  spacing={16}
+                  alignment="leading"
+                  modifiers={[
+                    background(colors.surface),
+                    cornerRadius(radius.xl),
+                    padding({ all: spacing.cardPadding }),
+                  ]}
+                >
+                  <Text
+                    modifiers={[
+                      font({ size: typography.sectionTitle, weight: 'semibold' }),
+                      foregroundStyle(colors.textPrimary),
+                    ]}
+                  >
+                    Earning Balance
+                  </Text>
 
-              <VStack spacing={10} alignment="leading">
-                <InfoRow label="Current strategy" value={earnSummary.strategy} />
-                <InfoRow
-                  label="Estimated APY"
-                  value={earnSummary.estimatedApy}
-                />
-                <InfoRow label="Risk" value={earnSummary.risk} />
-              </VStack>
+                  <HStack alignment="center">
+                    <Text
+                      modifiers={[
+                        font({ size: typography.caption }),
+                        foregroundStyle(colors.textSecondary),
+                        frame({ maxWidth: Infinity }),
+                      ]}
+                    >
+                      Current strategy
+                    </Text>
+                    <Text
+                      modifiers={[
+                        font({ size: typography.body, weight: 'semibold' }),
+                        foregroundStyle(colors.textPrimary),
+                      ]}
+                    >
+                      {earnSummary.strategy}
+                    </Text>
+                  </HStack>
 
-              <View style={styles.progressTrack}>
-                <View style={styles.progressFill} />
-              </View>
+                  <HStack alignment="center">
+                    <Text
+                      modifiers={[
+                        font({ size: typography.caption }),
+                        foregroundStyle(colors.textSecondary),
+                        frame({ maxWidth: Infinity }),
+                      ]}
+                    >
+                      Estimated APY
+                    </Text>
+                    <Text
+                      modifiers={[
+                        font({ size: typography.body, weight: 'semibold' }),
+                        foregroundStyle(colors.textPrimary),
+                      ]}
+                    >
+                      {earnSummary.estimatedApy}
+                    </Text>
+                  </HStack>
 
-              <Button
-                label="Manage allocation"
-                // TODO: Open native BottomSheet when strategy reference is approved.
-                onPress={() => undefined}
-              />
-            </VStack>
+                  <HStack alignment="center">
+                    <Text
+                      modifiers={[
+                        font({ size: typography.caption }),
+                        foregroundStyle(colors.textSecondary),
+                        frame({ maxWidth: Infinity }),
+                      ]}
+                    >
+                      Risk
+                    </Text>
+                    <Text
+                      modifiers={[
+                        font({ size: typography.body, weight: 'semibold' }),
+                        foregroundStyle(colors.textPrimary),
+                      ]}
+                    >
+                      {earnSummary.risk}
+                    </Text>
+                  </HStack>
+
+                  <View style={styles.progressTrack}>
+                    <View style={styles.progressFill} />
+                    <View style={styles.progressRemainder} />
+                  </View>
+
+                  <Button
+                    label="Manage allocation"
+                    // TODO: Open native BottomSheet when strategy reference is approved.
+                    onPress={() => undefined}
+                  />
+                </VStack>
+              </Host>
+            </View>
 
             <VStack spacing={spacing.md} alignment="leading">
               <SectionHeader title="Transaction" />
@@ -125,45 +187,28 @@ export function EarnScreen() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <Host matchContents>
-      <VStack spacing={2} alignment="leading">
-        <Text
-          modifiers={[
-            font({ size: typography.caption }),
-            foregroundStyle(colors.textSecondary),
-          ]}
-        >
-          {label}
-        </Text>
-        <Text
-          modifiers={[
-            font({ size: typography.body, weight: 'semibold' }),
-            foregroundStyle(colors.textPrimary),
-          ]}
-        >
-          {value}
-        </Text>
-      </VStack>
-    </Host>
-  );
-}
-
 const styles = StyleSheet.create({
   host: {
     flex: 1,
   },
+  strategyCard: {
+    borderRadius: radius.xl,
+  },
   progressTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accentMuted,
+    height: 10,
+    borderRadius: 5,
     overflow: 'hidden',
+    flexDirection: 'row',
+    backgroundColor: colors.accentMuted,
   },
   progressFill: {
     width: '62%',
     height: '100%',
     backgroundColor: colors.accent,
-    borderRadius: 4,
+  },
+  progressRemainder: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: colors.accentMuted,
   },
 });

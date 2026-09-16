@@ -9,14 +9,14 @@ interface LineChartProps {
   height?: number;
 }
 
-export function LineChart({ points, height = 140 }: LineChartProps) {
+export function LineChart({ points, height = 160 }: LineChartProps) {
   if (points.length < 2) {
     return <View style={[styles.container, { height }]} />;
   }
 
-  const width = 320;
-  const paddingX = 8;
-  const paddingY = 16;
+  const width = 340;
+  const paddingX = 12;
+  const paddingY = 20;
   const chartWidth = width - paddingX * 2;
   const chartHeight = height - paddingY * 2;
 
@@ -49,7 +49,7 @@ export function LineChart({ points, height = 140 }: LineChartProps) {
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         <Defs>
           <LinearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={colors.accent} stopOpacity={0.18} />
+            <Stop offset="0%" stopColor={colors.accent} stopOpacity={0.22} />
             <Stop offset="100%" stopColor={colors.accent} stopOpacity={0.02} />
           </LinearGradient>
         </Defs>
@@ -57,13 +57,13 @@ export function LineChart({ points, height = 140 }: LineChartProps) {
         <Path
           d={linePath}
           stroke={colors.accent}
-          strokeWidth={2}
+          strokeWidth={2.5}
           fill="none"
         />
         <Circle
           cx={lastPoint.x}
           cy={lastPoint.y}
-          r={4}
+          r={5}
           fill={colors.surface}
           stroke={colors.accent}
           strokeWidth={2}

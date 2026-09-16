@@ -21,7 +21,7 @@ import {
   activityMetrics,
   activityPayments,
 } from '@/data/mocks/activity';
-import { colors, radius, spacing, typography } from '@/theme';
+import { cardShadow, colors, radius, spacing, typography } from '@/theme';
 import type { ActivitySegment } from '@/types';
 
 export function ActivityScreen() {
@@ -36,7 +36,13 @@ export function ActivityScreen() {
           <VStack
             spacing={spacing.sectionGap}
             alignment="leading"
-            modifiers={[padding({ horizontal: spacing.screenHorizontal })]}
+            modifiers={[
+              padding({
+                horizontal: spacing.screenHorizontal,
+                top: spacing.headerTop,
+                bottom: spacing.scrollBottom,
+              }),
+            ]}
           >
             <ScreenHeader showBack title="Activity" showMenu />
 
@@ -51,7 +57,7 @@ export function ActivityScreen() {
               </Text>
               <Text
                 modifiers={[
-                  font({ size: typography.balanceMedium, weight: 'bold' }),
+                  font({ size: typography.balanceHero, weight: 'bold' }),
                   foregroundStyle(colors.textPrimary),
                 ]}
               >
@@ -59,8 +65,8 @@ export function ActivityScreen() {
               </Text>
             </VStack>
 
-            <View style={styles.chartCard}>
-              <LineChart points={activityChartPoints} />
+            <View style={[styles.chartCard, cardShadow]}>
+              <LineChart points={activityChartPoints} height={160} />
             </View>
 
             <HStack spacing={10}>

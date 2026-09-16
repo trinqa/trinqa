@@ -1,11 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { Host, Text, VStack } from '@expo/ui/swift-ui';
 import {
-  background,
-  cornerRadius,
   font,
   foregroundStyle,
-  padding,
 } from '@expo/ui/swift-ui/modifiers';
 
 import { colors, radius, typography } from '@/theme';
@@ -17,47 +14,38 @@ interface AccountCardStackProps {
 
 export function AccountCardStack({ account }: AccountCardStackProps) {
   return (
-    <View style={styles.container}>
-      <Host matchContents>
-        <VStack
-          spacing={4}
-          alignment="leading"
-          modifiers={[
-            background(colors.cardLight),
-            cornerRadius(radius.xl),
-            padding({ horizontal: 18, vertical: 16 }),
-          ]}
-        >
+    <View style={styles.sleeve}>
+      <View style={styles.backCard}>
+        <Host matchContents>
           <Text
             modifiers={[
-              font({ size: typography.caption, weight: 'medium' }),
+              font({ size: typography.micro, weight: 'medium' }),
               foregroundStyle(colors.textSecondary),
             ]}
           >
             {account.accountName}
           </Text>
-        </VStack>
-      </Host>
+        </Host>
+      </View>
 
       <View style={styles.frontCard}>
         <Host matchContents>
-          <VStack spacing={8} alignment="leading">
+          <VStack spacing={10} alignment="leading">
             <Text
               modifiers={[
                 font({ size: typography.caption }),
-                foregroundStyle('#AAAAAA'),
+                foregroundStyle('#B0B0B0'),
               ]}
             >
               {account.cardLabel}
             </Text>
             <Text
               modifiers={[
-                font({ size: typography.balanceLarge, weight: 'bold' }),
+                font({ size: typography.balanceHero, weight: 'bold' }),
                 foregroundStyle(colors.surface),
               ]}
             >
-              {account.displayCurrency}
-              {account.balance}
+              {account.displayCurrency} {account.balance}
             </Text>
           </VStack>
         </Host>
@@ -67,14 +55,30 @@ export function AccountCardStack({ account }: AccountCardStackProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 0,
+  sleeve: {
+    backgroundColor: colors.cardSleeve,
+    borderRadius: radius.xxl,
+    padding: 14,
+    minHeight: 168,
+    justifyContent: 'flex-end',
+  },
+  backCard: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    right: 14,
+    height: 56,
+    backgroundColor: colors.cardLight,
+    borderRadius: radius.lg,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   frontCard: {
-    marginTop: -28,
     backgroundColor: colors.cardDark,
     borderRadius: radius.xl,
     paddingHorizontal: 18,
     paddingVertical: 22,
+    minHeight: 112,
+    justifyContent: 'center',
   },
 });

@@ -6,8 +6,10 @@ export const spacing = {
   xl: 18,
   xxl: 22,
   xxxl: 24,
-  screenHorizontal: 18,
+  screenHorizontal: 20,
   cardGap: 12,
-  sectionGap: 22,
-  cardPadding: 16,
+  sectionGap: 24,
+  cardPadding: 18,
+  headerTop: 8,
+  scrollBottom: 32,
 } as const;

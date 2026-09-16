@@ -31,21 +31,21 @@ export function TransactionRow({
     <Host matchContents>
       <HStack
         spacing={12}
-        modifiers={[padding({ vertical: 10 })]}
+        modifiers={[padding({ vertical: 12 }), frame({ minHeight: 68 })]}
         alignment="center"
       >
         <Text
           modifiers={[
-            frame({ width: 40, height: 40 }),
+            frame({ width: 44, height: 44 }),
             background(colors.surfaceSecondary),
-            cornerRadius(radius.md),
+            cornerRadius(radius.lg),
             font({ size: typography.body, weight: 'semibold' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
           {initial}
         </Text>
-        <VStack spacing={2} alignment="leading">
+        <VStack spacing={3} alignment="leading">
           <Text
             modifiers={[
               font({ size: typography.body, weight: 'semibold' }),
@@ -64,7 +64,7 @@ export function TransactionRow({
           </Text>
         </VStack>
         <Spacer />
-        <VStack spacing={2} alignment="trailing">
+        <VStack spacing={3} alignment="trailing">
           <Text
             modifiers={[
               font({ size: typography.body, weight: 'semibold' }),

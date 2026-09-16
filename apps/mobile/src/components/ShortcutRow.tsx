@@ -1,4 +1,5 @@
-import { Host, HStack, Text, VStack } from '@expo/ui/swift-ui';
+import { StyleSheet, View } from 'react-native';
+import { Host, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
   cornerRadius,
@@ -7,57 +8,65 @@ import {
   frame,
   padding,
 } from '@expo/ui/swift-ui/modifiers';
+import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { colors, radius, typography } from '@/theme';
+import { cardShadow, colors, radius, typography } from '@/theme';
 
-const shortcuts = [
-  { id: 'add-money', label: 'Add Money', icon: '＋' },
-  { id: 'pay', label: 'Pay', icon: '↗' },
-  { id: 'more', label: 'More', icon: '···' },
-] as const;
+const shortcuts: Array<{ id: string; label: string; symbol: SFSymbol }> = [
+  { id: 'add-money', label: 'Add Money', symbol: 'plus.circle' },
+  { id: 'pay', label: 'Pay', symbol: 'arrow.up.circle' },
+  { id: 'more', label: 'More', symbol: 'ellipsis.circle' },
+];
 
 export function ShortcutRow() {
   return (
-    <Host matchContents>
-      <HStack
-        spacing={0}
-        alignment="center"
-        modifiers={[
-          background(colors.surface),
-          cornerRadius(radius.xl),
-          padding({ vertical: 16 }),
-          frame({ maxWidth: Infinity }),
-        ]}
-      >
-        {shortcuts.map((item) => (
-          <VStack
-            key={item.id}
-            spacing={8}
-            alignment="center"
-            modifiers={[frame({ maxWidth: Infinity })]}
-          >
-            <Text
-              modifiers={[
-                frame({ width: 44, height: 44 }),
-                background(colors.surfaceSecondary),
-                cornerRadius(radius.pill),
-                font({ size: 18, weight: 'medium' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
+    <View style={[styles.container, cardShadow]}>
+      <Host matchContents>
+        <HStack
+          spacing={0}
+          alignment="center"
+          modifiers={[
+            background(colors.surface),
+            cornerRadius(radius.xl),
+            padding({ vertical: 18, horizontal: 8 }),
+            frame({ maxWidth: Infinity }),
+          ]}
+        >
+          {shortcuts.map((item) => (
+            <VStack
+              key={item.id}
+              spacing={10}
+              alignment="center"
+              modifiers={[frame({ maxWidth: Infinity })]}
             >
-              {item.icon}
-            </Text>
-            <Text
-              modifiers={[
-                font({ size: typography.caption, weight: 'medium' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
-            >
-              {item.label}
-            </Text>
-          </VStack>
-        ))}
-      </HStack>
-    </Host>
+              <Image
+                systemName={item.symbol}
+                size={22}
+                color={colors.textPrimary}
+                modifiers={[
+                  frame({ width: 48, height: 48 }),
+                  background(colors.surfaceSecondary),
+                  cornerRadius(radius.lg),
+                ]}
+              />
+              <Text
+                modifiers={[
+                  font({ size: typography.caption, weight: 'medium' }),
+                  foregroundStyle(colors.textPrimary),
+                ]}
+              >
+                {item.label}
+              </Text>
+            </VStack>
+          ))}
+        </HStack>
+      </Host>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: radius.xl,
+  },
+});
