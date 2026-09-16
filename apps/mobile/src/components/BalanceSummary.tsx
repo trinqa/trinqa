@@ -1,15 +1,25 @@
-import { StyleSheet, View } from 'react-native';
-import { Host, HStack, Text, VStack } from '@expo/ui/swift-ui';
+import { useState } from 'react';
+
+import { Button, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
-  cornerRadius,
+  border,
+  buttonStyle,
   font,
   foregroundStyle,
   frame,
   padding,
+  shadow,
+  shapes,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { cardShadow, colors, radius, typography } from '@/theme';
+import { colors, typography } from '@/theme';
+
+const REPORT_WIDTH = 366;
+const CARD_WIDTH = 396;
+const CARD_HEIGHT = 206;
+const CARD_RADIUS = 15;
+const METRIC_GAP = 8;
 
 interface BalanceSummaryProps {
   totalLabel: string;
@@ -20,6 +30,33 @@ interface BalanceSummaryProps {
   rightValue: string;
 }
 
+function MetricTile({
+  label,
+  value,
+  width,
+}: {
+  label: string;
+  value: string;
+  width: number;
+}) {
+  return (
+    <VStack
+      alignment="leading"
+      spacing={4}
+      modifiers={[
+        padding({ horizontal: 14, vertical: 12 }),
+        frame({ width, height: 64 }),
+        background(colors.surfaceSecondary, shapes.roundedRectangle({ cornerRadius: 12 })),
+      ]}
+    >
+      <Text modifiers={[font({ size: 11 }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
+      <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        ${value}
+      </Text>
+    </VStack>
+  );
+}
+
 export function BalanceSummary({
   totalLabel,
   totalValue,
@@ -28,85 +65,62 @@ export function BalanceSummary({
   rightLabel,
   rightValue,
 }: BalanceSummaryProps) {
-  return (
-    <View style={[styles.container, cardShadow]}>
-      <Host matchContents>
-        <VStack
-          spacing={18}
-          alignment="leading"
-          modifiers={[
-            background(colors.surface),
-            cornerRadius(radius.xl),
-            padding({ all: spacingValues.cardPadding }),
-          ]}
-        >
-          <VStack spacing={8} alignment="leading">
-            <Text
-              modifiers={[
-                font({ size: typography.caption }),
-                foregroundStyle(colors.textSecondary),
-              ]}
-            >
-              {totalLabel}
-            </Text>
-            <Text
-              modifiers={[
-                font({ size: typography.balanceHero, weight: 'bold' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
-            >
-              ${totalValue}
-            </Text>
-          </VStack>
+  const [balanceVisible, setBalanceVisible] = useState(true);
+  const displayValue = balanceVisible ? totalValue : '••••••';
 
-          <HStack spacing={12}>
-            <SubMetric label={leftLabel} value={leftValue} />
-            <SubMetric label={rightLabel} value={rightValue} />
-          </HStack>
-        </VStack>
-      </Host>
-    </View>
-  );
-}
-
-function SubMetric({ label, value }: { label: string; value: string }) {
   return (
     <VStack
-      spacing={4}
       alignment="leading"
+      spacing={0}
       modifiers={[
-        background(colors.surfaceSecondary),
-        cornerRadius(radius.lg),
-        padding({ all: 14 }),
-        frame({ maxWidth: Infinity }),
+        padding({ top: 24, horizontal: 16, bottom: 26 }),
+        frame({ width: CARD_WIDTH, height: CARD_HEIGHT }),
+        background(colors.surface, shapes.roundedRectangle({ cornerRadius: CARD_RADIUS })),
+        border({ content: colors.border, width: 1 }),
+        shadow({ radius: 8, y: 2, color: '#0000000A' }),
+        frame({ width: REPORT_WIDTH }),
       ]}
     >
-      <Text
-        modifiers={[
-          font({ size: typography.caption }),
-          foregroundStyle(colors.textSecondary),
-        ]}
+      <Text modifiers={[font({ size: 13 }), foregroundStyle(colors.textSecondary)]}>{totalLabel}</Text>
+
+      <HStack
+        alignment="center"
+        spacing={8}
+        modifiers={[padding({ top: 7 }), frame({ maxWidth: Infinity, minHeight: 44 })]}
       >
-        {label}
-      </Text>
-      <Text
-        modifiers={[
-          font({ size: typography.body, weight: 'semibold' }),
-          foregroundStyle(colors.textPrimary),
-        ]}
-      >
-        ${value}
-      </Text>
+        <HStack alignment="firstTextBaseline" spacing={0} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+          <Text modifiers={[font({ size: 22, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>$</Text>
+          <Text
+            modifiers={[
+              font({ size: typography.balanceLarge, weight: 'bold' }),
+              foregroundStyle(colors.textPrimary),
+            ]}
+          >
+            {displayValue}
+          </Text>
+        </HStack>
+
+        <Button
+          onPress={() => setBalanceVisible((visible) => !visible)}
+          modifiers={[
+            buttonStyle('plain'),
+            padding({ all: 0 }),
+            frame({ width: 44, height: 44 }),
+            background(colors.surfaceSecondary, shapes.circle()),
+          ]}
+        >
+          <Image
+            systemName={balanceVisible ? 'eye' : 'eye.slash'}
+            size={17}
+            color={colors.textPrimary}
+          />
+        </Button>
+      </HStack>
+
+      <HStack spacing={METRIC_GAP} modifiers={[padding({ top: 28, leading: 1 }), frame({ width: 360, alignment: 'leading' })]}>
+        <MetricTile label={leftLabel} value={leftValue} width={177} />
+        <MetricTile label={rightLabel} value={rightValue} width={175} />
+      </HStack>
     </VStack>
   );
 }
-
-const spacingValues = {
-  cardPadding: 18,
-};
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: radius.xl,
-  },
-});

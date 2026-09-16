@@ -1,14 +1,25 @@
-import { Image, StyleSheet, View } from 'react-native';
-import { Host, HStack, Image as SwiftUIImage, Spacer, Text } from '@expo/ui/swift-ui';
+import {
+  Button,
+  Group,
+  HStack,
+  Image,
+  RNHostView,
+  Spacer,
+  Text,
+  ZStack,
+} from '@expo/ui/swift-ui';
 import {
   background,
-  cornerRadius,
+  buttonStyle,
   font,
   foregroundStyle,
   frame,
+  shapes,
 } from '@expo/ui/swift-ui/modifiers';
+import { Image as RNImage, StyleSheet } from 'react-native';
+import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { colors, radius, typography } from '@/theme';
+import { colors } from '@/theme';
 
 interface ScreenHeaderProps {
   showBack?: boolean;
@@ -18,24 +29,36 @@ interface ScreenHeaderProps {
 
 function HeaderIconButton({
   symbol,
-  accessibilityLabel,
+  onPress,
 }: {
-  symbol: 'headphones' | 'bell' | 'chevron.left' | 'ellipsis';
-  accessibilityLabel: string;
+  symbol: SFSymbol;
+  onPress?: () => void;
 }) {
   return (
-    <Host matchContents>
-      <SwiftUIImage
-        systemName={symbol}
-        size={16}
-        color={colors.textPrimary}
-        modifiers={[
-          frame({ width: 36, height: 36 }),
-          background(colors.surface),
-          cornerRadius(radius.pill),
-        ]}
-      />
-    </Host>
+    <Button
+      onPress={onPress}
+      modifiers={[
+        buttonStyle('plain'),
+        frame({ width: 44, height: 44 }),
+        background(colors.surface, shapes.circle()),
+      ]}
+    >
+      <Image systemName={symbol} size={17} color={colors.textPrimary} />
+    </Button>
+  );
+}
+
+function ProfileAvatar() {
+  return (
+    <Group modifiers={[frame({ width: 44, height: 44 })]}>
+      <RNHostView matchContents={false}>
+        <RNImage
+          source={require('../../assets/images/trinqa-hand.jpeg')}
+          style={styles.avatarImage}
+          accessibilityLabel="Trinqa profile"
+        />
+      </RNHostView>
+    </Group>
   );
 }
 
@@ -45,90 +68,53 @@ export function ScreenHeader({
   showMenu = false,
 }: ScreenHeaderProps) {
   return (
-    <View style={styles.wrapper}>
-      <Host matchContents>
-        <HStack spacing={12} alignment="center">
-          {showBack ? (
-            <HeaderIconButton symbol="chevron.left" accessibilityLabel="Back" />
-          ) : (
-            <View style={styles.avatar}>
-              <Image
-                source={require('../../assets/images/trinqa-hand.jpeg')}
-                style={styles.avatarImage}
-                accessibilityLabel="Trinqa profile"
-              />
-            </View>
-          )}
+    <HStack
+      alignment="center"
+      spacing={8}
+      modifiers={[frame({ maxWidth: Infinity, minHeight: 44 })]}
+    >
+      {showBack ? (
+        <HeaderIconButton symbol="chevron.left" />
+      ) : (
+        <ProfileAvatar />
+      )}
 
-          {title ? (
+      {title ? (
+        <Text modifiers={[font({ size: 17, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+          {title}
+        </Text>
+      ) : null}
+
+      <Spacer />
+
+      {!showBack && !showMenu ? (
+        <HStack spacing={8}>
+          <HeaderIconButton symbol="headphones" />
+          <ZStack alignment="topTrailing">
+            <HeaderIconButton symbol="bell" />
             <Text
               modifiers={[
-                font({ size: typography.sectionTitle, weight: 'semibold' }),
-                foregroundStyle(colors.textPrimary),
+                font({ size: 10, weight: 'bold' }),
+                foregroundStyle(colors.surface),
+                frame({ width: 16, height: 16 }),
+                background(colors.notificationBadge, shapes.circle()),
               ]}
             >
-              {title}
+              4
             </Text>
-          ) : null}
-
-          <Spacer />
-
-          {!showBack && !showMenu ? (
-            <HStack spacing={10}>
-              <HeaderIconButton symbol="headphones" accessibilityLabel="Support" />
-              <View>
-                <HeaderIconButton symbol="bell" accessibilityLabel="Notifications" />
-                <View style={styles.badge}>
-                  <Host matchContents>
-                    <Text
-                      modifiers={[
-                        font({ size: 10, weight: 'bold' }),
-                        foregroundStyle(colors.surface),
-                      ]}
-                    >
-                      4
-                    </Text>
-                  </Host>
-                </View>
-              </View>
-            </HStack>
-          ) : null}
-
-          {showMenu ? (
-            <HeaderIconButton symbol="ellipsis" accessibilityLabel="More options" />
-          ) : null}
+          </ZStack>
         </HStack>
-      </Host>
-    </View>
+      ) : null}
+
+      {showMenu ? <HeaderIconButton symbol="ellipsis" /> : null}
+    </HStack>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingHorizontal: 0,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-  },
   avatarImage: {
-    width: 40,
-    height: 40,
-    resizeMode: 'cover',
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.notificationBadge,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
 });

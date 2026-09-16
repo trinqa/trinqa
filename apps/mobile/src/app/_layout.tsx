@@ -1,11 +1,16 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { StatusBar } from 'expo-status-bar';
 
+import { colors } from '@/theme';
+
 export default function TabLayout() {
   return (
     <>
       <StatusBar style="dark" />
-      <NativeTabs>
+      <NativeTabs
+        disableTransparentOnScrollEdge
+        backgroundColor={colors.surface}
+      >
         <NativeTabs.Trigger name="index">
           <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon

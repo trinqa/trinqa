@@ -4,7 +4,7 @@ export const typography = {
   balanceLarge: 32,
   balanceMedium: 28,
   sectionTitle: 17,
-  body: 15,
-  caption: 13,
-  micro: 11,
+  body: 14,
+  caption: 12,
+  micro: 10,
 } as const;

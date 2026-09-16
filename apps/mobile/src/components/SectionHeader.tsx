@@ -1,23 +1,11 @@
-import { Host, Text } from '@expo/ui/swift-ui';
-import { font, foregroundStyle } from '@expo/ui/swift-ui/modifiers';
+import { Text } from '@expo/ui/swift-ui';
 
-import { colors, typography } from '@/theme';
+import { sectionTitleModifiers } from '@/theme/swiftUi';
 
 interface SectionHeaderProps {
   title: string;
 }
 
 export function SectionHeader({ title }: SectionHeaderProps) {
-  return (
-    <Host matchContents>
-      <Text
-        modifiers={[
-          font({ size: typography.sectionTitle, weight: 'semibold' }),
-          foregroundStyle(colors.textPrimary),
-        ]}
-      >
-        {title}
-      </Text>
-    </Host>
-  );
+  return <Text modifiers={sectionTitleModifiers()}>{title}</Text>;
 }

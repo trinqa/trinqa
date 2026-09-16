@@ -1,59 +1,74 @@
-import { StyleSheet } from 'react-native';
-import { Host, ScrollView, VStack } from '@expo/ui/swift-ui';
-import { padding } from '@expo/ui/swift-ui/modifiers';
+import { Group, RNHostView } from '@expo/ui/swift-ui';
+import { frame, padding } from '@expo/ui/swift-ui/modifiers';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AccountCardStack } from '@/components/AccountCardStack';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { HomeRecentGroup } from '@/components/HomeRecentGroup';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { SectionHeader } from '@/components/SectionHeader';
 import { ShortcutRow } from '@/components/ShortcutRow';
-import { TransactionRow } from '@/components/TransactionRow';
-import { homeAccountSummary, homeRecentActivity } from '@/data/mocks/home';
+import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
+import { homeAccountSummary } from '@/data/mocks/home';
 import { spacing } from '@/theme';
+
+const WALLET_HEIGHT = 262;
+const WALLET_VISUAL_WIDTH = 380;
+const HEADER_WALLET_GAP = 18;
+const WALLET_SHORTCUT_GAP = 27;
+const SHORTCUT_GROUP_GAP = 22;
+
+function HomeWalletHost() {
+  const { width: windowWidth } = useWindowDimensions();
+  const shellWidth = windowWidth - spacing.screenHorizontal * 2;
+  const walletBleed = (WALLET_VISUAL_WIDTH - shellWidth) / 2;
+
+  return (
+    <Group modifiers={[frame({ width: shellWidth, height: WALLET_HEIGHT, alignment: 'center' })]}>
+      <RNHostView matchContents>
+        <View style={[styles.walletShell, { width: shellWidth, height: WALLET_HEIGHT }]}>
+          <View
+            style={[
+              styles.walletVisual,
+              {
+                width: WALLET_VISUAL_WIDTH,
+                height: WALLET_HEIGHT,
+                left: -walletBleed,
+              },
+            ]}
+          >
+            <AccountCardStack account={homeAccountSummary} width={WALLET_VISUAL_WIDTH} />
+          </View>
+        </View>
+      </RNHostView>
+    </Group>
+  );
+}
 
 export function HomeScreen() {
   return (
-    <ScreenContainer>
-      <Host style={styles.host}>
-        <ScrollView>
-          <VStack
-            spacing={spacing.sectionGap}
-            alignment="leading"
-            modifiers={[
-              padding({
-                horizontal: spacing.screenHorizontal,
-                top: spacing.headerTop,
-                bottom: spacing.scrollBottom,
-              }),
-            ]}
-          >
-            <ScreenHeader />
+    <SwiftUIScreenShell sectionGap={0}>
+      <ScreenHeader />
 
-            <AccountCardStack account={homeAccountSummary} />
+      <Group modifiers={[padding({ top: HEADER_WALLET_GAP })]}>
+        <HomeWalletHost />
+      </Group>
 
-            <ShortcutRow />
+      <Group modifiers={[padding({ top: WALLET_SHORTCUT_GAP })]}>
+        <ShortcutRow />
+      </Group>
 
-            <VStack spacing={spacing.md} alignment="leading">
-              <SectionHeader title="Recent" />
-              {homeRecentActivity.map((item) => (
-                <TransactionRow
-                  key={item.id}
-                  title={item.title}
-                  subtitle={item.subtitle}
-                  amount={item.amount}
-                  meta={item.date}
-                />
-              ))}
-            </VStack>
-          </VStack>
-        </ScrollView>
-      </Host>
-    </ScreenContainer>
+      <Group modifiers={[padding({ top: SHORTCUT_GROUP_GAP })]}>
+        <HomeRecentGroup />
+      </Group>
+    </SwiftUIScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  host: {
-    flex: 1,
+  walletShell: {
+    overflow: 'visible',
+  },
+  walletVisual: {
+    position: 'absolute',
+    top: 0,
   },
 });
