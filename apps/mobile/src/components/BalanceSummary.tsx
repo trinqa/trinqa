@@ -14,6 +14,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 
 import { SurfacePanel } from '@/components/SurfacePanel';
+import { InsetLayer } from '@/components/InsetLayer';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 interface BalanceSummaryProps {
@@ -140,27 +141,13 @@ export function BalanceSummary({
         </HStack>
 
         <Group modifiers={[padding({ top: wallet.balanceValueToMetrics })]}>
-          <HStack
-            alignment="center"
-            spacing={wallet.metricLayerGap}
-            modifiers={[
-              padding({ all: wallet.metricLayerInset }),
-              frame({ maxWidth: Infinity, height: wallet.metricLayerHeight }),
-              background(
-                colors.surfaceLayer,
-                shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-              ),
-              strokeBorder({
-                content: colors.borderStrong,
-                style: { lineWidth: componentTokens.surface.borderWidth },
-                shape: 'roundedRectangle',
-                cornerRadius: componentTokens.surface.cardRadius,
-              }),
-            ]}
+          <InsetLayer
+            axis="horizontal"
+            height={wallet.metricLayerHeight}
           >
             <MetricTile label={leftLabel} value={leftValue} width={159} />
             <MetricTile label={rightLabel} value={rightValue} width={159} />
-          </HStack>
+          </InsetLayer>
         </Group>
       </VStack>
     </SurfacePanel>

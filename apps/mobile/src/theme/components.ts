@@ -13,6 +13,10 @@ export const componentTokens = {
     symbolSize: 17,
     gap: 8,
   },
+  layer: {
+    inset: 4,
+    gap: 4,
+  },
   transactionRow: {
     mainHeight: 67,
     footerHeight: 32,

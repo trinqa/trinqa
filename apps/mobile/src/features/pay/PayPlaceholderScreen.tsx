@@ -26,6 +26,7 @@ import {
 
 import { BalanceSummary } from '@/components/BalanceSummary';
 import { CardLimitGauge } from '@/components/CardLimitGauge';
+import { InsetLayer } from '@/components/InsetLayer';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
@@ -33,7 +34,7 @@ import { WalletTransactionRow } from '@/components/WalletTransactionRow';
 import { walletSummary, walletTransactions } from '@/data/mocks/wallet';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
-const GAUGE_WIDTH = 302;
+const GAUGE_WIDTH = 298;
 const GAUGE_HEIGHT = 28;
 
 export function WalletScreen() {
@@ -82,88 +83,88 @@ export function WalletScreen() {
             </Text>
 
             <Group modifiers={[padding({ top: wallet.titleToLimitCard })]}>
-              <VStack
-                alignment="leading"
-                spacing={0}
-                modifiers={[
-                  padding({ horizontal: 14, vertical: 10 }),
-                  frame({ maxWidth: Infinity, height: wallet.limitCardHeight }),
-                  background(
-                    colors.surface,
-                    shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-                  ),
-                  strokeBorder({
-                    content: colors.borderStrong,
-                    style: { lineWidth: componentTokens.surface.borderWidth },
-                    shape: 'roundedRectangle',
-                    cornerRadius: componentTokens.surface.cardRadius,
-                  }),
-                ]}
-              >
-                <Group modifiers={[frame({ width: GAUGE_WIDTH, height: GAUGE_HEIGHT })]}>
-                  <RNHostView matchContents>
-                    <CardLimitGauge
-                      width={GAUGE_WIDTH}
-                      height={GAUGE_HEIGHT}
-                      progress={walletSummary.limitProgress}
-                    />
-                  </RNHostView>
-                </Group>
+              <InsetLayer>
+                <VStack
+                  alignment="leading"
+                  spacing={0}
+                  modifiers={[
+                    padding({ horizontal: 14, vertical: 10 }),
+                    frame({ maxWidth: Infinity, height: wallet.limitCardHeight }),
+                    background(
+                      colors.surface,
+                      shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
+                    ),
+                    strokeBorder({
+                      content: colors.borderStrong,
+                      style: { lineWidth: componentTokens.surface.borderWidth },
+                      shape: 'roundedRectangle',
+                      cornerRadius: componentTokens.surface.cardRadius,
+                    }),
+                  ]}
+                >
+                  <Group modifiers={[frame({ width: GAUGE_WIDTH, height: GAUGE_HEIGHT })]}>
+                    <RNHostView matchContents>
+                      <CardLimitGauge
+                        width={GAUGE_WIDTH}
+                        height={GAUGE_HEIGHT}
+                        progress={walletSummary.limitProgress}
+                      />
+                    </RNHostView>
+                  </Group>
 
-                <HStack spacing={8} modifiers={[padding({ top: 8 }), frame({ maxWidth: Infinity })]}>
-                  <Text
-                    modifiers={[
-                      font({ size: 13, weight: 'medium' }),
-                      foregroundStyle(colors.textSecondary),
-                    ]}
-                  >
-                    Today Limits
-                  </Text>
-                  <Spacer />
-                  <Text
-                    modifiers={[
-                      font({ size: 13, weight: 'semibold' }),
-                      foregroundStyle(colors.textPrimary),
-                    ]}
-                  >
-                    {walletSummary.todayLimit}
-                  </Text>
-                </HStack>
-              </VStack>
-            </Group>
+                  <HStack spacing={8} modifiers={[padding({ top: 8 }), frame({ maxWidth: Infinity })]}>
+                    <Text
+                      modifiers={[
+                        font({ size: 13, weight: 'medium' }),
+                        foregroundStyle(colors.textSecondary),
+                      ]}
+                    >
+                      Today Limits
+                    </Text>
+                    <Spacer />
+                    <Text
+                      modifiers={[
+                        font({ size: 13, weight: 'semibold' }),
+                        foregroundStyle(colors.textPrimary),
+                      ]}
+                    >
+                      {walletSummary.todayLimit}
+                    </Text>
+                  </HStack>
+                </VStack>
 
-            <Group modifiers={[padding({ top: wallet.limitCardToAction })]}>
-              <Button
-                onPress={() => undefined}
-                modifiers={[
-                  buttonStyle('plain'),
-                  padding({ horizontal: 14 }),
-                  frame({ maxWidth: Infinity, height: 44 }),
-                  background(
-                    colors.surface,
-                    shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-                  ),
-                  strokeBorder({
-                    content: colors.borderStrong,
-                    style: { lineWidth: componentTokens.surface.borderWidth },
-                    shape: 'roundedRectangle',
-                    cornerRadius: componentTokens.surface.cardRadius,
-                  }),
-                ]}
-              >
-                <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
-                  <Text
-                    modifiers={[
-                      font({ size: typography.body, weight: 'medium' }),
-                      foregroundStyle(colors.textPrimary),
-                    ]}
-                  >
-                    Set card limits
-                  </Text>
-                  <Spacer />
-                  <Image systemName="arrow.right" size={14} color={colors.textPrimary} />
-                </HStack>
-              </Button>
+                <Button
+                  onPress={() => undefined}
+                  modifiers={[
+                    buttonStyle('plain'),
+                    padding({ horizontal: 14 }),
+                    frame({ maxWidth: Infinity, height: 44 }),
+                    background(
+                      colors.surface,
+                      shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
+                    ),
+                    strokeBorder({
+                      content: colors.borderStrong,
+                      style: { lineWidth: componentTokens.surface.borderWidth },
+                      shape: 'roundedRectangle',
+                      cornerRadius: componentTokens.surface.cardRadius,
+                    }),
+                  ]}
+                >
+                  <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
+                    <Text
+                      modifiers={[
+                        font({ size: typography.body, weight: 'medium' }),
+                        foregroundStyle(colors.textPrimary),
+                      ]}
+                    >
+                      Set card limits
+                    </Text>
+                    <Spacer />
+                    <Image systemName="arrow.right" size={14} color={colors.textPrimary} />
+                  </HStack>
+                </Button>
+              </InsetLayer>
             </Group>
 
             <Text
