@@ -1,5 +1,5 @@
-import { PayPlaceholderScreen } from '@/features/pay/PayPlaceholderScreen';
+import { WalletScreen } from '@/features/pay/PayPlaceholderScreen';
 
 export default function PayRoute() {
-  return <PayPlaceholderScreen />;
+  return <WalletScreen />;
 }

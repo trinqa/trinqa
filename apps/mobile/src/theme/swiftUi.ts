@@ -1,15 +1,16 @@
 import {
   background,
-  border,
+  clipShape,
   font,
   foregroundStyle,
   padding,
   shadow,
   shapes,
+  strokeBorder,
   type ViewModifier,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, componentTokens, radius, spacing, typography } from '@/theme';
 
 export function bodyTextModifiers(
   weight: 'regular' | 'medium' | 'semibold' | 'bold' = 'regular',
@@ -44,8 +45,18 @@ export function sectionTitleModifiers(): ViewModifier[] {
 export function cardChromeModifiers(cornerRadius: number = radius.xl): ViewModifier[] {
   return [
     background(colors.surface, shapes.roundedRectangle({ cornerRadius })),
-    border({ content: colors.border, width: 1 }),
-    shadow({ radius: 8, y: 2, color: '#0000000A' }),
+    clipShape('roundedRectangle', cornerRadius),
+    strokeBorder({
+      content: colors.borderStrong,
+      style: { lineWidth: componentTokens.surface.borderWidth },
+      shape: 'roundedRectangle',
+      cornerRadius,
+    }),
+    shadow({
+      radius: componentTokens.surface.shadowRadius,
+      y: componentTokens.surface.shadowY,
+      color: componentTokens.surface.shadowColor,
+    }),
   ];
 }
 

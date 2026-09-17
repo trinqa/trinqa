@@ -1,5 +1,5 @@
-import { EarnScreen } from '@/features/earn/EarnScreen';
+import { ProgressScreen } from '@/features/earn/EarnScreen';
 
 export default function EarnRoute() {
-  return <EarnScreen />;
+  return <ProgressScreen />;
 }

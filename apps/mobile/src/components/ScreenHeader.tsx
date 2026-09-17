@@ -2,7 +2,6 @@ import {
   Button,
   Group,
   HStack,
-  Image,
   RNHostView,
   Spacer,
   Text,
@@ -14,12 +13,14 @@ import {
   font,
   foregroundStyle,
   frame,
+  labelStyle,
   shapes,
+  strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 import { Image as RNImage, StyleSheet } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { colors } from '@/theme';
+import { colors, componentTokens } from '@/theme';
 
 interface ScreenHeaderProps {
   showBack?: boolean;
@@ -28,29 +29,47 @@ interface ScreenHeaderProps {
 }
 
 function HeaderIconButton({
+  label,
   symbol,
   onPress,
 }: {
+  label: string;
   symbol: SFSymbol;
   onPress?: () => void;
 }) {
   return (
     <Button
+      label={label}
+      systemImage={symbol}
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        frame({ width: 44, height: 44 }),
+        labelStyle('iconOnly'),
+        frame({
+          width: componentTokens.headerControl.size,
+          height: componentTokens.headerControl.size,
+        }),
         background(colors.surface, shapes.circle()),
+        strokeBorder({
+          content: colors.borderStrong,
+          style: { lineWidth: componentTokens.surface.borderWidth },
+          shape: 'circle',
+        }),
       ]}
-    >
-      <Image systemName={symbol} size={17} color={colors.textPrimary} />
-    </Button>
+    />
   );
 }
 
 function ProfileAvatar() {
   return (
-    <Group modifiers={[frame({ width: 44, height: 44 })]}>
+    <Group
+      modifiers={[
+        frame({
+          width: componentTokens.headerControl.size,
+          height: componentTokens.headerControl.size,
+        }),
+      ]}
+    >
       <RNHostView matchContents={false}>
         <RNImage
           source={require('../../assets/images/trinqa-hand.jpeg')}
@@ -70,11 +89,13 @@ export function ScreenHeader({
   return (
     <HStack
       alignment="center"
-      spacing={8}
-      modifiers={[frame({ maxWidth: Infinity, minHeight: 44 })]}
+      spacing={title ? 18 : componentTokens.headerControl.gap}
+      modifiers={[
+        frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size }),
+      ]}
     >
       {showBack ? (
-        <HeaderIconButton symbol="chevron.left" />
+        <HeaderIconButton label="Back" symbol="arrow.left" />
       ) : (
         <ProfileAvatar />
       )}
@@ -88,10 +109,10 @@ export function ScreenHeader({
       <Spacer />
 
       {!showBack && !showMenu ? (
-        <HStack spacing={8}>
-          <HeaderIconButton symbol="headphones" />
+        <HStack spacing={componentTokens.headerControl.gap}>
+          <HeaderIconButton label="Support" symbol="headphones" />
           <ZStack alignment="topTrailing">
-            <HeaderIconButton symbol="bell" />
+            <HeaderIconButton label="Notifications, 4 unread" symbol="bell" />
             <Text
               modifiers={[
                 font({ size: 10, weight: 'bold' }),
@@ -106,7 +127,7 @@ export function ScreenHeader({
         </HStack>
       ) : null}
 
-      {showMenu ? <HeaderIconButton symbol="ellipsis" /> : null}
+      {showMenu ? <HeaderIconButton label="More options" symbol="ellipsis" /> : null}
     </HStack>
   );
 }

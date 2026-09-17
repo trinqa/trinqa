@@ -1,7 +1,6 @@
 import { Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
-  border,
   font,
   foregroundStyle,
   frame,
@@ -9,9 +8,10 @@ import {
   padding,
   shadow,
   shapes,
+  strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors } from '@/theme';
+import { colors, componentTokens, typography } from '@/theme';
 
 interface MetricCardProps {
   label: string;
@@ -20,22 +20,30 @@ interface MetricCardProps {
 }
 
 export function MetricCard({ label, value, width }: MetricCardProps) {
+  const metric = componentTokens.metricCard;
+  const surface = componentTokens.surface;
+
   return (
     <VStack
       alignment="center"
-      spacing={4}
+      spacing={metric.textGap}
       modifiers={[
-        padding({ vertical: 10, horizontal: 8 }),
-        frame({ width, height: 60 }),
-        background(colors.surface, shapes.roundedRectangle({ cornerRadius: 12 })),
-        border({ content: colors.border, width: 1 }),
-        shadow({ radius: 6, y: 1, color: '#0000000A' }),
+        padding({ vertical: metric.verticalPadding, horizontal: metric.horizontalPadding }),
+        frame({ width, height: metric.height }),
+        background(colors.surface, shapes.roundedRectangle({ cornerRadius: metric.radius })),
+        strokeBorder({
+          content: colors.borderStrong,
+          style: { lineWidth: surface.borderWidth },
+          shape: 'roundedRectangle',
+          cornerRadius: metric.radius,
+        }),
+        shadow({ radius: surface.shadowRadius * 0.75, y: 1, color: surface.shadowColor }),
         layoutPriority(1),
       ]}
     >
       <Text
         modifiers={[
-          font({ size: 11, weight: 'regular' }),
+          font({ size: typography.transactionMeta, weight: 'regular' }),
           foregroundStyle(colors.textSecondary),
         ]}
       >
@@ -43,7 +51,7 @@ export function MetricCard({ label, value, width }: MetricCardProps) {
       </Text>
       <Text
         modifiers={[
-          font({ size: 15, weight: 'semibold' }),
+          font({ size: typography.transactionTitle, weight: 'semibold' }),
           foregroundStyle(colors.textPrimary),
         ]}
       >

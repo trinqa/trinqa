@@ -1,17 +1,17 @@
 import { Button, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
-  border,
   buttonStyle,
   clipShape,
   font,
   foregroundStyle,
   frame,
   shadow,
+  strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { colors } from '@/theme';
+import { colors, componentTokens, homeTokens } from '@/theme';
 
 const shortcuts: Array<{ id: string; label: string; symbol: SFSymbol }> = [
   { id: 'add-money', label: 'Add Money', symbol: 'plus.circle' },
@@ -19,28 +19,38 @@ const shortcuts: Array<{ id: string; label: string; symbol: SFSymbol }> = [
   { id: 'more', label: 'More', symbol: 'ellipsis.circle' },
 ];
 
-const SHORTCUT_WIDTH = 118;
-const SHORTCUT_HEIGHT = 66;
-const SHORTCUT_GAP = 5;
-
 export function ShortcutRow() {
   return (
-    <HStack spacing={SHORTCUT_GAP} modifiers={[frame({ maxWidth: Infinity, minHeight: SHORTCUT_HEIGHT })]}>
+    <HStack
+      spacing={homeTokens.shortcuts.gap}
+      modifiers={[frame({ maxWidth: Infinity, minHeight: homeTokens.shortcuts.height })]}
+    >
       {shortcuts.map((item) => (
         <Button
           key={item.id}
           onPress={() => undefined}
           modifiers={[
             buttonStyle('plain'),
-            frame({ width: SHORTCUT_WIDTH, height: SHORTCUT_HEIGHT }),
+            frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height }),
             background(colors.surface),
-            clipShape('roundedRectangle', 12),
-            border({ content: colors.border, width: 1 }),
-            shadow({ radius: 6, y: 1, color: '#0000000A' }),
+            clipShape('roundedRectangle', componentTokens.surface.controlRadius),
+            strokeBorder({
+              content: colors.borderStrong,
+              style: { lineWidth: componentTokens.surface.borderWidth },
+              shape: 'roundedRectangle',
+              cornerRadius: componentTokens.surface.controlRadius,
+            }),
+            shadow({ radius: 4, y: 1, color: '#00000008' }),
           ]}
         >
-          <VStack alignment="center" spacing={8} modifiers={[frame({ width: SHORTCUT_WIDTH, height: SHORTCUT_HEIGHT })]}>
-            <Image systemName={item.symbol} size={17} color={colors.textPrimary} />
+          <VStack
+            alignment="center"
+            spacing={8}
+            modifiers={[
+              frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height }),
+            ]}
+          >
+            <Image systemName={item.symbol} size={homeTokens.shortcuts.iconSize} color={colors.textPrimary} />
             <Text
               modifiers={[
                 font({ size: 12, weight: 'medium' }),

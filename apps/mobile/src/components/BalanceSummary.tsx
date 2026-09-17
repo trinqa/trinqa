@@ -1,25 +1,20 @@
 import { useState } from 'react';
 
-import { Button, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
-  border,
   buttonStyle,
   font,
   foregroundStyle,
   frame,
+  labelStyle,
   padding,
-  shadow,
   shapes,
+  strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, typography } from '@/theme';
-
-const REPORT_WIDTH = 366;
-const CARD_WIDTH = 396;
-const CARD_HEIGHT = 206;
-const CARD_RADIUS = 15;
-const METRIC_GAP = 8;
+import { SurfacePanel } from '@/components/SurfacePanel';
+import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 interface BalanceSummaryProps {
   totalLabel: string;
@@ -44,12 +39,14 @@ function MetricTile({
       alignment="leading"
       spacing={4}
       modifiers={[
-        padding({ horizontal: 14, vertical: 12 }),
-        frame({ width, height: 64 }),
-        background(colors.surfaceSecondary, shapes.roundedRectangle({ cornerRadius: 12 })),
+        frame({ width, height: 58 }),
+        background(
+          colors.surface,
+          shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
+        ),
       ]}
     >
-      <Text modifiers={[font({ size: 11 }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
+      <Text modifiers={[font({ size: 13 }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
       <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
         ${value}
       </Text>
@@ -67,60 +64,105 @@ export function BalanceSummary({
 }: BalanceSummaryProps) {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const displayValue = balanceVisible ? totalValue : '••••••';
+  const wallet = screenTokens.wallet;
 
   return (
-    <VStack
-      alignment="leading"
-      spacing={0}
-      modifiers={[
-        padding({ top: 24, horizontal: 16, bottom: 26 }),
-        frame({ width: CARD_WIDTH, height: CARD_HEIGHT }),
-        background(colors.surface, shapes.roundedRectangle({ cornerRadius: CARD_RADIUS })),
-        border({ content: colors.border, width: 1 }),
-        shadow({ radius: 8, y: 2, color: '#0000000A' }),
-        frame({ width: REPORT_WIDTH }),
-      ]}
+    <SurfacePanel
+      width={wallet.contentWidth}
+      height={wallet.balanceHeight}
+      cornerRadius={componentTokens.surface.panelRadius}
     >
-      <Text modifiers={[font({ size: 13 }), foregroundStyle(colors.textSecondary)]}>{totalLabel}</Text>
-
-      <HStack
-        alignment="center"
-        spacing={8}
-        modifiers={[padding({ top: 7 }), frame({ maxWidth: Infinity, minHeight: 44 })]}
+      <VStack
+        alignment="leading"
+        spacing={0}
+        modifiers={[
+          padding({
+            top: wallet.balancePaddingTop,
+            horizontal: wallet.balancePaddingHorizontal,
+          }),
+          frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'topLeading' }),
+        ]}
       >
-        <HStack alignment="firstTextBaseline" spacing={0} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-          <Text modifiers={[font({ size: 22, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>$</Text>
-          <Text
-            modifiers={[
-              font({ size: typography.balanceLarge, weight: 'bold' }),
-              foregroundStyle(colors.textPrimary),
-            ]}
-          >
-            {displayValue}
-          </Text>
-        </HStack>
+        <Text modifiers={[font({ size: 15, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
+          {totalLabel}
+        </Text>
 
-        <Button
-          onPress={() => setBalanceVisible((visible) => !visible)}
+        <HStack
+          alignment="center"
+          spacing={8}
           modifiers={[
-            buttonStyle('plain'),
-            padding({ all: 0 }),
-            frame({ width: 44, height: 44 }),
-            background(colors.surfaceSecondary, shapes.circle()),
+            padding({ top: wallet.balanceTitleToValue }),
+            frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size }),
           ]}
         >
-          <Image
-            systemName={balanceVisible ? 'eye' : 'eye.slash'}
-            size={17}
-            color={colors.textPrimary}
-          />
-        </Button>
-      </HStack>
+          <HStack
+            alignment="firstTextBaseline"
+            spacing={0}
+            modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
+          >
+            <Text
+              modifiers={[
+                font({ size: 22, weight: 'bold' }),
+                foregroundStyle(colors.textSecondary),
+              ]}
+            >
+              $
+            </Text>
+            <Text
+              modifiers={[
+                font({ size: typography.balanceLarge, weight: 'bold' }),
+                foregroundStyle(colors.textPrimary),
+              ]}
+            >
+              {displayValue}
+            </Text>
+          </HStack>
 
-      <HStack spacing={METRIC_GAP} modifiers={[padding({ top: 28, leading: 1 }), frame({ width: 360, alignment: 'leading' })]}>
-        <MetricTile label={leftLabel} value={leftValue} width={177} />
-        <MetricTile label={rightLabel} value={rightValue} width={175} />
-      </HStack>
-    </VStack>
+          <Button
+            label={balanceVisible ? 'Hide balance' : 'Show balance'}
+            systemImage={balanceVisible ? 'eye.slash' : 'eye'}
+            onPress={() => setBalanceVisible((visible) => !visible)}
+            modifiers={[
+              buttonStyle('plain'),
+              labelStyle('iconOnly'),
+              frame({
+                width: componentTokens.headerControl.size,
+                height: componentTokens.headerControl.size,
+              }),
+              background(colors.surface, shapes.circle()),
+              strokeBorder({
+                content: colors.borderStrong,
+                style: { lineWidth: componentTokens.surface.borderWidth },
+                shape: 'circle',
+              }),
+            ]}
+          />
+        </HStack>
+
+        <Group modifiers={[padding({ top: wallet.balanceValueToMetrics })]}>
+          <HStack
+            alignment="center"
+            spacing={wallet.metricLayerGap}
+            modifiers={[
+              padding({ all: wallet.metricLayerInset }),
+              frame({ maxWidth: Infinity, height: wallet.metricLayerHeight }),
+              background(
+                colors.surfaceLayer,
+                shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
+              ),
+              strokeBorder({
+                content: colors.borderStrong,
+                style: { lineWidth: componentTokens.surface.borderWidth },
+                shape: 'roundedRectangle',
+                cornerRadius: componentTokens.surface.cardRadius,
+              }),
+            ]}
+          >
+            <MetricTile label={leftLabel} value={leftValue} width={159} />
+            <MetricTile label={rightLabel} value={rightValue} width={159} />
+          </HStack>
+        </Group>
+      </VStack>
+    </SurfacePanel>
   );
 }

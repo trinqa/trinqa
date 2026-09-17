@@ -53,3 +53,26 @@ export interface ActivityListItem {
 }
 
 export type ActivitySegment = 'payments' | 'earnings';
+
+export type InstallmentSegment = 'four' | 'six';
+
+export interface WalletTransactionItem {
+  id: string;
+  title: string;
+  date: string;
+  amount: string;
+  time: string;
+  brand: 'amazon' | 'temu' | 'apple';
+  group: 'today' | 'yesterday';
+}
+
+export interface InstallmentItem {
+  id: string;
+  title: string;
+  merchant: string;
+  amount: string;
+  dueDate: string;
+  installment: string;
+  symbol: import('sf-symbols-typescript').SFSymbol;
+  plan: InstallmentSegment;
+}
