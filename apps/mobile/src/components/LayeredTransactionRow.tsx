@@ -7,6 +7,7 @@ import {
   frame,
   layoutPriority,
   padding,
+  offset,
   shadow,
   shapes,
   strokeBorder,
@@ -27,6 +28,13 @@ interface LayeredTransactionRowProps {
   footerTrailingText: string;
   footerSymbol?: SFSymbol;
   onFooterPress?: () => void;
+  density?: 'standard' | 'compact';
+  iconBackgroundColor?: string;
+  iconColor?: string;
+  iconLetterColor?: string;
+  iconAccentText?: string;
+  iconAccentColor?: string;
+  footerTrailingColor?: string;
 }
 
 /** Shared Home-quality transaction card with a white body and muted lower layer. */
@@ -41,10 +49,21 @@ export function LayeredTransactionRow({
   footerTrailingText,
   footerSymbol,
   onFooterPress,
+  density = 'standard',
+  iconBackgroundColor = colors.surfaceSecondary,
+  iconColor = colors.textSecondary,
+  iconLetterColor = colors.textSecondary,
+  iconAccentText,
+  iconAccentColor = colors.textSecondary,
+  footerTrailingColor,
 }: LayeredTransactionRowProps) {
   const initial = iconLetter ?? title.charAt(0).toUpperCase();
-  const row = componentTokens.transactionRow;
+  const baseRow = componentTokens.transactionRow;
+  const row = density === 'compact' ? { ...baseRow, ...baseRow.compact } : baseRow;
   const surface = componentTokens.surface;
+  const titleSize = density === 'compact' ? baseRow.compact.titleSize : typography.transactionTitle;
+  const metaSize = density === 'compact' ? baseRow.compact.metaSize : typography.transactionMeta;
+  const actionSize = density === 'compact' ? baseRow.compact.actionSize : typography.transactionAction;
 
   return (
     <VStack
@@ -89,20 +108,33 @@ export function LayeredTransactionRow({
         <ZStack
           modifiers={[
             frame({ width: row.iconSize, height: row.iconSize }),
-            background(colors.surfaceSecondary, shapes.circle()),
+            background(iconBackgroundColor, shapes.circle()),
           ]}
         >
           {symbol ? (
-            <Image systemName={symbol} size={row.symbolSize} color={colors.textSecondary} />
+            <Image systemName={symbol} size={row.symbolSize} color={iconColor} />
           ) : (
-            <Text
-              modifiers={[
-                font({ size: 14, weight: 'semibold' }),
-                foregroundStyle(colors.textSecondary),
-              ]}
-            >
-              {initial}
-            </Text>
+            <ZStack>
+              <Text
+                modifiers={[
+                  font({ size: 14, weight: 'semibold' }),
+                  foregroundStyle(iconLetterColor),
+                ]}
+              >
+                {initial}
+              </Text>
+              {iconAccentText ? (
+                <Text
+                  modifiers={[
+                    font({ size: baseRow.brandAccentSize, weight: 'bold' }),
+                    foregroundStyle(iconAccentColor),
+                    offset({ y: baseRow.brandAccentOffsetY }),
+                  ]}
+                >
+                  {iconAccentText}
+                </Text>
+              ) : null}
+            </ZStack>
           )}
         </ZStack>
 
@@ -113,7 +145,7 @@ export function LayeredTransactionRow({
         >
           <Text
             modifiers={[
-              font({ size: typography.transactionTitle, weight: 'semibold' }),
+              font({ size: titleSize, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
@@ -121,7 +153,7 @@ export function LayeredTransactionRow({
           </Text>
           <Text
             modifiers={[
-              font({ size: typography.transactionMeta }),
+              font({ size: metaSize }),
               foregroundStyle(colors.textSecondary),
             ]}
           >
@@ -136,7 +168,7 @@ export function LayeredTransactionRow({
         >
           <Text
             modifiers={[
-              font({ size: typography.transactionTitle, weight: 'semibold' }),
+              font({ size: titleSize, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
@@ -145,7 +177,7 @@ export function LayeredTransactionRow({
           {meta ? (
             <Text
               modifiers={[
-                font({ size: typography.transactionMeta }),
+                font({ size: metaSize }),
                 foregroundStyle(colors.textSecondary),
               ]}
             >
@@ -160,6 +192,10 @@ export function LayeredTransactionRow({
         trailingText={footerTrailingText}
         leadingSymbol={footerSymbol}
         onTrailingPress={onFooterPress}
+        height={row.footerHeight}
+        horizontalPadding={row.horizontalPadding}
+        textSize={actionSize}
+        trailingColor={footerTrailingColor}
       />
     </VStack>
   );

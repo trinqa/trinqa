@@ -1,5 +1,6 @@
 export const typography = {
   screenTitle: 28,
+  activityTitle: 30,
   balanceHero: 34,
   balanceLarge: 32,
   balanceMedium: 28,

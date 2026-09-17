@@ -15,6 +15,10 @@ interface LayeredInfoBarProps {
   trailingText: string;
   leadingSymbol?: SFSymbol;
   onTrailingPress?: () => void;
+  height?: number;
+  horizontalPadding?: number;
+  textSize?: number;
+  trailingColor?: string;
 }
 
 /** Reusable muted layer used below primary white card content. */
@@ -23,20 +27,26 @@ export function LayeredInfoBar({
   trailingText,
   leadingSymbol = 'checkmark.circle.fill',
   onTrailingPress,
+  height = componentTokens.transactionRow.footerHeight,
+  horizontalPadding = componentTokens.transactionRow.horizontalPadding,
+  textSize = typography.transactionAction,
+  trailingColor,
 }: LayeredInfoBarProps) {
+  const resolvedTrailingColor = trailingColor ?? (onTrailingPress ? colors.action : colors.textSecondary);
+
   return (
     <HStack
       alignment="center"
       spacing={6}
       modifiers={[
-        padding({ horizontal: componentTokens.transactionRow.horizontalPadding }),
-        frame({ maxWidth: Infinity, height: componentTokens.transactionRow.footerHeight }),
+        padding({ horizontal: horizontalPadding }),
+        frame({ maxWidth: Infinity, height }),
       ]}
     >
       <Image systemName={leadingSymbol} size={11} color={colors.textSecondary} />
       <Text
         modifiers={[
-          font({ size: typography.transactionAction, weight: 'medium' }),
+          font({ size: textSize, weight: 'medium' }),
           foregroundStyle(colors.textSecondary),
         ]}
       >
@@ -55,8 +65,8 @@ export function LayeredInfoBar({
         >
           <Text
             modifiers={[
-              font({ size: typography.transactionAction, weight: 'semibold' }),
-              foregroundStyle(colors.action),
+              font({ size: textSize, weight: 'semibold' }),
+              foregroundStyle(resolvedTrailingColor),
             ]}
           >
             {trailingText}
@@ -65,8 +75,8 @@ export function LayeredInfoBar({
       ) : (
         <Text
           modifiers={[
-            font({ size: typography.transactionAction, weight: 'medium' }),
-            foregroundStyle(colors.textSecondary),
+            font({ size: textSize, weight: 'medium' }),
+            foregroundStyle(resolvedTrailingColor),
           ]}
         >
           {trailingText}

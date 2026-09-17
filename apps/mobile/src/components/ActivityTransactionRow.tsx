@@ -1,93 +1,35 @@
-import { HStack, Text, VStack } from '@expo/ui/swift-ui';
-import {
-  background,
-  border,
-  font,
-  foregroundStyle,
-  frame,
-  layoutPriority,
-  padding,
-  shapes,
-} from '@expo/ui/swift-ui/modifiers';
-
+import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { colors } from '@/theme';
-
-const ROW_WIDTH = 364;
+import type { ActivityListItem } from '@/types';
 
 interface ActivityTransactionRowProps {
-  title: string;
-  subtitle: string;
-  amount: string;
-  iconLetter?: string;
+  item: ActivityListItem;
 }
 
-/** Activity-only compact card row (do not use shared TransactionRow). */
-export function ActivityTransactionRow({
-  title,
-  subtitle,
-  amount,
-  iconLetter,
-}: ActivityTransactionRowProps) {
-  const initial = iconLetter ?? title.charAt(0).toUpperCase();
+/** Reference-matched Activity presentation of the shared layered transaction row. */
+export function ActivityTransactionRow({ item }: ActivityTransactionRowProps) {
+  const isEarning = item.iconStyle === 'earning';
+  const isAmazon = item.iconStyle === 'amazon';
 
   return (
-    <HStack
-      alignment="center"
-      spacing={12}
-      modifiers={[
-        padding({ horizontal: 14, vertical: 12 }),
-        frame({ width: ROW_WIDTH, height: 67, alignment: 'leading' }),
-        background(colors.surface, shapes.roundedRectangle({ cornerRadius: 14 })),
-        border({ content: colors.border, width: 1 }),
-      ]}
-    >
-      <Text
-        modifiers={[
-          font({ size: 14, weight: 'semibold' }),
-          foregroundStyle(colors.textSecondary),
-          frame({ width: 40, height: 40 }),
-          background(
-            colors.surfaceSecondary,
-            shapes.roundedRectangle({ cornerRadius: 12 }),
-          ),
-        ]}
-      >
-        {initial}
-      </Text>
-
-      <VStack
-        alignment="leading"
-        spacing={3}
-        modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
-      >
-        <Text
-          modifiers={[
-            font({ size: 14, weight: 'semibold' }),
-            foregroundStyle(colors.textPrimary),
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          modifiers={[
-            font({ size: 12, weight: 'regular' }),
-            foregroundStyle(colors.textSecondary),
-          ]}
-        >
-          {subtitle}
-        </Text>
-      </VStack>
-
-      <Text
-        modifiers={[
-          font({ size: 14, weight: 'semibold' }),
-          foregroundStyle(colors.textPrimary),
-          layoutPriority(1),
-          frame({ alignment: 'trailing' }),
-        ]}
-      >
-        {amount}
-      </Text>
-    </HStack>
+    <LayeredTransactionRow
+      density="compact"
+      title={item.title}
+      subtitle={item.subtitle}
+      amount={item.amount}
+      meta={item.timestamp}
+      symbol={item.symbol}
+      iconLetter={isAmazon ? 'a' : undefined}
+      iconBackgroundColor={
+        isEarning ? colors.earningMuted : isAmazon ? colors.merchantLogo : undefined
+      }
+      iconColor={isEarning ? colors.earning : undefined}
+      iconLetterColor={isAmazon ? colors.surface : undefined}
+      iconAccentText={isAmazon ? '⌣' : undefined}
+      iconAccentColor={isAmazon ? colors.merchantLogoAccent : undefined}
+      footerLeadingText="Completed"
+      footerTrailingText="Details"
+      footerTrailingColor={colors.action}
+    />
   );
 }

@@ -20,7 +20,7 @@ export default function TabLayout() {
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="earn">
-          <NativeTabs.Trigger.Label>Progress</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Label>Earn</NativeTabs.Trigger.Label>
           <NativeTabs.Trigger.Icon
             sf={{
               default: 'chart.line.uptrend.xyaxis',

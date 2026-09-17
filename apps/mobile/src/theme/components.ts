@@ -35,6 +35,16 @@ export const componentTokens = {
     contentGap: 10,
     textGap: 2,
     rowGap: 10,
+    brandAccentSize: 10,
+    brandAccentOffsetY: 10,
+    compact: {
+      mainHeight: 50,
+      footerHeight: 25,
+      verticalPadding: 6,
+      titleSize: 14,
+      metaSize: 12,
+      actionSize: 11,
+    },
   },
   metricCard: {
     height: 60,

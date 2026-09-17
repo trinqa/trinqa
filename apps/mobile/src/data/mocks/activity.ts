@@ -1,66 +1,65 @@
-import type {
-  ActivityListItem,
-  ActivityMetric,
-  ChartPoint,
-} from '@/types';
+import type { ActivityListItem } from '@/types';
 
-export const activityHeadline = {
-  label: 'Total Flow',
-  value: '$12,480.32',
-};
-
-export const activityMetrics: ActivityMetric[] = [
-  { id: 'sent', label: 'Sent', value: '$1,240.00' },
-  { id: 'earned', label: 'Earned', value: '$186.42' },
-  { id: 'received', label: 'Received', value: '$2,850.00' },
-];
-
-export const activityChartPoints: ChartPoint[] = [
-  { label: 'Sep 1', value: 8200 },
-  { label: 'Sep 5', value: 9100 },
-  { label: 'Sep 9', value: 8800 },
-  { label: 'Sep 13', value: 10200 },
-  { label: 'Sep 16', value: 12480 },
-];
-
-export const activityPayments: ActivityListItem[] = [
+export const activityItems: ActivityListItem[] = [
   {
-    id: '1',
-    title: 'Spotify',
-    subtitle: 'Payment',
-    amount: '-$12.99',
-  },
-  {
-    id: '2',
+    id: 'coffee-shop',
     title: 'Coffee Shop',
     subtitle: 'Payment',
     amount: '-$4.80',
+    timestamp: 'Today, 2:14 PM',
+    category: 'payments',
+    group: 'today',
+    symbol: 'cup.and.saucer.fill',
   },
   {
-    id: '3',
-    title: 'Maria',
-    subtitle: 'Sent',
-    amount: '-€120.00',
-  },
-];
-
-export const activityEarnings: ActivityListItem[] = [
-  {
-    id: '1',
+    id: 'yield-earned',
     title: 'Yield earned',
-    subtitle: 'Daily accrual',
+    subtitle: 'Earnings',
     amount: '+$3.84',
+    timestamp: 'Today, 8:00 AM',
+    category: 'earnings',
+    group: 'today',
+    symbol: 'chart.line.uptrend.xyaxis',
+    iconStyle: 'earning',
   },
   {
-    id: '2',
+    id: 'maria',
+    title: 'Maria',
+    subtitle: 'Received',
+    amount: '+€250.00',
+    timestamp: 'Yesterday, 6:21 PM',
+    category: 'payments',
+    group: 'yesterday',
+    symbol: 'person.fill',
+  },
+  {
+    id: 'strategy-transfer',
     title: 'Added to strategy',
-    subtitle: 'Balanced',
-    amount: '+$500.00',
+    subtitle: 'Earn transfer',
+    amount: '$500.00',
+    timestamp: 'Yesterday, 1:36 PM',
+    category: 'earnings',
+    group: 'yesterday',
+    symbol: 'arrow.triangle.2.circlepath',
   },
   {
-    id: '3',
-    title: 'Withdrawn',
-    subtitle: 'To available',
-    amount: '-$100.00',
+    id: 'deposit',
+    title: 'Deposit',
+    subtitle: 'Bank transfer',
+    amount: '+₺10,000',
+    timestamp: 'Yesterday, 9:12 AM',
+    category: 'payments',
+    group: 'yesterday',
+    symbol: 'building.columns.fill',
+  },
+  {
+    id: 'amazon',
+    title: 'Amazon.com',
+    subtitle: 'Payment',
+    amount: '-$89.71',
+    timestamp: 'Nov 18, 2025, 9:17 AM',
+    category: 'payments',
+    group: 'november-18',
+    iconStyle: 'amazon',
   },
 ];

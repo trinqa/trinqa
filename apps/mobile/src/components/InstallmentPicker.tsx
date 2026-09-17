@@ -1,8 +1,11 @@
-import { Picker, Text } from '@expo/ui/swift-ui';
-import { frame, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
-
+import { NativeSegmentedControl } from '@/components/NativeSegmentedControl';
 import { screenTokens } from '@/theme';
 import type { InstallmentSegment } from '@/types';
+
+const INSTALLMENT_OPTIONS = [
+  { label: '4 Installment', value: 'four' },
+  { label: '6 Installment', value: 'six' },
+] as const;
 
 interface InstallmentPickerProps {
   segment: InstallmentSegment;
@@ -14,16 +17,13 @@ export function InstallmentPicker({ segment, onChange }: InstallmentPickerProps)
   const width = screenTokens.progress.lowerPanelWidth - screenTokens.progress.lowerPanelPadding * 2;
 
   return (
-    <Picker
-      selection={segment}
-      onSelectionChange={onChange}
-      modifiers={[
-        frame({ width, height: screenTokens.progress.pickerHeight }),
-        pickerStyle('segmented'),
-      ]}
-    >
-      <Text modifiers={[tag('four')]}>4 Installment</Text>
-      <Text modifiers={[tag('six')]}>6 Installment</Text>
-    </Picker>
+    <NativeSegmentedControl
+      accessibilityLabel="Installment period"
+      value={segment}
+      onChange={onChange}
+      options={INSTALLMENT_OPTIONS}
+      width={width}
+      height={screenTokens.progress.pickerHeight}
+    />
   );
 }

@@ -50,9 +50,14 @@ export interface ActivityListItem {
   title: string;
   subtitle: string;
   amount: string;
+  timestamp: string;
+  category: Exclude<ActivitySegment, 'all'>;
+  group: 'today' | 'yesterday' | 'november-18';
+  symbol?: import('sf-symbols-typescript').SFSymbol;
+  iconStyle?: 'default' | 'earning' | 'amazon';
 }
 
-export type ActivitySegment = 'payments' | 'earnings';
+export type ActivitySegment = 'all' | 'payments' | 'earnings';
 
 export type InstallmentSegment = 'four' | 'six';
 
