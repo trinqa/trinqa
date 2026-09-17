@@ -79,6 +79,11 @@ export function LayeredTransactionRow({
             shape: 'roundedRectangle',
             cornerRadius: surface.cardRadius,
           }),
+          shadow({
+            radius: componentTokens.layer.seamShadowRadius,
+            y: componentTokens.layer.seamShadowY,
+            color: componentTokens.layer.seamShadowColor,
+          }),
         ]}
       >
         <ZStack

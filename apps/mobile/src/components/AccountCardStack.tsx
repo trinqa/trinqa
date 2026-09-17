@@ -19,6 +19,8 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
   const height = BASE_HEIGHT * scale;
 
   const outerR = homeTokens.wallet.outerRadius * scale;
+  const bodyStrokeWidth = 1 * scale;
+  const bodyStrokeInset = bodyStrokeWidth / 2;
   const backX = 19 * scale;
   const backY = 26 * scale;
   const backW = 342 * scale;
@@ -91,15 +93,15 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
         </Defs>
 
         <Rect
-          x={0}
-          y={0}
-          width={width}
-          height={height}
-          rx={outerR}
-          ry={outerR}
+          x={bodyStrokeInset}
+          y={bodyStrokeInset}
+          width={width - bodyStrokeWidth}
+          height={height - bodyStrokeWidth}
+          rx={outerR - bodyStrokeInset}
+          ry={outerR - bodyStrokeInset}
           fill="url(#walletBody)"
           stroke="#2A2D31"
-          strokeWidth={1 * scale}
+          strokeWidth={bodyStrokeWidth}
         />
 
         <Rect

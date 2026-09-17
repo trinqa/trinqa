@@ -1,7 +1,10 @@
+const cardRadius = 14;
+const insetLayerPadding = 4;
+
 export const componentTokens = {
   surface: {
     panelRadius: 16,
-    cardRadius: 14,
+    cardRadius,
     controlRadius: 11,
     borderWidth: 0.5,
     shadowRadius: 8,
@@ -14,8 +17,13 @@ export const componentTokens = {
     gap: 8,
   },
   layer: {
-    inset: 4,
+    inset: insetLayerPadding,
     gap: 4,
+    innerRadius: cardRadius,
+    outerRadius: cardRadius + insetLayerPadding,
+    seamShadowRadius: 1.5,
+    seamShadowY: 1,
+    seamShadowColor: '#0000000D',
   },
   transactionRow: {
     mainHeight: 67,
