@@ -21,9 +21,9 @@ export const componentTokens = {
     gap: 4,
     innerRadius: cardRadius,
     outerRadius: cardRadius + insetLayerPadding,
-    seamShadowRadius: 1.5,
-    seamShadowY: 1,
-    seamShadowColor: '#0000000D',
+    seamShadowRadius: 2,
+    seamShadowY: 1.5,
+    seamShadowColor: '#00000012',
   },
   transactionRow: {
     mainHeight: 67,
