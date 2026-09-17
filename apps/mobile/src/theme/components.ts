@@ -56,4 +56,16 @@ export const componentTokens = {
     horizontalPadding: 8,
     textGap: 4,
   },
+  actionButton: {
+    height: 48,
+    radius: 14,
+  },
+  selectionRow: {
+    height: 64,
+    radius: 14,
+    iconSize: 36,
+    symbolSize: 15,
+    contentGap: 12,
+    horizontalPadding: 13,
+  },
 } as const;

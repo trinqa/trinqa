@@ -11,13 +11,66 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
+import { AddMoneySourceSheet } from '@/features/add-money/AddMoneySourceSheet';
 import { colors, componentTokens, homeTokens } from '@/theme';
 
-const shortcuts: Array<{ id: string; label: string; symbol: SFSymbol }> = [
-  { id: 'add-money', label: 'Add Money', symbol: 'plus.circle' },
-  { id: 'pay', label: 'Pay', symbol: 'arrow.up.circle' },
-  { id: 'more', label: 'More', symbol: 'ellipsis.circle' },
-];
+interface ShortcutButtonProps {
+  label: string;
+  symbol: SFSymbol;
+  onPress?: () => void;
+  isSheetAnchor?: boolean;
+}
+
+function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: ShortcutButtonProps) {
+  const cardModifiers = [
+    frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height }),
+    background(colors.surface),
+    clipShape('roundedRectangle', componentTokens.surface.controlRadius),
+    strokeBorder({
+      content: colors.borderStrong,
+      style: { lineWidth: componentTokens.surface.borderWidth },
+      shape: 'roundedRectangle' as const,
+      cornerRadius: componentTokens.surface.controlRadius,
+    }),
+    shadow({ radius: 4, y: 1, color: componentTokens.surface.shadowColor }),
+  ];
+
+  const content = (
+    <VStack
+      alignment="center"
+      spacing={8}
+      modifiers={
+        isSheetAnchor
+          ? cardModifiers
+          : [frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height })]
+      }
+    >
+      <Image systemName={symbol} size={homeTokens.shortcuts.iconSize} color={colors.textPrimary} />
+      <Text
+        modifiers={[
+          font({ size: 12, weight: 'medium' }),
+          foregroundStyle(colors.textPrimary),
+        ]}
+      >
+        {label}
+      </Text>
+    </VStack>
+  );
+
+  if (isSheetAnchor) return content;
+
+  return (
+    <Button
+      onPress={onPress}
+      modifiers={[
+        buttonStyle('plain'),
+        ...cardModifiers,
+      ]}
+    >
+      {content}
+    </Button>
+  );
+}
 
 export function ShortcutRow() {
   return (
@@ -25,43 +78,11 @@ export function ShortcutRow() {
       spacing={homeTokens.shortcuts.gap}
       modifiers={[frame({ maxWidth: Infinity, minHeight: homeTokens.shortcuts.height })]}
     >
-      {shortcuts.map((item) => (
-        <Button
-          key={item.id}
-          onPress={() => undefined}
-          modifiers={[
-            buttonStyle('plain'),
-            frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height }),
-            background(colors.surface),
-            clipShape('roundedRectangle', componentTokens.surface.controlRadius),
-            strokeBorder({
-              content: colors.borderStrong,
-              style: { lineWidth: componentTokens.surface.borderWidth },
-              shape: 'roundedRectangle',
-              cornerRadius: componentTokens.surface.controlRadius,
-            }),
-            shadow({ radius: 4, y: 1, color: '#00000008' }),
-          ]}
-        >
-          <VStack
-            alignment="center"
-            spacing={8}
-            modifiers={[
-              frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height }),
-            ]}
-          >
-            <Image systemName={item.symbol} size={homeTokens.shortcuts.iconSize} color={colors.textPrimary} />
-            <Text
-              modifiers={[
-                font({ size: 12, weight: 'medium' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
-            >
-              {item.label}
-            </Text>
-          </VStack>
-        </Button>
-      ))}
+      <AddMoneySourceSheet
+        anchor={<ShortcutButton label="Add Money" symbol="plus.circle" isSheetAnchor />}
+      />
+      <ShortcutButton label="Pay" symbol="arrow.up.circle" onPress={() => undefined} />
+      <ShortcutButton label="More" symbol="ellipsis.circle" onPress={() => undefined} />
     </HStack>
   );
 }

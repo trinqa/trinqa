@@ -26,6 +26,7 @@ interface ScreenHeaderProps {
   showBack?: boolean;
   title?: string;
   showMenu?: boolean;
+  onBackPress?: () => void;
 }
 
 function HeaderIconButton({
@@ -85,6 +86,7 @@ export function ScreenHeader({
   showBack = false,
   title,
   showMenu = false,
+  onBackPress,
 }: ScreenHeaderProps) {
   return (
     <HStack
@@ -95,7 +97,7 @@ export function ScreenHeader({
       ]}
     >
       {showBack ? (
-        <HeaderIconButton label="Back" symbol="arrow.left" />
+        <HeaderIconButton label="Back" symbol="arrow.left" onPress={onBackPress} />
       ) : (
         <ProfileAvatar />
       )}

@@ -46,6 +46,27 @@ export interface ChartPoint {
   displayValue?: string;
 }
 
+export type AddMoneySourceId = 'bank' | 'card' | 'wallet';
+
+export interface AddMoneySourceOption {
+  id: AddMoneySourceId;
+  title: string;
+  subtitle: string;
+  symbol: import('sf-symbols-typescript').SFSymbol;
+}
+
+export interface AddMoneyQuote {
+  amount: number;
+  currency: 'TRY';
+  receivedAmount: number;
+  receivedCurrency: 'USDC';
+  exchangeRate: number;
+  fee: number;
+  estimatedTime: string;
+}
+
+export type AddMoneyStep = 'amount' | 'review' | 'processing' | 'success';
+
 export interface ActivityListItem {
   id: string;
   title: string;
