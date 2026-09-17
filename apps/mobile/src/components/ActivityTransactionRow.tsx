@@ -13,7 +13,6 @@ export function ActivityTransactionRow({ item }: ActivityTransactionRowProps) {
 
   return (
     <LayeredTransactionRow
-      density="compact"
       title={item.title}
       subtitle={item.subtitle}
       amount={item.amount}
@@ -29,6 +28,7 @@ export function ActivityTransactionRow({ item }: ActivityTransactionRowProps) {
       iconAccentColor={isAmazon ? colors.merchantLogoAccent : undefined}
       footerLeadingText="Completed"
       footerTrailingText="Details"
+      onFooterPress={() => undefined}
       footerTrailingColor={colors.action}
     />
   );

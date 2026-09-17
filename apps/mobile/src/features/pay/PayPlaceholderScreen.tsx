@@ -1,6 +1,5 @@
 import {
   Button,
-  Divider,
   Group,
   HStack,
   Image,
@@ -12,13 +11,9 @@ import {
 import {
   background,
   buttonStyle,
-  allowsTightening,
   font,
   foregroundStyle,
   frame,
-  lineLimit,
-  minimumScaleFactor,
-  opacity,
   padding,
   shapes,
   strokeBorder,
@@ -26,6 +21,7 @@ import {
 
 import { BalanceSummary } from '@/components/BalanceSummary';
 import { CardLimitGauge } from '@/components/CardLimitGauge';
+import { DateSectionDivider } from '@/components/DateSectionDivider';
 import { InsetLayer } from '@/components/InsetLayer';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SurfacePanel } from '@/components/SurfacePanel';
@@ -39,6 +35,8 @@ const GAUGE_HEIGHT = 28;
 
 export function WalletScreen() {
   const wallet = screenTokens.wallet;
+  const transactionContentWidth =
+    wallet.contentWidth - wallet.detailsHorizontalPadding * 2;
   const today = walletTransactions.filter((item) => item.group === 'today');
   const yesterday = walletTransactions.filter((item) => item.group === 'yesterday');
 
@@ -177,15 +175,31 @@ export function WalletScreen() {
               Transaction
             </Text>
 
-            <WalletDateGroup label="Today" modifiers={[padding({ top: wallet.transactionTitleToGroup })]} />
-            <VStack alignment="leading" spacing={wallet.transactionRowGap} modifiers={[padding({ top: 10 })]}>
+            <DateSectionDivider
+              contentWidth={transactionContentWidth}
+              label="Today"
+              modifiers={[padding({ top: wallet.transactionTitleToGroup })]}
+            />
+            <VStack
+              alignment="leading"
+              spacing={wallet.transactionRowGap}
+              modifiers={[padding({ top: componentTokens.dateSectionDivider.toRowsGap })]}
+            >
               {today.map((item) => (
                 <WalletTransactionRow key={item.id} item={item} />
               ))}
             </VStack>
 
-            <WalletDateGroup label="Yesterday" modifiers={[padding({ top: 12 })]} />
-            <VStack alignment="leading" spacing={wallet.transactionRowGap} modifiers={[padding({ top: 10 })]}>
+            <DateSectionDivider
+              contentWidth={transactionContentWidth}
+              label="Yesterday"
+              modifiers={[padding({ top: 12 })]}
+            />
+            <VStack
+              alignment="leading"
+              spacing={wallet.transactionRowGap}
+              modifiers={[padding({ top: componentTokens.dateSectionDivider.toRowsGap })]}
+            >
               {yesterday.map((item) => (
                 <WalletTransactionRow key={item.id} item={item} />
               ))}
@@ -194,37 +208,5 @@ export function WalletScreen() {
         </SurfacePanel>
       </VStack>
     </SwiftUIScreenShell>
-  );
-}
-
-function WalletDateGroup({
-  label,
-  modifiers = [],
-}: {
-  label: string;
-  modifiers?: import('@expo/ui/swift-ui/modifiers').ViewModifier[];
-}) {
-  return (
-    <HStack alignment="center" spacing={0} modifiers={[frame({ maxWidth: Infinity }), ...modifiers]}>
-      <Text
-        modifiers={[
-          frame({ width: 60, alignment: 'leading' }),
-          lineLimit(1),
-          allowsTightening(true),
-          minimumScaleFactor(0.86),
-          font({ size: 12, weight: 'medium' }),
-          foregroundStyle(colors.textSecondary),
-        ]}
-      >
-        {label}
-      </Text>
-      <Divider
-        modifiers={[
-          frame({ width: 274, height: 1 }),
-          background(colors.action),
-          opacity(0.65),
-        ]}
-      />
-    </HStack>
   );
 }

@@ -39,9 +39,9 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
     `C ${frontInset + frontWidth * 0.25} ${pocketTop} ${frontInset + frontWidth * 0.25} ${pocketDip} ${centerX} ${pocketDip}`,
     `C ${frontInset + frontWidth * 0.75} ${pocketDip} ${frontInset + frontWidth * 0.75} ${pocketTop} ${width - frontInset} ${pocketTop}`,
     `L ${width - frontInset} ${frontBottom - pocketBottomR}`,
-    `Q ${width - frontInset} ${frontBottom} ${width - frontInset - pocketBottomR} ${frontBottom}`,
+    `A ${pocketBottomR} ${pocketBottomR} 0 0 1 ${width - frontInset - pocketBottomR} ${frontBottom}`,
     `L ${frontInset + pocketBottomR} ${frontBottom}`,
-    `Q ${frontInset} ${frontBottom} ${frontInset} ${frontBottom - pocketBottomR}`,
+    `A ${pocketBottomR} ${pocketBottomR} 0 0 1 ${frontInset} ${frontBottom - pocketBottomR}`,
     'Z',
   ].join(' ');
 
@@ -56,9 +56,9 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
     `C ${stitchInset + stitchWidth * 0.25} ${stitchCurveY} ${stitchInset + stitchWidth * 0.25} ${stitchDipY} ${centerX} ${stitchDipY}`,
     `C ${stitchInset + stitchWidth * 0.75} ${stitchDipY} ${stitchInset + stitchWidth * 0.75} ${stitchCurveY} ${width - stitchInset} ${stitchCurveY}`,
     `L ${width - stitchInset} ${stitchBottom - stitchRadius}`,
-    `Q ${width - stitchInset} ${stitchBottom} ${width - stitchInset - stitchRadius} ${stitchBottom}`,
+    `A ${stitchRadius} ${stitchRadius} 0 0 1 ${width - stitchInset - stitchRadius} ${stitchBottom}`,
     `L ${stitchInset + stitchRadius} ${stitchBottom}`,
-    `Q ${stitchInset} ${stitchBottom} ${stitchInset} ${stitchBottom - stitchRadius}`,
+    `A ${stitchRadius} ${stitchRadius} 0 0 1 ${stitchInset} ${stitchBottom - stitchRadius}`,
     `L ${stitchInset} ${stitchCurveY}`,
   ].join(' ');
 

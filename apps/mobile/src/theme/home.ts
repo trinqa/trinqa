@@ -1,5 +1,8 @@
-const walletFrontInset = 5;
+const walletFrontPadding = 5;
 const walletFrontRadius = 18;
+const walletStitchInset = 10;
+const walletOuterRadius = walletFrontRadius + walletFrontPadding;
+const walletStitchRadius = walletFrontRadius - walletStitchInset;
 
 /** Home-screen geometry shared by the reference-matched components. */
 export const homeTokens = {
@@ -11,13 +14,13 @@ export const homeTokens = {
     shortcutRecentGap: 20,
   },
   wallet: {
-    frontInset: walletFrontInset,
-    frontBottomInset: walletFrontInset,
+    frontInset: walletFrontPadding,
+    frontBottomInset: walletFrontPadding,
     frontRadius: walletFrontRadius,
-    outerRadius: walletFrontRadius + walletFrontInset,
-    stitchInset: 10,
+    outerRadius: walletOuterRadius,
+    stitchInset: walletStitchInset,
     stitchCurveInset: 9,
-    stitchRadius: 11,
+    stitchRadius: walletStitchRadius,
     stitchWidth: 1.15,
     stitchDash: 2.4,
     stitchGap: 4.1,

@@ -28,7 +28,6 @@ interface LayeredTransactionRowProps {
   footerTrailingText: string;
   footerSymbol?: SFSymbol;
   onFooterPress?: () => void;
-  density?: 'standard' | 'compact';
   iconBackgroundColor?: string;
   iconColor?: string;
   iconLetterColor?: string;
@@ -49,7 +48,6 @@ export function LayeredTransactionRow({
   footerTrailingText,
   footerSymbol,
   onFooterPress,
-  density = 'standard',
   iconBackgroundColor = colors.surfaceSecondary,
   iconColor = colors.textSecondary,
   iconLetterColor = colors.textSecondary,
@@ -58,12 +56,8 @@ export function LayeredTransactionRow({
   footerTrailingColor,
 }: LayeredTransactionRowProps) {
   const initial = iconLetter ?? title.charAt(0).toUpperCase();
-  const baseRow = componentTokens.transactionRow;
-  const row = density === 'compact' ? { ...baseRow, ...baseRow.compact } : baseRow;
+  const row = componentTokens.transactionRow;
   const surface = componentTokens.surface;
-  const titleSize = density === 'compact' ? baseRow.compact.titleSize : typography.transactionTitle;
-  const metaSize = density === 'compact' ? baseRow.compact.metaSize : typography.transactionMeta;
-  const actionSize = density === 'compact' ? baseRow.compact.actionSize : typography.transactionAction;
 
   return (
     <VStack
@@ -126,9 +120,9 @@ export function LayeredTransactionRow({
               {iconAccentText ? (
                 <Text
                   modifiers={[
-                    font({ size: baseRow.brandAccentSize, weight: 'bold' }),
+                    font({ size: row.brandAccentSize, weight: 'bold' }),
                     foregroundStyle(iconAccentColor),
-                    offset({ y: baseRow.brandAccentOffsetY }),
+                    offset({ y: row.brandAccentOffsetY }),
                   ]}
                 >
                   {iconAccentText}
@@ -145,7 +139,7 @@ export function LayeredTransactionRow({
         >
           <Text
             modifiers={[
-              font({ size: titleSize, weight: 'semibold' }),
+              font({ size: typography.transactionTitle, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
@@ -153,7 +147,7 @@ export function LayeredTransactionRow({
           </Text>
           <Text
             modifiers={[
-              font({ size: metaSize }),
+              font({ size: typography.transactionMeta }),
               foregroundStyle(colors.textSecondary),
             ]}
           >
@@ -168,7 +162,7 @@ export function LayeredTransactionRow({
         >
           <Text
             modifiers={[
-              font({ size: titleSize, weight: 'semibold' }),
+              font({ size: typography.transactionTitle, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
@@ -177,7 +171,7 @@ export function LayeredTransactionRow({
           {meta ? (
             <Text
               modifiers={[
-                font({ size: metaSize }),
+                font({ size: typography.transactionMeta }),
                 foregroundStyle(colors.textSecondary),
               ]}
             >
@@ -194,7 +188,7 @@ export function LayeredTransactionRow({
         onTrailingPress={onFooterPress}
         height={row.footerHeight}
         horizontalPadding={row.horizontalPadding}
-        textSize={actionSize}
+        textSize={typography.transactionAction}
         trailingColor={footerTrailingColor}
       />
     </VStack>

@@ -16,6 +16,17 @@ export const componentTokens = {
     symbolSize: 17,
     gap: 8,
   },
+  dateSectionDivider: {
+    labelToLineGap: 8,
+    labelWidths: {
+      today: 35,
+      yesterday: 58,
+      dated: 78,
+    },
+    lineHeight: 1,
+    lineOpacity: 0.7,
+    toRowsGap: 8,
+  },
   layer: {
     inset: insetLayerPadding,
     gap: 4,
@@ -37,14 +48,6 @@ export const componentTokens = {
     rowGap: 10,
     brandAccentSize: 10,
     brandAccentOffsetY: 10,
-    compact: {
-      mainHeight: 50,
-      footerHeight: 25,
-      verticalPadding: 6,
-      titleSize: 14,
-      metaSize: 12,
-      actionSize: 11,
-    },
   },
   metricCard: {
     height: 60,

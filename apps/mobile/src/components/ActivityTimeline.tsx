@@ -1,19 +1,13 @@
-import { Divider, Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
+import { Group, VStack } from '@expo/ui/swift-ui';
 import {
-  background,
-  allowsTightening,
-  font,
-  foregroundStyle,
   frame,
-  lineLimit,
-  minimumScaleFactor,
-  opacity,
   padding,
 } from '@expo/ui/swift-ui/modifiers';
 
 import { ActivityTransactionRow } from '@/components/ActivityTransactionRow';
+import { DateSectionDivider } from '@/components/DateSectionDivider';
 import { SurfacePanel } from '@/components/SurfacePanel';
-import { colors, screenTokens } from '@/theme';
+import { componentTokens, homeTokens, screenTokens } from '@/theme';
 import type { ActivityListItem } from '@/types';
 
 interface ActivitySection {
@@ -26,62 +20,23 @@ interface ActivityTimelineProps {
   sections: ActivitySection[];
 }
 
-function DateSectionHeader({ title }: { title: string }) {
-  const activity = screenTokens.activity;
-  const contentWidth =
-    activity.panelWidth - activity.panelPaddingHorizontal * 2;
-  const labelWidth =
-    title === 'Today'
-      ? activity.dateLabelWidths.today
-      : title === 'Yesterday'
-        ? activity.dateLabelWidths.yesterday
-        : activity.dateLabelWidths.dated;
-  const lineWidth = contentWidth - labelWidth - activity.sectionHeaderGap;
-
-  return (
-    <HStack
-      alignment="center"
-      spacing={activity.sectionHeaderGap}
-      modifiers={[frame({ maxWidth: Infinity })]}
-    >
-      <Text
-        modifiers={[
-          lineLimit(1),
-          allowsTightening(true),
-          minimumScaleFactor(0.78),
-          frame({ width: labelWidth, alignment: 'leading' }),
-          font({ size: activity.sectionHeaderFontSize, weight: 'medium' }),
-          foregroundStyle(colors.textSecondary),
-        ]}
-      >
-        {title}
-      </Text>
-      <Divider
-        modifiers={[
-          frame({ width: lineWidth, height: 1 }),
-          background(colors.action),
-          opacity(activity.sectionDividerOpacity),
-        ]}
-      />
-    </HStack>
-  );
-}
-
 /** Chronological grouped Activity list using the shared Home transaction card. */
 export function ActivityTimeline({ sections }: ActivityTimelineProps) {
   const activity = screenTokens.activity;
+  const timelineContentWidth =
+    homeTokens.recent.width - homeTokens.recent.horizontalPadding * 2;
 
   return (
     <Group modifiers={[frame({ width: activity.contentWidth, alignment: 'center' })]}>
-      <SurfacePanel width={activity.panelWidth}>
+      <SurfacePanel width={homeTokens.recent.width}>
         <VStack
           alignment="leading"
           spacing={0}
           modifiers={[
             padding({
-              top: activity.panelPaddingTop,
-              bottom: activity.panelPaddingBottom,
-              horizontal: activity.panelPaddingHorizontal,
+              top: homeTokens.recent.topPadding,
+              bottom: homeTokens.recent.bottomPadding,
+              horizontal: homeTokens.recent.horizontalPadding,
             }),
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
@@ -90,11 +45,14 @@ export function ActivityTimeline({ sections }: ActivityTimelineProps) {
             <VStack
               key={section.id}
               alignment="leading"
-              spacing={activity.sectionHeaderToRows}
+              spacing={componentTokens.dateSectionDivider.toRowsGap}
               modifiers={sectionIndex === 0 ? [] : [padding({ top: activity.sectionGap })]}
             >
-              <DateSectionHeader title={section.title} />
-              <VStack alignment="leading" spacing={activity.rowGap}>
+              <DateSectionDivider
+                contentWidth={timelineContentWidth}
+                label={section.title}
+              />
+              <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
                 {section.items.map((item) => (
                   <ActivityTransactionRow key={item.id} item={item} />
                 ))}
