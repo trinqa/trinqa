@@ -22,7 +22,7 @@ const AREA_FILL = '#08AFD31F';
 const OUTER_WIDTH = 350;
 const OUTER_PLOT_HEIGHT = 181;
 const LABEL_TOP_PADDING = 8;
-const SELECTED_INDEX = 5;
+const SELECTED_INDEX = 6;
 
 /** Tunable visual transform — iterate from screenshots. */
 const SCALE_X = 1.13;
@@ -167,7 +167,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
               foregroundStyle(colors.textPrimary),
             ]}
           >
-            {formatCurrency(selected.value)}
+            {selected.displayValue ?? formatCurrency(selected.value)}
           </Text>
           <Text
             modifiers={[

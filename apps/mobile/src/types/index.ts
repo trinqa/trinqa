@@ -43,6 +43,7 @@ export interface ActivityMetric {
 export interface ChartPoint {
   label: string;
   value: number;
+  displayValue?: string;
 }
 
 export interface ActivityListItem {
@@ -59,7 +60,7 @@ export interface ActivityListItem {
 
 export type ActivitySegment = 'all' | 'payments' | 'earnings';
 
-export type InstallmentSegment = 'four' | 'six';
+export type EarnSegment = 'earnings' | 'strategies';
 
 export interface WalletTransactionItem {
   id: string;
@@ -72,13 +73,16 @@ export interface WalletTransactionItem {
   group: 'today' | 'yesterday';
 }
 
-export interface InstallmentItem {
+export interface EarnListItem {
   id: string;
   title: string;
-  merchant: string;
+  subtitle: string;
   amount: string;
-  dueDate: string;
-  installment: string;
+  meta: string;
+  footerLeadingText: string;
+  footerTrailingText: string;
   symbol: import('sf-symbols-typescript').SFSymbol;
-  plan: InstallmentSegment;
+  iconStyle: 'earning' | 'strategy';
+  segment: EarnSegment;
+  action?: 'manage-strategy' | 'details';
 }

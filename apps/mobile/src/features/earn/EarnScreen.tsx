@@ -4,31 +4,31 @@ import { Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
 import { font, foregroundStyle, frame, padding } from '@expo/ui/swift-ui/modifiers';
 
 import { ActivityChart } from '@/components/ActivityChart';
-import { InstallmentPanel } from '@/components/InstallmentPanel';
+import { EarnDetailsPanel } from '@/components/EarnDetailsPanel';
 import { MetricCard } from '@/components/MetricCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import {
-  installmentItems,
+  earnListItems,
   earnChartPoints,
   earnHeadline,
   earnMetrics,
 } from '@/data/mocks/earnAnalytics';
 import { colors, screenTokens } from '@/theme';
 import { captionTextModifiers } from '@/theme/swiftUi';
-import type { InstallmentSegment } from '@/types';
+import type { EarnSegment } from '@/types';
 
 const METRIC_WIDTHS = [112, 112, 112] as const;
 
 export function EarnScreen() {
-  const [segment, setSegment] = useState<InstallmentSegment>('four');
-  const items = installmentItems.filter((item) => item.plan === segment);
+  const [segment, setSegment] = useState<EarnSegment>('earnings');
+  const items = earnListItems.filter((item) => item.segment === segment);
   const earn = screenTokens.earn;
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
       <Group modifiers={[padding({ horizontal: 8 })]}>
-        <ScreenHeader showBack title="Analytics" showMenu />
+        <ScreenHeader showBack title="Earn" showMenu />
       </Group>
 
       <VStack
@@ -51,10 +51,10 @@ export function EarnScreen() {
         </Text>
         <HStack alignment="firstTextBaseline" spacing={0}>
           <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>
-            $
+            {earnHeadline.prefix}
           </Text>
           <Text modifiers={[font({ size: 25, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
-            {earnHeadline.value.replace(/^\$/, '')}
+            {earnHeadline.value}
           </Text>
         </HStack>
       </VStack>
@@ -79,6 +79,7 @@ export function EarnScreen() {
           <MetricCard
             key={metric.id}
             label={metric.label}
+            labelFontSize={metric.id === 'balance' ? 12 : undefined}
             value={metric.value}
             width={METRIC_WIDTHS[index] ?? 117}
           />
@@ -86,7 +87,7 @@ export function EarnScreen() {
       </HStack>
 
       <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
-        <InstallmentPanel segment={segment} onChange={setSegment} items={items} />
+        <EarnDetailsPanel segment={segment} onChange={setSegment} items={items} />
       </VStack>
     </SwiftUIScreenShell>
   );

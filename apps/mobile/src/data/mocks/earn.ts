@@ -7,7 +7,7 @@ export const earnSummary: EarnSummary = {
   earningBalance: '8,260.18',
   strategy: 'Balanced',
   estimatedApy: '6.2%',
-  risk: 'Medium',
+  risk: 'Balanced',
 };
 
 export const earnActivity: EarnActivityItem[] = [

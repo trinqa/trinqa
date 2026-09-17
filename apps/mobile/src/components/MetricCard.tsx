@@ -15,11 +15,12 @@ import { colors, componentTokens, typography } from '@/theme';
 
 interface MetricCardProps {
   label: string;
+  labelFontSize?: number;
   value: string;
   width: number;
 }
 
-export function MetricCard({ label, value, width }: MetricCardProps) {
+export function MetricCard({ label, labelFontSize, value, width }: MetricCardProps) {
   const metric = componentTokens.metricCard;
   const surface = componentTokens.surface;
 
@@ -43,7 +44,7 @@ export function MetricCard({ label, value, width }: MetricCardProps) {
     >
       <Text
         modifiers={[
-          font({ size: typography.transactionMeta, weight: 'regular' }),
+          font({ size: labelFontSize ?? typography.transactionMeta, weight: 'regular' }),
           foregroundStyle(colors.textSecondary),
         ]}
       >
