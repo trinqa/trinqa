@@ -10,20 +10,20 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import {
   installmentItems,
-  progressChartPoints,
-  progressHeadline,
-  progressMetrics,
-} from '@/data/mocks/progress';
+  earnChartPoints,
+  earnHeadline,
+  earnMetrics,
+} from '@/data/mocks/earnAnalytics';
 import { colors, screenTokens } from '@/theme';
 import { captionTextModifiers } from '@/theme/swiftUi';
 import type { InstallmentSegment } from '@/types';
 
 const METRIC_WIDTHS = [112, 112, 112] as const;
 
-export function ProgressScreen() {
+export function EarnScreen() {
   const [segment, setSegment] = useState<InstallmentSegment>('four');
   const items = installmentItems.filter((item) => item.plan === segment);
-  const progress = screenTokens.progress;
+  const earn = screenTokens.earn;
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
@@ -35,9 +35,9 @@ export function ProgressScreen() {
         alignment="leading"
         spacing={4}
         modifiers={[
-          padding({ top: progress.headlineTopGap }),
-          padding({ leading: progress.contentHorizontalOffset }),
-          frame({ width: progress.contentWidth, alignment: 'leading' }),
+          padding({ top: earn.headlineTopGap }),
+          padding({ leading: earn.contentHorizontalOffset }),
+          frame({ width: earn.contentWidth, alignment: 'leading' }),
         ]}
       >
         <Text
@@ -47,35 +47,35 @@ export function ProgressScreen() {
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
-          {progressHeadline.label}
+          {earnHeadline.label}
         </Text>
         <HStack alignment="firstTextBaseline" spacing={0}>
           <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>
             $
           </Text>
           <Text modifiers={[font({ size: 25, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
-            {progressHeadline.value.replace(/^\$/, '')}
+            {earnHeadline.value.replace(/^\$/, '')}
           </Text>
         </HStack>
       </VStack>
 
       <VStack
         modifiers={[
-          padding({ top: progress.chartTopGap, leading: progress.contentHorizontalOffset }),
-          frame({ width: progress.contentWidth }),
+          padding({ top: earn.chartTopGap, leading: earn.contentHorizontalOffset }),
+          frame({ width: earn.contentWidth }),
         ]}
       >
-        <ActivityChart points={progressChartPoints} />
+        <ActivityChart points={earnChartPoints} />
       </VStack>
 
       <HStack
-        spacing={progress.metricGap}
+        spacing={earn.metricGap}
         modifiers={[
-          padding({ top: progress.metricTopGap, leading: progress.contentHorizontalOffset }),
-          frame({ width: progress.contentWidth }),
+          padding({ top: earn.metricTopGap, leading: earn.contentHorizontalOffset }),
+          frame({ width: earn.contentWidth }),
         ]}
       >
-        {progressMetrics.map((metric, index) => (
+        {earnMetrics.map((metric, index) => (
           <MetricCard
             key={metric.id}
             label={metric.label}
@@ -85,7 +85,7 @@ export function ProgressScreen() {
         ))}
       </HStack>
 
-      <VStack modifiers={[padding({ top: progress.lowerPanelTopGap }), frame({ width: progress.contentWidth })]}>
+      <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
         <InstallmentPanel segment={segment} onChange={setSegment} items={items} />
       </VStack>
     </SwiftUIScreenShell>

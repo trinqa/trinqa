@@ -5,17 +5,15 @@ import {
   foregroundStyle,
   frame,
   layoutPriority,
-  offset,
   shapes,
 } from '@expo/ui/swift-ui/modifiers';
 
 import { colors, screenTokens, typography } from '@/theme';
 import type { WalletTransactionItem } from '@/types';
 
-const BRAND_COLORS = {
-  amazon: '#050505',
-  temu: '#FF6A00',
-  apple: '#050505',
+const ICON_BACKGROUNDS = {
+  neutral: '#050505',
+  accent: '#FF6A00',
 } as const;
 
 export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) {
@@ -34,41 +32,10 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
       <ZStack
         modifiers={[
           frame({ width: 42, height: 42 }),
-          background(BRAND_COLORS[item.brand], shapes.circle()),
+          background(ICON_BACKGROUNDS[item.iconStyle], shapes.circle()),
         ]}
       >
-        {item.brand === 'apple' ? (
-          <Image systemName="apple.logo" size={23} color={colors.surface} />
-        ) : item.brand === 'amazon' ? (
-          <ZStack>
-            <Text
-              modifiers={[
-                font({ size: 27, weight: 'bold' }),
-                foregroundStyle(colors.surface),
-              ]}
-            >
-              a
-            </Text>
-            <Text
-              modifiers={[
-                font({ size: 13, weight: 'bold' }),
-                foregroundStyle('#FF9900'),
-                offset({ y: 12 }),
-              ]}
-            >
-              ⌣
-            </Text>
-          </ZStack>
-        ) : (
-          <Text
-            modifiers={[
-              font({ size: 10, weight: 'bold' }),
-              foregroundStyle(colors.surface),
-            ]}
-          >
-            TEMU
-          </Text>
-        )}
+        <Image systemName={item.symbol} size={18} color={colors.surface} />
       </ZStack>
 
       <VStack alignment="leading" spacing={2} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
@@ -86,7 +53,7 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
             foregroundStyle(colors.textSecondary),
           ]}
         >
-          {item.date}
+          {item.detail}
         </Text>
       </VStack>
 

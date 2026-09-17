@@ -1,17 +1,17 @@
 import type { ChartPoint, InstallmentItem } from '@/types';
 
-export const progressHeadline = {
+export const earnHeadline = {
   label: 'Total Spending',
   value: '$248,967.83',
 } as const;
 
-export const progressMetrics = [
+export const earnMetrics = [
   { id: 'progress', label: 'On Progress', value: '$61,523.00' },
   { id: 'overdue', label: 'Overdue', value: '$4,825.43' },
   { id: 'total', label: 'Total', value: '$89,271.92' },
 ] as const;
 
-export const progressChartPoints: ChartPoint[] = [
+export const earnChartPoints: ChartPoint[] = [
   { label: 'Nov 1, 2025', value: 520 },
   { label: 'Nov 6, 2025', value: 1620 },
   { label: 'Nov 11, 2025', value: 1620 },

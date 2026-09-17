@@ -12,9 +12,9 @@ interface InstallmentPickerProps {
   onChange: (segment: InstallmentSegment) => void;
 }
 
-/** Native SwiftUI segmented picker used by the Progress installment panel. */
+/** Native SwiftUI segmented picker used by the Earn installment panel. */
 export function InstallmentPicker({ segment, onChange }: InstallmentPickerProps) {
-  const width = screenTokens.progress.lowerPanelWidth - screenTokens.progress.lowerPanelPadding * 2;
+  const width = screenTokens.earn.lowerPanelWidth - screenTokens.earn.lowerPanelPadding * 2;
 
   return (
     <NativeSegmentedControl
@@ -23,7 +23,7 @@ export function InstallmentPicker({ segment, onChange }: InstallmentPickerProps)
       onChange={onChange}
       options={INSTALLMENT_OPTIONS}
       width={width}
-      height={screenTokens.progress.pickerHeight}
+      height={screenTokens.earn.pickerHeight}
     />
   );
 }

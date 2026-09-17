@@ -18,7 +18,7 @@ export const screenTokens = {
     transactionRowHeight: 56,
     transactionRowGap: 8,
   },
-  progress: {
+  earn: {
     contentWidth: 350,
     contentHorizontalOffset: 8,
     headlineTopGap: 22,

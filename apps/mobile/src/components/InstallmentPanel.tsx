@@ -14,18 +14,18 @@ interface InstallmentPanelProps {
 }
 
 export function InstallmentPanel({ segment, onChange, items }: InstallmentPanelProps) {
-  const progress = screenTokens.progress;
+  const earn = screenTokens.earn;
 
   return (
-    <SurfacePanel width={progress.lowerPanelWidth}>
+    <SurfacePanel width={earn.lowerPanelWidth}>
       <VStack
         alignment="leading"
-        spacing={progress.pickerToRowsGap}
+        spacing={earn.pickerToRowsGap}
         modifiers={[
           padding({
             top: 14,
             bottom: 24,
-            horizontal: progress.lowerPanelPadding,
+            horizontal: earn.lowerPanelPadding,
           }),
         ]}
       >

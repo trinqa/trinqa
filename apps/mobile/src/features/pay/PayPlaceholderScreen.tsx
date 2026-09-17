@@ -50,10 +50,10 @@ export function WalletScreen() {
         <BalanceSummary
           totalLabel="Total Balance"
           totalValue={walletSummary.totalBalance}
-          leftLabel="Payment Next"
-          leftValue={walletSummary.paymentNext}
-          rightLabel="Payment Completed"
-          rightValue={walletSummary.paymentCompleted}
+          leftLabel="Available"
+          leftValue={walletSummary.available}
+          rightLabel="Earning"
+          rightValue={walletSummary.earning}
         />
       </VStack>
 
@@ -77,7 +77,7 @@ export function WalletScreen() {
                 foregroundStyle(colors.textPrimary),
               ]}
             >
-              Card Limits
+              Allocation
             </Text>
 
             <Group modifiers={[padding({ top: wallet.titleToLimitCard })]}>
@@ -105,7 +105,7 @@ export function WalletScreen() {
                       <CardLimitGauge
                         width={GAUGE_WIDTH}
                         height={GAUGE_HEIGHT}
-                        progress={walletSummary.limitProgress}
+                        progress={walletSummary.allocationProgress}
                       />
                     </RNHostView>
                   </Group>
@@ -117,7 +117,7 @@ export function WalletScreen() {
                         foregroundStyle(colors.textSecondary),
                       ]}
                     >
-                      Today Limits
+                      Earning
                     </Text>
                     <Spacer />
                     <Text
@@ -126,7 +126,7 @@ export function WalletScreen() {
                         foregroundStyle(colors.textPrimary),
                       ]}
                     >
-                      {walletSummary.todayLimit}
+                      {walletSummary.earningAllocation}
                     </Text>
                   </HStack>
                 </VStack>
@@ -156,7 +156,7 @@ export function WalletScreen() {
                         foregroundStyle(colors.textPrimary),
                       ]}
                     >
-                      Set card limits
+                      Manage allocation
                     </Text>
                     <Spacer />
                     <Image systemName="arrow.right" size={14} color={colors.textPrimary} />

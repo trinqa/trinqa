@@ -64,10 +64,11 @@ export type InstallmentSegment = 'four' | 'six';
 export interface WalletTransactionItem {
   id: string;
   title: string;
-  date: string;
+  detail: string;
   amount: string;
   time: string;
-  brand: 'amazon' | 'temu' | 'apple';
+  symbol: import('sf-symbols-typescript').SFSymbol;
+  iconStyle: 'neutral' | 'accent';
   group: 'today' | 'yesterday';
 }
 
