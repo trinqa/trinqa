@@ -23,7 +23,7 @@ export const componentTokens = {
     outerRadius: cardRadius + insetLayerPadding,
     seamShadowRadius: 2,
     seamShadowY: 1.5,
-    seamShadowColor: '#00000012',
+    seamShadowColor: '#00000009',
   },
   transactionRow: {
     mainHeight: 67,
