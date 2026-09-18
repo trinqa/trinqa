@@ -1,5 +1,7 @@
 # Trinqa Backend — Implementation Plan (Testnet)
 
+**P2 note:** Activity feed remains an OperationStore stub until ledger indexing (`activity.ts`); M4 “DONE (code)” does not imply indexed history proof in `TESTNET_EVIDENCE.md`. Stale `paltalabs/defindex-sdk` links in non-backend audit docs deferred — canonical is `defindex-io/defindex-sdk`.
+
 **Branch:** `backend/integration`
 
 | # | Scope | Status |
