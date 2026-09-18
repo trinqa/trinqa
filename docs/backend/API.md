@@ -46,9 +46,10 @@ Base URL: `http://localhost:8787` (default)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/payments/quote` | Route quote (`stellar_transfer`, `fiat_payout`, …); includes `candidateCount`, `routeScore` |
-| POST | `/api/v1/payments/withdraw/quote` | TRY off-ramp quote shortcut (USDC → TRY via anchor) |
-| POST | `/api/v1/payments/build` | Build payment / anchor session |
+| POST | `/api/v1/payments/quote` | Route quote; `sourceAssetCode` USDC only; optional `anchorSessionId` for TRY; returns `funding` breakdown |
+| POST | `/api/v1/payments/withdraw/quote` | USDC→TRY via live SEP-38 (`anchorSessionId` required) |
+| POST | `/api/v1/payments/build` | Build payment; `approveEarnUnwind: true` when quote requires earn unwind |
+| POST | `/api/v1/payments/execute-step` | Continue multi-step pay (`yield_withdraw` → `stellar_payment` / `soroswap_swap`) |
 | POST | `/api/v1/payments/submit` | Submit signed classic tx |
 
 ## Anchor (TR mock, SEP-6)
@@ -60,7 +61,8 @@ Base URL: `http://localhost:8787` (default)
 | POST | `/api/v1/anchor/auth/complete` | `{ transaction }` → opaque `{ sessionId, expiresAt }` (JWT server-side only) |
 | POST | `/api/v1/anchor/quotes` | SEP-38 quote (`sessionId` body) |
 | POST | `/api/v1/anchor/deposits` | SEP-6 interactive deposit (`sessionId`) |
-| POST | `/api/v1/anchor/withdrawals` | SEP-6 interactive withdraw (`sessionId`) |
+| POST | `/api/v1/anchor/withdrawals` | SEP-6 withdraw (`sessionId`, optional `quoteId`) |
+| GET | `/api/v1/anchor/transfers/:id?sessionId=` | SEP-6 transaction status |
 
 ## Operations & activity
 
@@ -77,4 +79,4 @@ Base URL: `http://localhost:8787` (default)
 
 ## Error codes
 
-`NO_SUPPORTED_PAYOUT_RAIL` (BRL), `EARN_UNWIND_REQUIRED`, `QUOTE_EXPIRED`, `ROUTE_UNAVAILABLE`, `ADAPTER_UNAVAILABLE`, `INSUFFICIENT_BALANCE`
+`NO_SUPPORTED_PAYOUT_RAIL` (BRL), `EARN_UNWIND_APPROVAL_REQUIRED`, `QUOTE_EXPIRED`, `ROUTE_UNAVAILABLE`, `ADAPTER_UNAVAILABLE`, `INSUFFICIENT_BALANCE`, `SMART_WALLET_FLOW_REQUIRED`, `ASSET_ROUTE_UNAVAILABLE`
