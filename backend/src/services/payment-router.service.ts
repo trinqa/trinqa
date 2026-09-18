@@ -104,8 +104,12 @@ export class PaymentRouter {
 
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
+    const routeScore = ranked[0]?.score;
+
     const stored = this.quotes.save({
       routeType: chosen.routeType,
+      candidateCount: ranked.length,
+      routeScore,
       source: { assetCode: req.sourceAssetCode, amount: req.sourceAmount },
       destination: { currency: dest, amount: destinationAmount },
       fee: { assetCode: req.sourceAssetCode, amount: '0.0000000' },
@@ -114,7 +118,8 @@ export class PaymentRouter {
       providerPayload: {
         fromAccount: req.fromAccount,
         recipient: req.recipient,
-        routeScore: ranked[0]?.score,
+        routeScore,
+        candidateCount: ranked.length,
       },
     });
 

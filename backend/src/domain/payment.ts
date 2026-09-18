@@ -16,6 +16,9 @@ export type PaymentQuoteRequest = {
 export type PaymentRouteQuote = {
   quoteId: string;
   routeType: PaymentRouteType;
+  /** Number of viable route candidates considered before ranking. */
+  candidateCount: number;
+  routeScore?: number;
   source: { assetCode: string; amount: DecimalString };
   destination: { currency: string; amount: DecimalString };
   fee: { assetCode: string; amount: DecimalString };

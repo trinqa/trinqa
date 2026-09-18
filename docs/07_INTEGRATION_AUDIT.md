@@ -1,8 +1,17 @@
 # Trinqa — Track B: Stellar Template / Integration Audit
 
-**Date:** 2026-09-16  
+**Date:** 2026-09-16 (updated 2026-09-18 — M4 backend alignment)  
 **Scope:** Phase 1 (Home, Pay, Earn) · Expo React Native mobile · testnet only · no secrets · no real funds  
 **Sources:** `source-material/HACKATHON_LINKS.md`, `docs/03_MOBILE_ARCHITECTURE.md`, `docs/06_SOURCES_AND_REFERENCES.md`, plus live fetches of official docs/skills where reachable.
+
+---
+
+## M4 backend anchor protocol status (2026-09-18)
+
+| Protocol | Status | Notes |
+|----------|--------|--------|
+| **SEP-6** | **Current (testnet)** | TR mock anchor (`tr-mock-anchor.fly.dev`) — deposit/withdraw interactive, SEP-38 quotes. Backend: `TrMockAnchorAdapter`, `/api/v1/anchor/*`, payment `fiat_payout` → SEP-6 withdraw session. |
+| **SEP-24** | **Future** | Original audit assumed SEP-24 WebView for Add Money (BlindPay/Bridge/testanchor). Mobile product may still use SEP-24 for global anchors; **TR TRY rail stays SEP-6** until a SEP-24 anchor is selected. Do not remove SEP-24 references below — they remain the target for non-TR fiat partners. |
 
 ---
 

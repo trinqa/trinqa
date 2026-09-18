@@ -28,6 +28,7 @@ Base URL: `http://localhost:8787` (default)
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/api/v1/yield/recommendations/:accountId` | Ranked strategies + target-date horizon (`?targetDate=` or `?daysToTarget=`) |
 | GET | `/api/v1/yield/strategies` | Normalized strategies |
 | GET | `/api/v1/yield/positions/:accountId` | Vault positions |
 | POST | `/api/v1/yield/deposits/build` | Unsigned deposit XDR |
@@ -45,7 +46,8 @@ Base URL: `http://localhost:8787` (default)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/payments/quote` | Route quote (`stellar_transfer`, `fiat_payout`, …) |
+| POST | `/api/v1/payments/quote` | Route quote (`stellar_transfer`, `fiat_payout`, …); includes `candidateCount`, `routeScore` |
+| POST | `/api/v1/payments/withdraw/quote` | TRY off-ramp quote shortcut (USDC → TRY via anchor) |
 | POST | `/api/v1/payments/build` | Build payment / anchor session |
 | POST | `/api/v1/payments/submit` | Submit signed classic tx |
 

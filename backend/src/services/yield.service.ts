@@ -1,6 +1,11 @@
 import type { DefindexYieldAdapter } from '../adapters/defindex-yield.adapter.js';
 import { ApiError } from '../domain/api-errors.js';
 import { toAtomic } from '../domain/money.js';
+import {
+  daysFromTargetDateIso,
+  daysUntilTargetTimestamp,
+  toRecommendationPayload,
+} from '../domain/yield-recommendation.js';
 import { strategyIdForVault, type YieldStrategy } from '../domain/yield.js';
 import { DeterministicRiskEngine } from './deterministic-risk-engine.js';
 import type { PolicyService } from './policy.service.js';
@@ -36,6 +41,53 @@ export class YieldService {
     const policy = await this.policy.getPolicy(accountId);
     const strategies = await this.listStrategies(accountId);
     return this.riskEngine.rankStrategies(strategies, policy.riskProfile ?? 1, daysToTarget);
+  }
+
+  async resolveDaysToTarget(
+    accountId: string,
+    input: { targetDate?: string; daysToTarget?: number },
+  ): Promise<{ daysToTarget: number; source: 'query_days' | 'query_date' | 'policy' | 'default' }> {
+    if (input.daysToTarget !== undefined && Number.isFinite(input.daysToTarget)) {
+      return {
+        daysToTarget: Math.max(0, Math.floor(input.daysToTarget)),
+        source: 'query_days',
+      };
+    }
+    if (input.targetDate) {
+      return { daysToTarget: daysFromTargetDateIso(input.targetDate), source: 'query_date' };
+    }
+    const policy = await this.policy.getPolicy(accountId);
+    const fromPolicy = daysUntilTargetTimestamp(policy.targetTimestamp);
+    if (fromPolicy !== undefined) {
+      return { daysToTarget: fromPolicy, source: 'policy' };
+    }
+    return { daysToTarget: 365, source: 'default' };
+  }
+
+  async getRecommendations(
+    accountId: string,
+    input: { targetDate?: string; daysToTarget?: number },
+  ) {
+    const policy = await this.policy.getPolicy(accountId);
+    const { daysToTarget, source: horizonSource } = await this.resolveDaysToTarget(accountId, input);
+    const ranked = await this.rankedStrategies(accountId, daysToTarget);
+    const recommendations = ranked.map((s, i) => toRecommendationPayload(s, i + 1));
+    const top = recommendations[0] ?? null;
+    const liquidityNote =
+      daysToTarget < 30 && top && top.withdrawalAvailability !== 'flexible'
+        ? 'Consider shifting toward flexible liquidity as your target date approaches.'
+        : null;
+
+    return {
+      accountId,
+      daysToTarget,
+      horizonSource,
+      targetTimestamp: policy.targetTimestamp ?? null,
+      riskProfile: policy.riskProfile ?? 1,
+      recommendation: top,
+      recommendations,
+      liquidityShiftNote: liquidityNote,
+    };
   }
 
   async getPositions(accountId: string) {

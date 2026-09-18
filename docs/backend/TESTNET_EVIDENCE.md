@@ -30,3 +30,13 @@ From `deployments/testnet.json`:
 | `e2e-defindex` | | BLOCKED / OK | |
 | `e2e-soroswap` | | BLOCKED / OK | |
 | `e2e-trinqa` | | PARTIAL / OK | |
+
+### M4 run (2026-09-18)
+
+Local `backend/.env` had no `DEFINDEX_*` or `SOROSWAP_*` — partner e2e **not executed** (exit 2/3 expected per `BLOCKERS.md`). Policy + anchor unit/integration paths still runnable via `pnpm verify` / `pnpm test:integration`.
+
+| Script | Result | Tx hashes |
+|--------|--------|-----------|
+| `e2e-defindex` | BLOCKED (no keys) | — |
+| `e2e-soroswap` | BLOCKED (no keys) | — |
+| `e2e-trinqa` | PARTIAL (no keys) | — |

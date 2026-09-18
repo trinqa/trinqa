@@ -44,6 +44,21 @@ export function registerPaymentRoutes(
     }
   });
 
+  app.post('/api/v1/payments/withdraw/quote', async (req, reply) => {
+    try {
+      const body = z
+        .object({
+          fromAccount: z.string().min(56).max(56),
+          usdcAmount: z.string().min(1),
+        })
+        .parse(req.body);
+      const quote = await router.quoteWithdrawToTry(body.fromAccount, body.usdcAmount);
+      return { quote };
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
+
   app.post('/api/v1/payments/submit', async (req, reply) => {
     try {
       const body = z

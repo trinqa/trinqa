@@ -31,13 +31,18 @@ export type Operation = {
 export function normalizeActivityItem(op: Operation) {
   return {
     id: op.id,
+    operationId: op.id,
     kind: op.kind,
     status: op.status,
     accountId: op.accountId,
     occurredAt: op.updatedAt,
+    createdAt: op.createdAt,
     title: op.title,
     subtitle: op.subtitle ?? null,
     amount: op.amount ?? null,
     txHash: op.externalRefs?.txHash ?? null,
+    anchorTransferId: op.externalRefs?.anchorTransferId ?? null,
+    quoteId: op.externalRefs?.quoteId ?? null,
+    metadata: op.metadata ?? null,
   };
 }

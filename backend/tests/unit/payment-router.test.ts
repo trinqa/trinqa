@@ -35,6 +35,41 @@ describe('PaymentRouter', () => {
     ).rejects.toMatchObject({ code: 'NO_SUPPORTED_PAYOUT_RAIL' satisfies ApiError['code'] });
   });
 
+  it('quotes TRY withdraw with single fiat_payout candidate', async () => {
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100',
+      },
+    ]);
+    const quote = await router.quoteWithdrawToTry('G'.repeat(56), '25.0000000');
+    expect(quote.routeType).toBe('fiat_payout');
+    expect(quote.candidateCount).toBe(1);
+    expect(quote.destination.currency).toBe('TRY');
+    expect(quote.routeScore).toBeGreaterThan(0);
+  });
+
+  it('builds fiat_payout anchor session for TRY withdraw quote', async () => {
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100',
+      },
+    ]);
+    const account = 'G'.repeat(56);
+    const quote = await router.quoteWithdrawToTry(account, '10.0000000');
+    const built = await router.build(quote.quoteId, account);
+    expect(built.anchorSession).toMatchObject({
+      kind: 'sep6_withdraw',
+      destinationCurrency: 'TRY',
+    });
+    expect(built.steps.some((s) => s.type === 'sep6_withdraw')).toBe(true);
+  });
+
   it('requires explicit earn unwind', async () => {
     vi.spyOn(stellar, 'getBalances').mockResolvedValue([
       {

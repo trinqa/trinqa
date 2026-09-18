@@ -50,3 +50,13 @@ pnpm e2e:trinqa      # exit 3 PARTIAL if partner keys missing
 ```
 
 Deployed policy metadata: `../deployments/testnet.json`.
+
+## Stellar Skills Used (M4 — consulted for this backend)
+
+| Skill | Use in backend |
+|-------|----------------|
+| [CheesecakeLabs/stellar-anchor-skill](https://github.com/CheesecakeLabs/stellar-anchor-skill/blob/main/SKILL.md) | SEP-1/10/6 flow, JWT handling, TR mock anchor adapter |
+| [paltalabs/defindex-sdk](https://github.com/paltalabs/defindex-sdk/blob/main/defindex-sdk-skill.md) | Vault deposit/withdraw XDR via `DefindexYieldAdapter` |
+| [soroswap/sdk](https://github.com/soroswap/sdk/blob/main/skills/soroswap-sdk/SKILL.md) | Quote/build proxy via `SoroswapAdapter` |
+| [stellar/stellar-dev-skill (standards)](https://github.com/stellar/stellar-dev-skill/blob/main/skills/standards/SKILL.md) | SEP numbering, testnet conventions |
+| [lumenloop/stellar-integration-finder](https://github.com/lumenloop/lumenloop-skills/blob/main/skills/stellar-integration-finder/SKILL.md) | Partner/integration audit cross-check (M4) |
