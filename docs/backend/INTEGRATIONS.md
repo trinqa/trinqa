@@ -40,6 +40,7 @@
 
 ## DeFindex (M3)
 
+- Canonical SDK: [defindex-io/defindex-sdk](https://github.com/defindex-io/defindex-sdk)
 - Package: `@defindex/sdk` 0.3.x
 - Adapter: `DefindexYieldAdapter` — health, vault info/APY/balance, deposit/withdraw XDR
 - Env: `DEFINDEX_API_KEY`, `DEFINDEX_VAULT_ADDRESS`, optional `DEFINDEX_API_URL`

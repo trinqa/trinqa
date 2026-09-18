@@ -9,6 +9,7 @@
 | CONTRACT ID | `CAFTEI4RY7OOWIWTBHYGJV5SV7C6UEG5MKNQI77BZSQNB3AZPC5GMESP` |
 | WASM HASH | `0ec6ee0b9d1ba56334e5f8a17221774cf2d7d38b470e8cc2fbe2af86aa7fba10` |
 | DEPLOY | https://stellar.expert/explorer/testnet/contract/CAFTEI4RY7OOWIWTBHYGJV5SV7C6UEG5MKNQI77BZSQNB3AZPC5GMESP |
+| DEPLOY TX HASH | `DEPLOY_TX_HASH_NOT_RECOVERED` (see `deployments/testnet.json`) |
 | POLICY WRITE TX | `2b58822755f70c12a23cdc12544677d51681aa80b85d500df9188836d61353d3` |
 | ACCOUNT | `GDFI7L547VREOVUXEULYDRKDB2TZCVCZFHCJESHH3A2B763HWYWQ7PRF` |
 
@@ -41,7 +42,7 @@
 | Field | Value |
 |--------|--------|
 | COMMAND | `pnpm e2e:trinqa` |
-| RESULT | PARTIAL (Anchor PASS, Policy PASS; DeFindex/Soroswap BLOCKED) |
+| RESULT | PARTIAL (Anchor+Policy PASS after real TRY→USDC on-ramp; DeFindex/Soroswap BLOCKED without keys) |
 
 ## Earn-funded payment
 

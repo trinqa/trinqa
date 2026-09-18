@@ -32,7 +32,8 @@ Base URL: `http://localhost:8787` (default)
 | GET | `/api/v1/yield/strategies` | Normalized strategies |
 | GET | `/api/v1/yield/positions/:accountId` | Vault positions |
 | POST | `/api/v1/yield/deposits/build` | Unsigned deposit XDR |
-| POST | `/api/v1/yield/withdrawals/build` | Unsigned withdraw / shares XDR |
+| POST | `/api/v1/yield/withdrawals/build` | Unsigned withdraw / shares XDR (+ `operationId`) |
+| POST | `/api/v1/yield/execute` | Submit signed DeFindex XDR for a yield `operationId` |
 
 ## Swaps (Soroswap)
 
@@ -40,7 +41,7 @@ Base URL: `http://localhost:8787` (default)
 |--------|------|-------------|
 | GET | `/api/v1/swaps/assets` | Testnet asset discovery |
 | POST | `/api/v1/swaps/quote` | Exact in/out quote |
-| POST | `/api/v1/swaps/build` | Unsigned swap XDR |
+| POST | `/api/v1/swaps/build` | Unsigned swap XDR (`from`, optional `to` recipient) |
 
 ## Payments
 
