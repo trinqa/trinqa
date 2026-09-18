@@ -1,5 +1,7 @@
 # Backend blockers (post-M5)
 
+Partner full lifecycle E2E (`e2e:defindex`, `e2e:soroswap`, earn-funded leg) remains **credential-blocked** until `DEFINDEX_*` and `SOROSWAP_API_KEY` are supplied — do not fabricate tx hashes in `TESTNET_EVIDENCE.md`.
+
 | Item | Status |
 |------|--------|
 | DeFindex deposit/withdraw E2E | **BLOCKED** — set `DEFINDEX_API_KEY` + `DEFINDEX_VAULT_ADDRESS` in `backend/.env` |
