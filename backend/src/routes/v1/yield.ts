@@ -70,4 +70,18 @@ export function registerYieldRoutes(app: FastifyInstance, yieldSvc: YieldService
       return sendApiError(reply, err);
     }
   });
+
+  app.post('/api/v1/yield/execute', async (req, reply) => {
+    try {
+      const body = z
+        .object({
+          operationId: z.string().uuid(),
+          signedXdr: z.string().min(10),
+        })
+        .parse(req.body);
+      return await yieldSvc.executeSignedXdr(body.operationId, body.signedXdr);
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
 }

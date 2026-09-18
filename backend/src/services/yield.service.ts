@@ -9,6 +9,8 @@ import {
 import { strategyIdForVault, type YieldStrategy } from '../domain/yield.js';
 import { DeterministicRiskEngine } from './deterministic-risk-engine.js';
 import type { PolicyService } from './policy.service.js';
+import type { OperationStore } from './operation-store.js';
+import { recordOperation } from './operation-store.js';
 
 export class YieldService {
   private readonly riskEngine = new DeterministicRiskEngine();
@@ -16,6 +18,7 @@ export class YieldService {
   constructor(
     private readonly defindex: DefindexYieldAdapter,
     private readonly policy: PolicyService,
+    private readonly operations: OperationStore,
   ) {}
 
   async listStrategies(accountId?: string): Promise<YieldStrategy[]> {
@@ -106,7 +109,16 @@ export class YieldService {
     }
     const atomic = toAtomic(params.amount, params.assetDecimals ?? 7);
     const res = await this.defindex.depositToVault(params.accountId, [atomic], params.invest ?? false);
+    const op = await recordOperation(this.operations, {
+      kind: 'yield_deposit',
+      status: 'awaiting_signature',
+      accountId: params.accountId,
+      title: 'Yield deposit',
+      amount: { assetCode: 'USDC', amount: params.amount },
+      metadata: { strategyId: params.strategyId, vaultAddress: vault, provider: 'defindex' },
+    });
     return {
+      operationId: op.id,
       unsignedXdr: res.xdr,
       vaultAddress: vault,
       strategyId: params.strategyId,
@@ -119,6 +131,7 @@ export class YieldService {
     amount?: string;
     shares?: string;
     assetDecimals?: number;
+    recordOperation?: boolean;
   }) {
     this.requireConfigured();
     const vault = this.defindex.requireVault();
@@ -126,16 +139,59 @@ export class YieldService {
     if (params.strategyId !== expectedId) {
       throw new ApiError('VALIDATION_ERROR', 'strategyId does not match configured vault', 400);
     }
+    let unsignedXdr: string;
     if (params.shares) {
       const res = await this.defindex.withdrawShares(params.accountId, BigInt(params.shares));
-      return { unsignedXdr: res.xdr, vaultAddress: vault, strategyId: params.strategyId };
-    }
-    if (!params.amount) {
+      unsignedXdr = res.xdr;
+    } else if (params.amount) {
+      const atomic = toAtomic(params.amount, params.assetDecimals ?? 7);
+      const res = await this.defindex.withdrawFromVault(params.accountId, [atomic]);
+      unsignedXdr = res.xdr;
+    } else {
       throw new ApiError('VALIDATION_ERROR', 'amount or shares required', 400);
     }
-    const atomic = toAtomic(params.amount, params.assetDecimals ?? 7);
-    const res = await this.defindex.withdrawFromVault(params.accountId, [atomic]);
-    return { unsignedXdr: res.xdr, vaultAddress: vault, strategyId: params.strategyId };
+    let operationId: string | undefined;
+    if (params.recordOperation !== false) {
+      const op = await recordOperation(this.operations, {
+        kind: 'yield_withdraw',
+        status: 'awaiting_signature',
+        accountId: params.accountId,
+        title: 'Yield withdraw',
+        amount: params.amount ? { assetCode: 'USDC', amount: params.amount } : undefined,
+        metadata: { strategyId: params.strategyId, vaultAddress: vault, provider: 'defindex' },
+      });
+      operationId = op.id;
+    }
+    return {
+      operationId,
+      unsignedXdr,
+      vaultAddress: vault,
+      strategyId: params.strategyId,
+    };
+  }
+
+  async executeSignedXdr(operationId: string, signedXdr: string) {
+    this.requireConfigured();
+    const op = await this.operations.get(operationId);
+    if (!op) {
+      throw new ApiError('NOT_FOUND', 'Operation not found', 404);
+    }
+    if (op.kind !== 'yield_deposit' && op.kind !== 'yield_withdraw') {
+      throw new ApiError('VALIDATION_ERROR', 'Operation is not a yield deposit/withdraw', 409);
+    }
+    const result = await this.defindex.sendSignedXdr(signedXdr);
+    const txHash =
+      (result as { hash?: string; txHash?: string }).hash ?? (result as { txHash?: string }).txHash;
+    const ok = (result as { success?: boolean }).success !== false && Boolean(txHash);
+    await this.operations.update(operationId, {
+      status: ok ? 'completed' : 'failed',
+      externalRefs: { ...op.externalRefs, txHash },
+      metadata: { ...op.metadata, providerResult: result },
+    });
+    if (!ok) {
+      throw new ApiError('ADAPTER_UNAVAILABLE', 'DeFindex transaction submission failed', 502);
+    }
+    return { operationId, txHash, successful: true };
   }
 
   private requireConfigured() {

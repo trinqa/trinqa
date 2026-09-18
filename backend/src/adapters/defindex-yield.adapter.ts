@@ -6,7 +6,7 @@ import {
   type YieldStrategy,
   strategyIdForVault,
 } from '../domain/yield.js';
-import { fromAtomic } from '../domain/money.js';
+import { providerNumberToDecimalString } from '../domain/provider-amount.js';
 import { bigintToSafeNumber } from '../domain/safe-integer.js';
 import { normalizeProviderError } from '../util/provider-error.js';
 import { ApiError } from '../domain/api-errors.js';
@@ -184,7 +184,6 @@ export class DefindexYieldAdapter {
 
   /** @deprecated use normalizeStrategy */
   normalizeStrategies(riskProfile = 1): YieldStrategy[] {
-    void riskProfile;
     const vault = this.vaultAddress;
     if (!vault) return [];
     return [
@@ -206,10 +205,9 @@ export class DefindexYieldAdapter {
     if (strategyId !== strategyIdForVault(vault)) return null;
     const balance = await this.getVaultBalance(accountId);
     const shares = String(balance.dfTokens ?? 0);
-    const underlying = (balance.underlyingBalance ?? []).map((n: number) => {
-      const atomic = BigInt(Math.trunc(n));
-      return fromAtomic(atomic, 7);
-    });
+    const underlying = (balance.underlyingBalance ?? []).map((n: number, i: number) =>
+      providerNumberToDecimalString(n, 7, `underlyingBalance[${i}]`),
+    );
     const totalUnderlying = underlying[0] ?? '0';
     if (Number(shares) <= 0 && Number(totalUnderlying) <= 0) {
       return null;
