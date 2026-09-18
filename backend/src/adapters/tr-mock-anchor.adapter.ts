@@ -25,7 +25,8 @@ export type Sep10Token = {
 export type Sep38QuoteRequest = {
   sellAsset: string;
   buyAsset: string;
-  sellAmount: string;
+  sellAmount?: string;
+  buyAmount?: string;
 };
 
 export type Sep38Quote = {
@@ -128,7 +129,8 @@ export class TrMockAnchorAdapter {
       body: JSON.stringify({
         sell_asset: req.sellAsset,
         buy_asset: buyAsset,
-        sell_amount: req.sellAmount,
+        ...(req.sellAmount ? { sell_amount: req.sellAmount } : {}),
+        ...(req.buyAmount ? { buy_amount: req.buyAmount } : {}),
       }),
     });
     if (!res.ok) {

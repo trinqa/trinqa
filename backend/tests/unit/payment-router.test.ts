@@ -66,9 +66,8 @@ describe('PaymentRouter', () => {
       router.quote({
         fromAccount: 'G'.repeat(56),
         recipient: 'G'.repeat(56),
-        sourceAmount: '10.0000000',
-        sourceAssetCode: 'USDC',
-        destinationCurrency: 'BRL',
+        receiveAmount: '10.0000000',
+        receiveCurrency: 'BRL',
       }),
     ).rejects.toMatchObject({ code: 'NO_SUPPORTED_PAYOUT_RAIL' satisfies ApiError['code'] });
   });
@@ -87,9 +86,8 @@ describe('PaymentRouter', () => {
       router.quote({
         fromAccount: 'G'.repeat(56),
         recipient: 'G'.repeat(56),
-        sourceAmount: '10.0000000',
-        sourceAssetCode: 'USDC',
-        destinationCurrency: 'USDC',
+        receiveAmount: '10.0000000',
+        receiveCurrency: 'USDC',
       }),
     ).resolves.toBeDefined();
   });
@@ -151,9 +149,8 @@ describe('PaymentRouter', () => {
     const quote = await router.quote({
       fromAccount: 'G'.repeat(56),
       recipient: 'H'.repeat(56),
-      sourceAmount: '7.0000000',
-      sourceAssetCode: 'USDC',
-      destinationCurrency: 'USDC',
+        receiveAmount: '7.0000000',
+        receiveCurrency: 'USDC',
       balanceSource: 'available',
     });
     expect(quote.funding?.requiresEarnUnwind).toBe(false);
@@ -182,9 +179,8 @@ describe('PaymentRouter', () => {
     const quote = await router.quote({
       fromAccount: 'G'.repeat(56),
       recipient: 'H'.repeat(56),
-      sourceAmount: '7.0000000',
-      sourceAssetCode: 'USDC',
-      destinationCurrency: 'USDC',
+        receiveAmount: '7.0000000',
+        receiveCurrency: 'USDC',
     });
     expect(quote.funding?.requiresEarnUnwind).toBe(true);
     expect(quote.funding?.earnContribution).toBe('3.0000000');
@@ -204,9 +200,8 @@ describe('PaymentRouter', () => {
       router.quote({
         fromAccount: 'G'.repeat(56),
         recipient: 'H'.repeat(56),
-        sourceAmount: '1.0000000',
-        sourceAssetCode: 'USDC',
-        destinationCurrency: 'XLM',
+        receiveAmount: '1.0000000',
+        receiveCurrency: 'XLM',
       }),
     ).rejects.toMatchObject({ code: 'ROUTE_UNAVAILABLE' });
   });
@@ -234,9 +229,8 @@ describe('PaymentRouter', () => {
     const quote = await router.quote({
       fromAccount: account,
       recipient: 'H'.repeat(56),
-      sourceAmount: '7.0000000',
-      sourceAssetCode: 'USDC',
-      destinationCurrency: 'USDC',
+        receiveAmount: '7.0000000',
+        receiveCurrency: 'USDC',
     });
     await expect(router.build(quote.quoteId, account)).rejects.toMatchObject({
       code: 'EARN_UNWIND_APPROVAL_REQUIRED',

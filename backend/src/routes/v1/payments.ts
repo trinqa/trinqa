@@ -19,9 +19,8 @@ export function registerPaymentRoutes(
         .object({
           fromAccount: z.string().min(56).max(56),
           recipient: z.string().min(56).max(56),
-          sourceAmount: z.string().min(1),
-          sourceAssetCode: z.enum(['USDC']).default('USDC'),
-          destinationCurrency: z.string().min(3).max(4),
+          receiveAmount: z.string().min(1),
+          receiveCurrency: z.string().min(3).max(4),
           balanceSource: z.enum(['available', 'earn']).optional(),
           anchorSessionId: z.string().uuid().optional(),
           withdrawDest: z.string().min(1).optional(),

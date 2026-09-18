@@ -1,6 +1,6 @@
 import type { AppConfig } from '../config/env.js';
 import { ApiError } from '../domain/api-errors.js';
-import type { PaymentExecutionStep, PaymentRouteType } from '../domain/payment.js';
+import type { PaymentExecutionStep, PaymentRouteQuote, PaymentRouteType } from '../domain/payment.js';
 import { Decimal } from '../domain/money.js';
 import { strategyIdForVault } from '../domain/yield.js';
 import type { DefindexYieldAdapter } from '../adapters/defindex-yield.adapter.js';
@@ -43,6 +43,14 @@ export class PaymentExecutionService {
     return this.quotes.get(quoteId);
   }
 
+  paymentDebitAmountForQuote(quote: PaymentRouteQuote): string {
+    const funding = quote.funding;
+    if (funding?.availableContribution && !funding.requiresEarnUnwind) {
+      return funding.availableContribution;
+    }
+    return quote.debitAmount ?? quote.source.amount;
+  }
+
   private paymentDebitAmount(quote: ReturnType<QuoteStore['get']>, meta: PaymentMeta): string {
     const funding = quote.funding ?? (meta.funding as PaymentMeta['funding']);
     const availableContribution = (funding as { availableContribution?: string } | undefined)
@@ -59,8 +67,23 @@ export class PaymentExecutionService {
       throw new ApiError('NOT_FOUND', 'Operation not found', 404);
     }
     const meta = (op.metadata ?? {}) as PaymentMeta;
+    const completed = meta.completedSteps ?? [];
+    if (completed.includes(step)) {
+      throw new ApiError('ALREADY_COMPLETED', `Step ${step} already completed`, 409);
+    }
+    if (op.status === 'completed' && step !== 'anchor_withdraw') {
+      throw new ApiError('ALREADY_COMPLETED', 'Operation already completed', 409);
+    }
     if (meta.currentStep !== step) {
-      throw new ApiError('VALIDATION_ERROR', `Expected step ${meta.currentStep ?? 'unknown'}, got ${step}`, 409);
+      throw new ApiError(
+        'INVALID_OPERATION_STATE',
+        `Expected step ${meta.currentStep ?? 'unknown'}, got ${step}`,
+        409,
+      );
+    }
+
+    if (meta.quoteId) {
+      this.quotes.get(meta.quoteId);
     }
 
     if (step === 'yield_withdraw') {

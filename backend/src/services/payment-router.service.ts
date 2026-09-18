@@ -60,7 +60,7 @@ export class PaymentRouter {
     anchorSessionId: string,
     fromAccount: string,
     usdcAmount: string,
-  ): Promise<{ buyAmount: string; quoteId: string; expiresAt: string; price: string }> {
+  ): Promise<{ buyAmount: string; sellAmount: string; quoteId: string; expiresAt: string; price: string }> {
     const jwt = this.anchorSessions.resolve(anchorSessionId, fromAccount);
     const sellAsset = `stellar:USDC:${this.config.USDC_ISSUER}`;
     const buyAsset = 'iso4217:TRY';
@@ -71,6 +71,29 @@ export class PaymentRouter {
     });
     return {
       buyAmount: quote.buy_amount,
+      sellAmount: quote.sell_amount,
+      quoteId: quote.id,
+      expiresAt: quote.expires_at,
+      price: quote.price,
+    };
+  }
+
+  private async trySep38TryQuoteReceive(
+    anchorSessionId: string,
+    fromAccount: string,
+    tryReceiveAmount: string,
+  ): Promise<{ buyAmount: string; sellAmount: string; quoteId: string; expiresAt: string; price: string }> {
+    const jwt = this.anchorSessions.resolve(anchorSessionId, fromAccount);
+    const sellAsset = `stellar:USDC:${this.config.USDC_ISSUER}`;
+    const buyAsset = 'iso4217:TRY';
+    const quote = await this.anchor.sep38Quote(jwt, {
+      sellAsset,
+      buyAsset,
+      buyAmount: tryReceiveAmount,
+    });
+    return {
+      buyAmount: quote.buy_amount,
+      sellAmount: quote.sell_amount,
       quoteId: quote.id,
       expiresAt: quote.expires_at,
       price: quote.price,
@@ -78,11 +101,8 @@ export class PaymentRouter {
   }
 
   async quote(req: PaymentQuoteRequest): Promise<PaymentRouteQuote> {
-    if (req.sourceAssetCode !== 'USDC') {
-      throw new ApiError('VALIDATION_ERROR', 'Only USDC is supported as payment source in this MVP', 400);
-    }
-
-    const dest = req.destinationCurrency.toUpperCase();
+    const dest = req.receiveCurrency.toUpperCase();
+    const receiveAmount = req.receiveAmount;
     const rail = this.capabilities.payoutRailFor(dest);
     if (!rail.available) {
       throw new ApiError(
@@ -93,18 +113,68 @@ export class PaymentRouter {
       );
     }
 
+    let xlmSwapQuote: Awaited<ReturnType<SoroswapAdapter['quoteExactOut']>> | null = null;
+    let debitUsdc = dest === 'USDC' ? formatStellarAmount(receiveAmount) : '0.0000000';
+
+    if (dest === 'XLM') {
+      if (!this.soroswap.isConfigured) {
+        throw new ApiError('ROUTE_UNAVAILABLE', 'XLM payout requires Soroswap', 422);
+      }
+      try {
+        const canSwap = await this.assetRegistry.canSwap('USDC', 'XLM', this.config.USDC_ISSUER);
+        const usdcContract = canSwap
+          ? await this.assetRegistry.resolveClassicAsset('USDC', this.config.USDC_ISSUER)
+          : null;
+        const xlmContract = canSwap ? await this.assetRegistry.resolveClassicAsset('XLM') : null;
+        if (usdcContract && xlmContract) {
+          const amountOut = toAtomic(receiveAmount, 7);
+          xlmSwapQuote = await this.soroswap.quoteExactOut({
+            assetIn: usdcContract,
+            assetOut: xlmContract,
+            amountOut,
+          });
+          debitUsdc = formatStellarAmount(fromAtomic(xlmSwapQuote.amountIn, 7));
+        }
+      } catch {
+        xlmSwapQuote = null;
+      }
+      if (!xlmSwapQuote) {
+        throw new ApiError('ROUTE_UNAVAILABLE', 'Cannot quote XLM exact-out route', 422);
+      }
+    }
+
+    let trySep38: Awaited<ReturnType<PaymentRouter['trySep38TryQuoteReceive']>> | null = null;
+    if (dest === 'TRY') {
+      if (!req.anchorSessionId) {
+        throw new ApiError('VALIDATION_ERROR', 'anchorSessionId required for TRY cash-out quote', 400);
+      }
+      if (!req.withdrawDest?.trim()) {
+        throw new ApiError('VALIDATION_ERROR', 'withdrawDest required for TRY cash-out quote', 400);
+      }
+      if (req.recipient !== req.fromAccount) {
+        throw new ApiError(
+          'VALIDATION_ERROR',
+          'TRY cash-out is withdraw to your linked bank account, not arbitrary P2P TRY pay',
+          400,
+        );
+      }
+      trySep38 = await this.trySep38TryQuoteReceive(
+        req.anchorSessionId,
+        req.fromAccount,
+        formatTryAmount(receiveAmount),
+      );
+      debitUsdc = formatStellarAmount(trySep38.sellAmount);
+    }
+
     const { available, earning } = await this.resolveBalances(req.fromAccount);
     const fundingCalc = this.execution.computeFunding(
       available,
       earning,
-      req.sourceAmount,
+      debitUsdc,
       req.balanceSource,
     );
 
-    const swapViable =
-      this.soroswap.isConfigured &&
-      dest === 'XLM' &&
-      (await this.assetRegistry.canSwap('USDC', 'XLM', this.config.USDC_ISSUER));
+    const swapViable = Boolean(xlmSwapQuote);
 
     const candidates: RouteCandidate[] = [];
 
@@ -157,7 +227,8 @@ export class PaymentRouter {
       throw new ApiError('ROUTE_UNAVAILABLE', 'No route candidates', 422);
     }
 
-    let destinationAmount = req.sourceAmount;
+    let destinationAmount =
+      dest === 'TRY' ? formatTryAmount(receiveAmount) : formatStellarAmount(receiveAmount);
     let expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     const providerPayload: Record<string, unknown> = {
       fromAccount: req.fromAccount,
@@ -174,53 +245,22 @@ export class PaymentRouter {
       },
     };
 
-    if (chosen.routeType === 'fiat_payout' && dest === 'TRY') {
-      if (!req.anchorSessionId) {
-        throw new ApiError('VALIDATION_ERROR', 'anchorSessionId required for TRY cash-out quote', 400);
-      }
-      if (!req.withdrawDest?.trim()) {
-        throw new ApiError('VALIDATION_ERROR', 'withdrawDest required for TRY cash-out quote', 400);
-      }
-      if (req.recipient !== req.fromAccount) {
-        throw new ApiError(
-          'VALIDATION_ERROR',
-          'TRY cash-out is withdraw to your linked bank account, not arbitrary P2P TRY pay',
-          400,
-        );
-      }
-      const sep38 = await this.trySep38TryQuote(req.anchorSessionId, req.fromAccount, req.sourceAmount);
-      destinationAmount = formatTryAmount(sep38.buyAmount);
-      expiresAt = sep38.expiresAt;
+    if (chosen.routeType === 'fiat_payout' && dest === 'TRY' && trySep38) {
+      destinationAmount = formatTryAmount(trySep38.buyAmount);
+      expiresAt = trySep38.expiresAt;
       providerPayload.anchorSessionId = req.anchorSessionId;
-      providerPayload.anchorQuoteId = sep38.quoteId;
-      providerPayload.anchorQuoteExpiresAt = sep38.expiresAt;
-      providerPayload.anchorPrice = sep38.price;
-      providerPayload.withdrawDest = req.withdrawDest.trim();
+      providerPayload.anchorQuoteId = trySep38.quoteId;
+      providerPayload.anchorQuoteExpiresAt = trySep38.expiresAt;
+      providerPayload.anchorPrice = trySep38.price;
+      providerPayload.withdrawDest = req.withdrawDest!.trim();
       if (req.withdrawDestExtra?.trim()) {
         providerPayload.withdrawDestExtra = req.withdrawDestExtra.trim();
       }
     }
 
-    if (chosen.routeType === 'stellar_swap_transfer' && dest === 'XLM') {
-      const usdcContract = await this.assetRegistry.resolveClassicAsset('USDC', this.config.USDC_ISSUER);
-      const xlmContract = await this.assetRegistry.resolveClassicAsset('XLM');
-      if (!usdcContract || !xlmContract) {
-        throw new ApiError('ASSET_ROUTE_UNAVAILABLE', 'Cannot resolve Soroswap asset contracts', 422);
-      }
-      const amountIn = toAtomic(req.sourceAmount, 7);
-      const preview = await this.soroswap.quoteExactIn({
-        assetIn: usdcContract,
-        assetOut: xlmContract,
-        amountIn,
-      });
-      const amountOut = preview.amountOut;
-      const swapQuote = await this.soroswap.quoteExactOut({
-        assetIn: usdcContract,
-        assetOut: xlmContract,
-        amountOut,
-      });
-      destinationAmount = formatStellarAmount(fromAtomic(amountOut, 7));
-      providerPayload.soroswapQuote = swapQuote;
+    if (chosen.routeType === 'stellar_swap_transfer' && dest === 'XLM' && xlmSwapQuote) {
+      destinationAmount = formatStellarAmount(receiveAmount);
+      providerPayload.soroswapQuote = xlmSwapQuote;
       providerPayload.swapAmountOut = destinationAmount;
     }
 
@@ -228,9 +268,13 @@ export class PaymentRouter {
       routeType: chosen.routeType,
       candidateCount: ranked.length,
       routeScore: ranked[0]?.score,
-      source: { assetCode: req.sourceAssetCode, amount: req.sourceAmount },
+      source: { assetCode: 'USDC', amount: debitUsdc },
       destination: { currency: dest, amount: destinationAmount },
-      fee: { assetCode: req.sourceAssetCode, amount: '0.0000000' },
+      receiveAmount: destinationAmount,
+      receiveCurrency: dest,
+      debitAmount: debitUsdc,
+      debitAsset: 'USDC',
+      fee: { assetCode: 'USDC', amount: '0.0000000' },
       estimatedArrivalMinutes: chosen.estimatedMinutes,
       expiresAt,
       funding: providerPayload.funding as PaymentRouteQuote['funding'],
@@ -307,7 +351,7 @@ export class PaymentRouter {
     }
 
     if (quote.routeType === 'stellar_transfer') {
-      const amount = quote.source.amount;
+      const amount = this.execution.paymentDebitAmountForQuote(quote);
       const unsignedXdr = await this.stellar.buildPaymentXdr(fromAccount, payload.recipient, amount);
       await this.operations.update(op.id, {
         status: 'awaiting_signature',
@@ -356,20 +400,9 @@ export class PaymentRouter {
       if (!this.soroswap.isConfigured) {
         throw new ApiError('ADAPTER_UNAVAILABLE', 'Soroswap not configured', 503);
       }
-      const payloadSwap = payload.soroswapQuote;
-      let swapQuote = payloadSwap;
+      const swapQuote = payload.soroswapQuote;
       if (!swapQuote) {
-        const usdcContract = await this.assetRegistry.resolveClassicAsset('USDC', this.config.USDC_ISSUER);
-        const xlmContract = await this.assetRegistry.resolveClassicAsset('XLM');
-        if (!usdcContract || !xlmContract) {
-          throw new ApiError('ASSET_ROUTE_UNAVAILABLE', 'Cannot resolve Soroswap asset contracts', 422);
-        }
-        const amountOut = toAtomic(quote.destination.amount, 7);
-        swapQuote = await this.soroswap.quoteExactOut({
-          assetIn: usdcContract,
-          assetOut: xlmContract,
-          amountOut,
-        });
+        throw new ApiError('QUOTE_EXPIRED', 'Missing Soroswap quote; request a fresh payment quote', 410);
       }
       const built = await this.soroswap.buildFromQuote(
         swapQuote as never,
@@ -404,12 +437,12 @@ export class PaymentRouter {
     withdrawDest: string,
     withdrawDestExtra?: string,
   ): Promise<PaymentRouteQuote> {
+    const sep38 = await this.trySep38TryQuote(anchorSessionId, fromAccount, usdcAmount);
     return this.quote({
       fromAccount,
       recipient: fromAccount,
-      sourceAmount: usdcAmount,
-      sourceAssetCode: 'USDC',
-      destinationCurrency: 'TRY',
+      receiveAmount: formatTryAmount(sep38.buyAmount),
+      receiveCurrency: 'TRY',
       anchorSessionId,
       withdrawDest,
       withdrawDestExtra,

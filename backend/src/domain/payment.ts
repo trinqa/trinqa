@@ -16,9 +16,9 @@ export type PaymentFundingBreakdown = {
 export type PaymentQuoteRequest = {
   fromAccount: string;
   recipient: string;
-  sourceAmount: DecimalString;
-  sourceAssetCode: 'USDC';
-  destinationCurrency: string;
+  /** Amount the recipient should receive (7dp Stellar assets, 2dp TRY). */
+  receiveAmount: DecimalString;
+  receiveCurrency: string;
   balanceSource?: BalanceSource;
   anchorSessionId?: string;
   /** SEP-6 withdraw bank destination (required for TRY / fiat_payout). */
@@ -31,8 +31,14 @@ export type PaymentRouteQuote = {
   routeType: PaymentRouteType;
   candidateCount: number;
   routeScore?: number;
-  source: { assetCode: string; amount: DecimalString };
+  /** USDC debited from payer (includes swap input for XLM routes). */
+  source: { assetCode: 'USDC'; amount: DecimalString };
+  /** What the recipient receives. */
   destination: { currency: string; amount: DecimalString };
+  receiveAmount: DecimalString;
+  receiveCurrency: string;
+  debitAmount: DecimalString;
+  debitAsset: 'USDC';
   fee: { assetCode: string; amount: DecimalString };
   estimatedArrivalMinutes: number;
   expiresAt: string;
