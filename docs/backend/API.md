@@ -47,7 +47,7 @@ Base URL: `http://localhost:8787` (default)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/payments/quote` | Route quote; `sourceAssetCode` USDC only; optional `anchorSessionId` for TRY; returns `funding` breakdown |
+| POST | `/api/v1/payments/quote` | Recipient-first quote (`receiveAmount`, `receiveCurrency`); USDC debit derived; optional `anchorSessionId` for TRY; returns `funding` + `debitAmount` |
 | POST | `/api/v1/payments/withdraw/quote` | USDC→TRY via live SEP-38 (`anchorSessionId` required) |
 | POST | `/api/v1/payments/build` | Build payment; `approveEarnUnwind: true` when quote requires earn unwind |
 | POST | `/api/v1/payments/execute-step` | Continue multi-step pay (`yield_withdraw` → `stellar_payment` / `soroswap_swap`) |

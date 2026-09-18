@@ -7,6 +7,15 @@
 | Horizon | `https://horizon-testnet.stellar.org` |
 | Soroban RPC | `https://soroban-testnet.stellar.org` |
 | USDC issuer | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
+| USDC SAC (testnet) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+
+### Pinned SDK versions (M5.2 freeze)
+
+| Package | Version |
+|---------|---------|
+| `@stellar/stellar-sdk` | 14.1.0 |
+| `@defindex/sdk` | 0.3.0 |
+| `@soroswap/sdk` | 0.5.0 |
 
 ## TR Mock Anchor (M1)
 
@@ -45,7 +54,8 @@
 - Adapter: `DefindexYieldAdapter` — health, vault info/APY/balance, deposit/withdraw XDR
 - Env: `DEFINDEX_API_KEY`, `DEFINDEX_VAULT_ADDRESS`, optional `DEFINDEX_API_URL`
 - BFF: `/api/v1/yield/*`
-- E2E: `pnpm e2e:defindex` (exit 2 if env missing)
+- E2E: `npm run e2e:defindex` (exit 2 if env missing)
+- Vault must match Trinqa USDC SAC (`npm run hackathon:compat`)
 
 ## Soroswap (M3)
 
