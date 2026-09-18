@@ -15,6 +15,7 @@ export const homeRecentActivity: ActivityItem[] = [
     amount: '+€250.00',
     amountDirection: 'in',
     date: 'Today, 2:14 PM',
+    symbol: 'person.fill',
   },
   {
     id: '2',
@@ -23,6 +24,7 @@ export const homeRecentActivity: ActivityItem[] = [
     amount: '-$4.80',
     amountDirection: 'out',
     date: 'Yesterday',
+    symbol: 'cup.and.saucer.fill',
   },
   {
     id: '3',
@@ -31,5 +33,6 @@ export const homeRecentActivity: ActivityItem[] = [
     amount: '+₺10,000',
     amountDirection: 'in',
     date: 'Sep 12',
+    symbol: 'building.columns.fill',
   },
 ];

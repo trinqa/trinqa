@@ -72,7 +72,7 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
   );
 }
 
-export function ShortcutRow() {
+export function ShortcutRow({ onPay }: { onPay: () => void }) {
   return (
     <HStack
       spacing={homeTokens.shortcuts.gap}
@@ -81,7 +81,7 @@ export function ShortcutRow() {
       <AddMoneySourceSheet
         anchor={<ShortcutButton label="Add Money" symbol="plus.circle" isSheetAnchor />}
       />
-      <ShortcutButton label="Pay" symbol="arrow.up.circle" onPress={() => undefined} />
+      <ShortcutButton label="Pay" symbol="arrow.up.circle" onPress={onPay} />
       <ShortcutButton label="More" symbol="ellipsis.circle" onPress={() => undefined} />
     </HStack>
   );

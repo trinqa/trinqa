@@ -1,6 +1,7 @@
 import { Group, RNHostView } from '@expo/ui/swift-ui';
 import { frame, padding } from '@expo/ui/swift-ui/modifiers';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { AccountCardStack } from '@/components/AccountCardStack';
 import { HomeRecentGroup } from '@/components/HomeRecentGroup';
@@ -29,6 +30,8 @@ function HomeWalletHost() {
 }
 
 export function HomeScreen() {
+  const router = useRouter();
+
   return (
     <SwiftUIScreenShell sectionGap={0}>
       <Group modifiers={[padding({ horizontal: 8 })]}>
@@ -40,7 +43,7 @@ export function HomeScreen() {
       </Group>
 
       <Group modifiers={[padding({ top: homeTokens.layout.walletShortcutGap })]}>
-        <ShortcutRow />
+        <ShortcutRow onPay={() => router.push('/send-money')} />
       </Group>
 
       <Group modifiers={[padding({ top: homeTokens.layout.shortcutRecentGap })]}>

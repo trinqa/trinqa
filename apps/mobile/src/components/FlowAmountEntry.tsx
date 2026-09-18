@@ -29,6 +29,7 @@ import { colors, screenTokens, typography } from '@/theme';
 
 interface FlowAmountEntryProps {
   amount: number;
+  amountAccessory?: React.ReactElement;
   amountText: ReturnType<typeof useNativeState<string>>;
   currencySymbol: string;
   formatQuickAmount: (amount: number) => string;
@@ -47,6 +48,7 @@ interface FlowAmountEntryProps {
 /** Approved Add Money amount-entry geometry shared by money movement flows. */
 export function FlowAmountEntry({
   amount,
+  amountAccessory,
   amountText,
   currencySymbol,
   formatQuickAmount,
@@ -112,6 +114,12 @@ export function FlowAmountEntry({
             ]}
           />
         </HStack>
+
+        {amountAccessory ? (
+          <Group modifiers={[padding({ top: screenTokens.paymentFlow.currencyTopGap })]}>
+            {amountAccessory}
+          </Group>
+        ) : null}
 
         <HStack spacing={flow.quickAmountGap} modifiers={[padding({ top: 12 })]}>
           {quickAmounts.map((quickAmount) => (

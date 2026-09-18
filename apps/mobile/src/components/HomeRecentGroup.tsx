@@ -13,18 +13,26 @@ import { useWindowDimensions } from 'react-native';
 
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { homeRecentActivity } from '@/data/mocks/home';
+import { useCompletedPayments } from '@/data/mocks/paymentActivity';
 import { colors, componentTokens, homeTokens, spacing } from '@/theme';
-
-const rowSymbols = {
-  '1': 'person.fill',
-  '2': 'cup.and.saucer.fill',
-  '3': 'building.columns.fill',
-} as const;
 
 /** Recent grouped card follows the reference's narrow outer inset and compact rows. */
 export function HomeRecentGroup() {
   const { width: windowWidth } = useWindowDimensions();
+  const completedPayments = useCompletedPayments();
   const shellWidth = windowWidth - spacing.screenHorizontal * 2;
+  const recentActivity = [
+    ...completedPayments.map((payment) => ({
+      id: payment.id,
+      title: payment.recipient.name,
+      subtitle: 'Sent',
+      amount: `-${payment.displayAmount}`,
+      amountDirection: 'out' as const,
+      date: payment.timestamp,
+      symbol: payment.recipient.symbol,
+    })),
+    ...homeRecentActivity,
+  ].slice(0, 3);
 
   return (
     <Group modifiers={[frame({ width: shellWidth, alignment: 'center' })]}>
@@ -60,14 +68,14 @@ export function HomeRecentGroup() {
         </Text>
 
         <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
-          {homeRecentActivity.map((item) => (
+          {recentActivity.map((item) => (
             <LayeredTransactionRow
               key={item.id}
               title={item.title}
               subtitle={item.subtitle}
               amount={item.amount}
               meta={item.date}
-              symbol={rowSymbols[item.id as keyof typeof rowSymbols]}
+              symbol={item.symbol}
               footerLeadingText="Completed"
               footerTrailingText="Details"
               onFooterPress={() => undefined}

@@ -70,4 +70,18 @@ export const screenTokens = {
     cardPadding: 16,
     cardGap: 12,
   },
+  paymentFlow: {
+    contentWidth: 366,
+    headerToContent: 20,
+    recipientRowHeight: 64,
+    recipientRowGap: 8,
+    methodTopGap: 20,
+    methodGap: 8,
+    methodHeight: 76,
+    currencyTopGap: 8,
+    currencyHeight: 36,
+    summaryHeight: 140,
+    cardPadding: 16,
+    cardGap: 12,
+  },
 } as const;

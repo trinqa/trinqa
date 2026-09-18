@@ -12,6 +12,7 @@ export interface ActivityItem {
   amount: string;
   amountDirection: 'in' | 'out';
   date: string;
+  symbol?: import('sf-symbols-typescript').SFSymbol;
 }
 
 export interface EarnSummary {
@@ -92,6 +93,45 @@ export interface PutToWorkQuote {
   estimatedYearlyReturn: number;
   availableAfter: number;
   earningAfter: number;
+}
+
+export type PaymentCurrency = 'TRY' | 'USD' | 'EUR';
+export type PaymentStep = 'recipient' | 'amount' | 'review' | 'processing' | 'success';
+export type PaymentStatus = 'initiated' | 'converting' | 'sending' | 'completed' | 'failed';
+
+export interface PaymentRecipient {
+  id: string;
+  name: string;
+  detail: string;
+  symbol: import('sf-symbols-typescript').SFSymbol;
+}
+
+export interface PaymentIntent {
+  recipient: PaymentRecipient;
+  receiveAmount: number;
+  receiveCurrency: PaymentCurrency;
+}
+
+export interface PaymentQuote {
+  receiveAmount: number;
+  receiveCurrency: PaymentCurrency;
+  debitAmount: number;
+  debitCurrency: 'TRY';
+  fee: number;
+  exchangeRate: number;
+  estimatedArrival: string;
+  routeId: string;
+  hasSufficientAvailable: boolean;
+}
+
+export interface CompletedPayment {
+  id: string;
+  recipient: PaymentRecipient;
+  receiveAmount: number;
+  receiveCurrency: PaymentCurrency;
+  displayAmount: string;
+  timestamp: string;
+  status: Extract<PaymentStatus, 'completed'>;
 }
 
 export interface ActivityListItem {

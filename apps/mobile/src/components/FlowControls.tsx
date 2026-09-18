@@ -1,9 +1,20 @@
-import { Button, Group, HStack, Image, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import {
+  Button,
+  Group,
+  HStack,
+  Image,
+  ProgressView,
+  Spacer,
+  Text,
+  VStack,
+  ZStack,
+} from '@expo/ui/swift-ui';
 import {
   accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
+  controlSize,
   font,
   foregroundStyle,
   frame,
@@ -11,8 +22,11 @@ import {
   disabled,
   opacity,
   padding,
+  progressViewStyle,
+  scaleEffect,
   shapes,
   strokeBorder,
+  tint,
   type ViewModifier,
 } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
@@ -195,6 +209,138 @@ export function FlowStepLayout({
         label={primaryLabel}
         onPress={onPrimaryPress}
         isDisabled={isPrimaryDisabled}
+      />
+    </VStack>
+  );
+}
+
+export type FlowProcessingRowState = 'complete' | 'current' | 'pending';
+
+export interface FlowProcessingTimelineItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  state: FlowProcessingRowState;
+}
+
+function FlowProcessingTimelineRow({
+  item,
+}: {
+  item: FlowProcessingTimelineItem;
+}) {
+  const symbol = item.state === 'complete' ? 'checkmark.circle.fill' : 'circle';
+  const color = item.state === 'pending' ? colors.borderStrong : colors.action;
+
+  return (
+    <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity, minHeight: 52 })]}>
+      <Image systemName={symbol} size={18} color={color} />
+      <VStack alignment="leading" spacing={3}>
+        <Text
+          modifiers={[
+            font({ size: typography.caption, weight: 'medium' }),
+            foregroundStyle(item.state === 'pending' ? colors.textSecondary : colors.textPrimary),
+          ]}
+        >
+          {item.title}
+        </Text>
+        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          {item.subtitle}
+        </Text>
+      </VStack>
+    </HStack>
+  );
+}
+
+interface FlowProcessingStateProps {
+  headerTitle: string;
+  stateTitle: string;
+  supportingLines: readonly string[];
+  symbol: SFSymbol;
+  steps: readonly FlowProcessingTimelineItem[];
+  noticeTitle: string;
+  noticeSubtitle: string;
+  onBack: () => void;
+}
+
+export function FlowProcessingState({
+  headerTitle,
+  noticeSubtitle,
+  noticeTitle,
+  onBack,
+  stateTitle,
+  steps,
+  supportingLines,
+  symbol,
+}: FlowProcessingStateProps) {
+  return (
+    <VStack
+      alignment="leading"
+      spacing={0}
+      modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}
+    >
+      <Group modifiers={[padding({ horizontal: 8 })]}>
+        <ScreenHeader showBack title={headerTitle} onBackPress={onBack} />
+      </Group>
+
+      <VStack alignment="center" spacing={0} modifiers={[padding({ top: 34 }), frame({ maxWidth: Infinity })]}>
+        <ZStack
+          modifiers={[
+            frame({
+              width: screenTokens.addMoney.processingIconSize,
+              height: screenTokens.addMoney.processingIconSize,
+            }),
+            background(colors.surface, shapes.circle()),
+            strokeBorder({
+              content: colors.borderStrong,
+              style: { lineWidth: componentTokens.surface.borderWidth },
+              shape: 'circle',
+            }),
+          ]}
+        >
+          <ProgressView
+            value={0.68}
+            modifiers={[
+              progressViewStyle('circular'),
+              controlSize('extraLarge'),
+              tint(colors.action),
+              scaleEffect(1.65),
+            ]}
+          />
+          <Image systemName={symbol} size={19} color={colors.textPrimary} />
+        </ZStack>
+
+        <Text
+          modifiers={[
+            padding({ top: 28 }),
+            font({ size: typography.sectionTitle, weight: 'semibold' }),
+            foregroundStyle(colors.textPrimary),
+          ]}
+        >
+          {stateTitle}
+        </Text>
+        <VStack alignment="center" spacing={2} modifiers={[padding({ top: 8 })]}>
+          {supportingLines.map((line) => (
+            <Text
+              key={line}
+              modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}
+            >
+              {line}
+            </Text>
+          ))}
+        </VStack>
+
+        <VStack alignment="leading" spacing={2} modifiers={[padding({ top: 24 }), frame({ width: 300 })]}>
+          {steps.map((item) => (
+            <FlowProcessingTimelineRow key={item.id} item={item} />
+          ))}
+        </VStack>
+      </VStack>
+
+      <Spacer />
+      <FlowNotice
+        symbol="info.circle"
+        title={noticeTitle}
+        subtitle={noticeSubtitle}
       />
     </VStack>
   );

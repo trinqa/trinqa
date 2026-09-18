@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import {
   Divider,
-  Group,
   HStack,
   Image,
-  ProgressView,
   Spacer,
   Text,
   useNativeState,
@@ -14,16 +12,11 @@ import {
 } from '@expo/ui/swift-ui';
 import {
   background,
-  controlSize,
   font,
   foregroundStyle,
   frame,
   padding,
-  progressViewStyle,
-  scaleEffect,
   shapes,
-  strokeBorder,
-  tint,
 } from '@expo/ui/swift-ui/modifiers';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { SFSymbol } from 'sf-symbols-typescript';
@@ -33,17 +26,17 @@ import {
   FlowCard,
   FlowInfoRow,
   FlowNotice,
+  FlowProcessingState,
   FlowStepLayout,
   FlowSuccessState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   addMoneySources,
   createAddMoneyQuote,
   quickAddMoneyAmounts,
 } from '@/data/mocks/addMoney';
-import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { colors, screenTokens, typography } from '@/theme';
 import type { AddMoneyQuote, AddMoneySourceId, AddMoneyStep } from '@/types';
 
 function formatWholeAmount(value: number) {
@@ -234,110 +227,31 @@ function ReviewStep({
   );
 }
 
-function ProcessingTimelineRow({
-  title,
-  subtitle,
-  state,
-}: {
-  title: string;
-  subtitle: string;
-  state: 'complete' | 'current' | 'pending';
-}) {
-  const symbol = state === 'complete' ? 'checkmark.circle.fill' : 'circle';
-  const color = state === 'pending' ? colors.borderStrong : colors.action;
-
-  return (
-    <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity, minHeight: 52 })]}>
-      <Image systemName={symbol} size={18} color={color} />
-      <VStack alignment="leading" spacing={3}>
-        <Text
-          modifiers={[
-            font({ size: typography.caption, weight: 'medium' }),
-            foregroundStyle(state === 'pending' ? colors.textSecondary : colors.textPrimary),
-          ]}
-        >
-          {title}
-        </Text>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
-          {subtitle}
-        </Text>
-      </VStack>
-    </HStack>
-  );
-}
-
 function ProcessingStep({ onBack }: { onBack: () => void }) {
   return (
-    <VStack
-      alignment="leading"
-      spacing={0}
-      modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}
-    >
-      <Group modifiers={[padding({ horizontal: 8 })]}>
-        <ScreenHeader showBack title="Adding Money" onBackPress={onBack} />
-      </Group>
-
-      <VStack alignment="center" spacing={0} modifiers={[padding({ top: 34 }), frame({ maxWidth: Infinity })]}>
-        <ZStack
-          modifiers={[
-            frame({ width: screenTokens.addMoney.processingIconSize, height: screenTokens.addMoney.processingIconSize }),
-            background(colors.surface, shapes.circle()),
-            strokeBorder({
-              content: colors.borderStrong,
-              style: { lineWidth: componentTokens.surface.borderWidth },
-              shape: 'circle',
-            }),
-          ]}
-        >
-          <ProgressView
-            value={0.68}
-            modifiers={[
-              progressViewStyle('circular'),
-              controlSize('extraLarge'),
-              tint(colors.action),
-              scaleEffect(1.65),
-            ]}
-          />
-          <Image systemName="building.columns.fill" size={19} color={colors.textPrimary} />
-        </ZStack>
-
-        <Text
-          modifiers={[
-            padding({ top: 28 }),
-            font({ size: typography.sectionTitle, weight: 'semibold' }),
-            foregroundStyle(colors.textPrimary),
-          ]}
-        >
-          Processing your deposit
-        </Text>
-        <Text
-          modifiers={[
-            padding({ top: 8 }),
-            font({ size: typography.caption }),
-            foregroundStyle(colors.textSecondary),
-          ]}
-        >
-          This usually takes 1–2 minutes.
-        </Text>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
-          We’ll notify you when it’s complete.
-        </Text>
-
-        <VStack alignment="leading" spacing={2} modifiers={[padding({ top: 24 }), frame({ width: 300 })]}>
-          <ProcessingTimelineRow title="Deposit initiated" subtitle="Just now" state="complete" />
-          <ProcessingTimelineRow title="Processing transfer" subtitle="This won’t take long" state="current" />
-          <ProcessingTimelineRow title="Converting to USDC" subtitle="Next" state="pending" />
-          <ProcessingTimelineRow title="Updating your balance" subtitle="Final step" state="pending" />
-        </VStack>
-      </VStack>
-
-      <Spacer />
-      <FlowNotice
-        symbol="info.circle"
-        title="You can close this screen"
-        subtitle="We’ll send you a notification when it’s ready."
-      />
-    </VStack>
+    <FlowProcessingState
+      headerTitle="Adding Money"
+      stateTitle="Processing your deposit"
+      supportingLines={[
+        'This usually takes 1–2 minutes.',
+        'We’ll notify you when it’s complete.',
+      ]}
+      symbol="building.columns.fill"
+      steps={[
+        { id: 'initiated', title: 'Deposit initiated', subtitle: 'Just now', state: 'complete' },
+        {
+          id: 'transfer',
+          title: 'Processing transfer',
+          subtitle: 'This won’t take long',
+          state: 'current',
+        },
+        { id: 'convert', title: 'Converting to USDC', subtitle: 'Next', state: 'pending' },
+        { id: 'balance', title: 'Updating your balance', subtitle: 'Final step', state: 'pending' },
+      ]}
+      noticeTitle="You can close this screen"
+      noticeSubtitle="We’ll send you a notification when it’s ready."
+      onBack={onBack}
+    />
   );
 }
 
