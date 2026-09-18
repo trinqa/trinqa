@@ -7,6 +7,7 @@ export interface OperationStore {
   create(input: Omit<Operation, 'id' | 'createdAt' | 'updatedAt'>): Promise<Operation>;
   update(id: string, patch: Partial<Operation>): Promise<Operation>;
   get(id: string): Promise<Operation | null>;
+  findByExternalRef(field: keyof NonNullable<Operation['externalRefs']>, value: string): Promise<Operation | null>;
   listByAccount(accountId: string, limit?: number): Promise<Operation[]>;
 }
 
@@ -48,6 +49,18 @@ export class MemoryOperationStore implements OperationStore {
       .filter((o) => o.accountId === accountId)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, limit);
+  }
+
+  async findByExternalRef(
+    field: keyof NonNullable<Operation['externalRefs']>,
+    value: string,
+  ): Promise<Operation | null> {
+    for (const op of this.ops.values()) {
+      if (op.externalRefs?.[field] === value) {
+        return op;
+      }
+    }
+    return null;
   }
 }
 
@@ -113,6 +126,19 @@ export class JsonFileOperationStore implements OperationStore {
       .filter((o) => o.accountId === accountId)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, limit);
+  }
+
+  async findByExternalRef(
+    field: keyof NonNullable<Operation['externalRefs']>,
+    value: string,
+  ): Promise<Operation | null> {
+    this.ensureLoaded();
+    for (const op of this.ops.values()) {
+      if (op.externalRefs?.[field] === value) {
+        return op;
+      }
+    }
+    return null;
   }
 }
 

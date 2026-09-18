@@ -114,13 +114,14 @@ export function registerAnchorRoutes(
         amount: body.amount,
         quote_id: body.quoteId,
       });
+      const transferId = (session as { id?: string }).id;
       const op = await recordOperation(operations, {
         kind: 'anchor_deposit',
         status: 'pending',
         accountId: body.account,
         title: 'Anchor deposit',
         amount: body.amount ? { assetCode: 'USDC', amount: body.amount } : undefined,
-        externalRefs: { quoteId: body.quoteId },
+        externalRefs: { quoteId: body.quoteId, anchorTransferId: transferId },
         metadata: { provider: 'tr_mock_anchor' },
       });
       return { session, operationId: op.id };
@@ -150,13 +151,14 @@ export function registerAnchorRoutes(
         dest_extra: body.destExtra,
         quote_id: body.quoteId,
       });
+      const transferId = (sessionResp as { id?: string }).id;
       const op = await recordOperation(operations, {
         kind: 'anchor_withdraw',
         status: 'pending',
         accountId: body.account,
         title: 'Anchor withdrawal',
         amount: { assetCode: 'USDC', amount: body.amount },
-        externalRefs: { quoteId: body.quoteId },
+        externalRefs: { quoteId: body.quoteId, anchorTransferId: transferId },
         metadata: { provider: 'tr_mock_anchor', dest: body.dest },
       });
       return { session: sessionResp, operationId: op.id };
@@ -168,9 +170,40 @@ export function registerAnchorRoutes(
   app.get('/api/v1/anchor/transfers/:id', async (req, reply) => {
     try {
       const id = z.string().min(1).parse((req.params as { id: string }).id);
-      const sessionId = sessionIdSchema.parse((req.query as { sessionId?: string }).sessionId);
-      const jwt = jwtFromSession(sessions, sessionId);
+      const query = z
+        .object({
+          sessionId: sessionIdSchema,
+          operationId: z.string().uuid().optional(),
+        })
+        .parse(req.query);
+      const jwt = jwtFromSession(sessions, query.sessionId);
       const tx = await anchor.sep6Transaction(jwt, id);
+      const status = (tx as { transaction?: { status?: string } }).transaction?.status;
+      if (query.operationId && status) {
+        const mapped =
+          status === 'completed'
+            ? 'completed'
+            : status === 'pending' || status === 'pending_user_transfer_start'
+              ? 'processing'
+              : status === 'error' || status === 'refunded'
+                ? 'failed'
+                : 'processing';
+        await operations.update(query.operationId, {
+          status: mapped,
+          externalRefs: { anchorTransferId: id },
+        });
+      } else {
+        const linked = await operations.findByExternalRef('anchorTransferId', id);
+        if (linked && status) {
+          const mapped =
+            status === 'completed'
+              ? 'completed'
+              : status === 'error' || status === 'refunded'
+                ? 'failed'
+                : linked.status;
+          await operations.update(linked.id, { status: mapped });
+        }
+      }
       return { transfer: tx };
     } catch (err) {
       return sendApiError(reply, err);
