@@ -1,4 +1,11 @@
-export type OperationStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'blocked';
+export type OperationStatus =
+  | 'created'
+  | 'awaiting_signature'
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'blocked';
 
 export type OperationKind =
   | 'payment'

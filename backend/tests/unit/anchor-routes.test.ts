@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
 import { registerAnchorRoutes } from '../../src/routes/v1/anchor.js';
 import { AnchorSessionStore } from '../../src/services/anchor-session-store.service.js';
+import { MemoryOperationStore } from '../../src/services/operation-store.js';
 import type { TrMockAnchorAdapter } from '../../src/adapters/tr-mock-anchor.adapter.js';
 
 describe('anchor routes (sessionId only)', () => {
@@ -16,7 +17,7 @@ describe('anchor routes (sessionId only)', () => {
     } as unknown as TrMockAnchorAdapter;
 
     const app = Fastify();
-    registerAnchorRoutes(app, anchor, sessions);
+    registerAnchorRoutes(app, anchor, sessions, new MemoryOperationStore());
 
     const bad = await app.inject({
       method: 'POST',

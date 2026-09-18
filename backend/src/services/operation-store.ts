@@ -78,7 +78,9 @@ export class JsonFileOperationStore implements OperationStore {
 
   private persist(): void {
     const operations = [...this.ops.values()];
-    fs.writeFileSync(this.filePath, JSON.stringify({ operations } satisfies Persisted, null, 2));
+    const tmp = `${this.filePath}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ operations } satisfies Persisted, null, 2));
+    fs.renameSync(tmp, this.filePath);
   }
 
   async create(input: Omit<Operation, 'id' | 'createdAt' | 'updatedAt'>): Promise<Operation> {

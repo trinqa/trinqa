@@ -4,6 +4,8 @@ import type { TrMockAnchorAdapter } from '../../adapters/tr-mock-anchor.adapter.
 import { env } from '../../config/env.js';
 import { ApiError } from '../../domain/api-errors.js';
 import type { AnchorSessionStore } from '../../services/anchor-session-store.service.js';
+import type { OperationStore } from '../../services/operation-store.js';
+import { recordOperation } from '../../services/operation-store.js';
 import { sendApiError } from './http-errors.js';
 
 const sessionIdSchema = z.string().uuid();
@@ -31,6 +33,7 @@ export function registerAnchorRoutes(
   app: FastifyInstance,
   anchor: TrMockAnchorAdapter,
   sessions: AnchorSessionStore,
+  operations: OperationStore,
 ): void {
   app.get('/api/v1/anchor/session', async () => ({
     domain: env.TR_ANCHOR_DOMAIN,
@@ -101,6 +104,7 @@ export function registerAnchorRoutes(
           sessionId: sessionIdSchema,
           account: z.string().min(56).max(56),
           amount: z.string().optional(),
+          quoteId: z.string().optional(),
         })
         .parse(req.body);
       const jwt = jwtFromSession(sessions, body.sessionId, body.account);
@@ -108,8 +112,18 @@ export function registerAnchorRoutes(
         asset_code: 'USDC',
         account: body.account,
         amount: body.amount,
+        quote_id: body.quoteId,
       });
-      return { session };
+      const op = await recordOperation(operations, {
+        kind: 'anchor_deposit',
+        status: 'pending',
+        accountId: body.account,
+        title: 'Anchor deposit',
+        amount: body.amount ? { assetCode: 'USDC', amount: body.amount } : undefined,
+        externalRefs: { quoteId: body.quoteId },
+        metadata: { provider: 'tr_mock_anchor' },
+      });
+      return { session, operationId: op.id };
     } catch (err) {
       return sendApiError(reply, err);
     }
@@ -124,17 +138,40 @@ export function registerAnchorRoutes(
           amount: z.string().min(1),
           dest: z.string().min(1),
           destExtra: z.string().optional(),
+          quoteId: z.string().optional(),
         })
         .parse(req.body);
       const jwt = jwtFromSession(sessions, body.sessionId, body.account);
-      const session = await anchor.sep6WithdrawInteractive(jwt, {
+      const sessionResp = await anchor.sep6Withdraw(jwt, {
         asset_code: 'USDC',
         account: body.account,
         amount: body.amount,
         dest: body.dest,
         dest_extra: body.destExtra,
+        quote_id: body.quoteId,
       });
-      return { session };
+      const op = await recordOperation(operations, {
+        kind: 'anchor_withdraw',
+        status: 'pending',
+        accountId: body.account,
+        title: 'Anchor withdrawal',
+        amount: { assetCode: 'USDC', amount: body.amount },
+        externalRefs: { quoteId: body.quoteId },
+        metadata: { provider: 'tr_mock_anchor', dest: body.dest },
+      });
+      return { session: sessionResp, operationId: op.id };
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
+
+  app.get('/api/v1/anchor/transfers/:id', async (req, reply) => {
+    try {
+      const id = z.string().min(1).parse((req.params as { id: string }).id);
+      const sessionId = sessionIdSchema.parse((req.query as { sessionId?: string }).sessionId);
+      const jwt = jwtFromSession(sessions, sessionId);
+      const tx = await anchor.sep6Transaction(jwt, id);
+      return { transfer: tx };
     } catch (err) {
       return sendApiError(reply, err);
     }

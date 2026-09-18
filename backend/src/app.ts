@@ -1,7 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import path from 'node:path';
-import { env } from './config/env.js';
+import { env, resolveOperationsDataDir } from './config/env.js';
 import { StellarService } from './services/stellar.service.js';
 import { TrMockAnchorAdapter } from './adapters/tr-mock-anchor.adapter.js';
 import { DefindexYieldAdapter } from './adapters/defindex-yield.adapter.js';
@@ -16,6 +15,7 @@ import { YieldService } from './services/yield.service.js';
 import { QuoteStore } from './services/quote-store.service.js';
 import { createOperationStore } from './services/operation-store.js';
 import { PaymentRouter } from './services/payment-router.service.js';
+import { PaymentExecutionService } from './services/payment-execution.service.js';
 import { registerYieldRoutes } from './routes/v1/yield.js';
 import { registerPaymentRoutes } from './routes/v1/payments.js';
 import { registerOperationRoutes } from './routes/v1/operations.js';
@@ -39,28 +39,39 @@ export async function buildApp() {
   const capabilities = new CapabilityService(env, anchor, defindex, soroswap, policy);
   const yieldSvc = new YieldService(defindex, policy);
   const quotes = new QuoteStore();
-  const dataDir = env.OPERATIONS_DATA_DIR ?? path.resolve(process.cwd(), '.data');
-  const operations = createOperationStore(dataDir);
+  const operations = createOperationStore(resolveOperationsDataDir());
   const anchorSessions = new AnchorSessionStore();
+  const paymentExecution = new PaymentExecutionService(
+    env,
+    stellar,
+    defindex,
+    soroswap,
+    yieldSvc,
+    quotes,
+    operations,
+  );
   const paymentRouter = new PaymentRouter(
     env,
     stellar,
     anchor,
     soroswap,
+    defindex,
     capabilities,
     quotes,
     operations,
+    anchorSessions,
+    paymentExecution,
   );
 
   registerHealthRoutes(app, stellar, anchor, defindex, soroswap, policy);
   registerCapabilitiesRoutes(app, capabilities);
-  registerDemoRoutes(app, stellar, anchor);
+  registerDemoRoutes(app, stellar, anchor, anchorSessions);
   registerPolicyRoutes(app, policy);
   registerYieldRoutes(app, yieldSvc);
-  registerPaymentRoutes(app, paymentRouter, stellar, operations);
+  registerPaymentRoutes(app, paymentRouter, paymentExecution, stellar, operations);
   registerOperationRoutes(app, operations);
   registerActivityRoutes(app, operations);
-  registerAnchorRoutes(app, anchor, anchorSessions);
+  registerAnchorRoutes(app, anchor, anchorSessions, operations);
   registerAccountRoutes(app, stellar);
   registerTransactionRoutes(app, stellar);
   registerSwapRoutes(app, soroswap);
@@ -77,6 +88,8 @@ export async function buildApp() {
     capabilities,
     yieldSvc,
     paymentRouter,
+    paymentExecution,
     operations,
+    anchorSessions,
   };
 }
