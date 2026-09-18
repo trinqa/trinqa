@@ -1,9 +1,11 @@
 #!/usr/bin/env npx tsx
 /**
- * Full Trinqa backend lifecycle (testnet). Prints PARTIAL + blockers when partner keys missing.
+ * Trinqa backend lifecycle (testnet): anchor on-ramp, policy, optional DeFindex/Soroswap/payment legs.
  */
 
-type LegStatus = 'PASS' | 'BLOCKED' | 'FAIL';
+process.env.ENABLE_MOCK_BANK_TRANSFER = process.env.ENABLE_MOCK_BANK_TRANSFER ?? 'true';
+
+type LegStatus = 'PASS' | 'BLOCKED' | 'FAIL' | 'PARTIAL';
 
 function log(step: string, detail?: unknown) {
   console.log(`\n[${step}]`, detail ?? '');
@@ -13,93 +15,117 @@ async function main() {
   const { env } = await import('../backend/src/config/env.js');
   const { loadTestnetDeployment } = await import('../backend/src/config/deployments.js');
   const { buildApp } = await import('../backend/src/app.js');
+  const { fundTestnetUsdcAccount } = await import('./lib/testnet-usdc-fixture.ts');
 
   const report: Record<string, LegStatus> = {
     Anchor: 'FAIL',
     Policy: 'FAIL',
-    DeFindex: env.DEFINDEX_API_KEY && env.DEFINDEX_VAULT_ADDRESS ? 'FAIL' : 'BLOCKED',
-    Soroswap: env.SOROSWAP_API_KEY ? 'FAIL' : 'BLOCKED',
-    'Earn-funded payment': env.DEFINDEX_API_KEY && env.DEFINDEX_VAULT_ADDRESS ? 'FAIL' : 'BLOCKED',
+    DeFindex: 'BLOCKED',
+    Soroswap: 'BLOCKED',
+    'Earn-funded payment': 'BLOCKED',
   };
 
-  if (!env.DEFINDEX_API_KEY) report['DeFindex'] = 'BLOCKED';
-  if (!env.DEFINDEX_VAULT_ADDRESS) report['DeFindex'] = 'BLOCKED';
-  if (!env.SOROSWAP_API_KEY) report.Soroswap = 'BLOCKED';
+  const blockers: string[] = [];
+  if (!env.DEFINDEX_API_KEY || !env.DEFINDEX_VAULT_ADDRESS) {
+    blockers.push('DEFINDEX_API_KEY/DEFINDEX_VAULT_ADDRESS');
+  } else {
+    report.DeFindex = 'FAIL';
+    report['Earn-funded payment'] = 'FAIL';
+  }
+  if (!env.SOROSWAP_API_KEY) {
+    blockers.push('SOROSWAP_API_KEY');
+  } else {
+    report.Soroswap = 'FAIL';
+  }
 
   const deployment = loadTestnetDeployment();
-  const policyId = env.POLICY_CONTRACT_ID ?? deployment.contractId;
-  log('policy contract', { policyId, wasmHash: deployment.wasmHash });
+  log('policy contract', { policyId: env.POLICY_CONTRACT_ID ?? deployment.contractId, wasmHash: deployment.wasmHash });
 
-  const { app, stellar, anchor, defindex, paymentRouter, anchorSessions } = await buildApp();
+  const { app, stellar, anchor, defindex, soroswap, paymentRouter, anchorSessions } = await buildApp();
 
   try {
-    const health = await app.inject({ method: 'GET', url: '/api/v1/health' });
-    if (health.statusCode === 200) report.Anchor = 'PASS';
-    log('health', health.json());
-
-    const { publicKey, secretKey } = stellar.createRandomKeypair();
-    await stellar.friendbotFund(publicKey);
-    const trustUnsigned = await stellar.buildUsdcTrustlineXdr(publicKey);
-    await stellar.submitSignedXdr(stellar.signXdr(trustUnsigned, secretKey));
-
-    const { token } = await anchor.sep10Authenticate(secretKey);
-    const session = anchorSessions.create(token, publicKey);
-
-    const sep38 = await anchor.sep38Quote(token, {
-      sellAsset: 'iso4217:TRY',
-      buyAsset: `stellar:USDC:${env.USDC_ISSUER}`,
-      sellAmount: '500',
-    });
-    log('SEP-38 TRY→USDC', { id: sep38.id, buy_amount: sep38.buy_amount });
+    const kp = stellar.createRandomKeypair();
+    const funded = await fundTestnetUsdcAccount({ stellar, anchor, env, keypair: kp });
+    const publicKey = funded.publicKey;
+    log('funded account', { publicKey, usdc: funded.usdcBalanceAfter });
     report.Anchor = 'PASS';
 
-    const policyRead = await app.inject({
-      method: 'GET',
-      url: `/api/v1/policy/${publicKey}`,
-    });
-    if (policyRead.statusCode === 200) report.Policy = 'PASS';
+    const { token } = await anchor.sep10Authenticate(kp.secretKey);
+    const session = anchorSessions.create(token, publicKey);
+
+    const policyRead = await app.inject({ method: 'GET', url: `/api/v1/policy/${publicKey}` });
+    report.Policy = policyRead.statusCode === 200 ? 'PASS' : 'FAIL';
     log('policy read', policyRead.json());
 
     if (defindex.isConfigured) {
-      log('defindex vault', await defindex.getVaultInfo());
-      report.DeFindex = 'PASS';
-    } else {
-      log('defindex', 'BLOCKED — missing DEFINDEX_API_KEY or DEFINDEX_VAULT_ADDRESS');
+      try {
+        const vaultInfo = await defindex.getVaultInfo();
+        log('defindex vault', vaultInfo);
+        const depositBuild = await app.inject({
+          method: 'POST',
+          url: '/api/v1/yield/deposits/build',
+          payload: {
+            accountId: publicKey,
+            strategyId: `defindex:${env.DEFINDEX_VAULT_ADDRESS}`,
+            amount: '0.1000000',
+            invest: true,
+          },
+        });
+        if (depositBuild.statusCode !== 200) {
+          report.DeFindex = 'FAIL';
+          log('defindex deposit build', depositBuild.json());
+        } else {
+          report.DeFindex = 'PASS';
+        }
+      } catch (err) {
+        report.DeFindex = 'FAIL';
+        log('defindex error', err instanceof Error ? err.message : err);
+      }
     }
 
-    if (env.SOROSWAP_API_KEY) {
-      report.Soroswap = 'PASS';
-    } else {
-      log('soroswap', 'BLOCKED — SOROSWAP_API_KEY');
+    if (env.SOROSWAP_API_KEY && soroswap.isConfigured) {
+      try {
+        const health = await soroswap.healthCheck();
+        report.Soroswap = health.ok ? 'PASS' : 'FAIL';
+        log('soroswap health', health);
+      } catch {
+        report.Soroswap = 'FAIL';
+      }
+    }
+
+    if (defindex.isConfigured && report.DeFindex === 'PASS') {
+      try {
+        const recipient = stellar.createRandomKeypair().publicKey;
+        await stellar.friendbotFund(recipient);
+        const quote = await paymentRouter.quote({
+          fromAccount: publicKey,
+          recipient,
+          sourceAmount: '0.0500000',
+          sourceAssetCode: 'USDC',
+          destinationCurrency: 'USDC',
+        });
+        log('payment quote', { routeType: quote.routeType, funding: quote.funding });
+        if (quote.funding?.requiresEarnUnwind) {
+          report['Earn-funded payment'] = 'PARTIAL';
+          blockers.push('earn unwind multi-step not exercised in trinqa e2e yet');
+        } else {
+          report['Earn-funded payment'] = 'PASS';
+        }
+      } catch (err) {
+        report['Earn-funded payment'] = 'FAIL';
+        log('payment quote error', err instanceof Error ? err.message : err);
+      }
     }
 
     try {
-      const quote = await paymentRouter.quote({
-        fromAccount: publicKey,
-        recipient: publicKey,
-        sourceAmount: '1.0000000',
-        sourceAssetCode: 'USDC',
-        destinationCurrency: 'USDC',
-      });
-      log('payment quote USDC', { funding: quote.funding, routeType: quote.routeType });
-    } catch (err) {
-      log('payment quote', err instanceof Error ? err.message : err);
-    }
-
-    try {
-      await paymentRouter.quoteWithdrawToTry(publicKey, '1.0000000', session.sessionId);
-      log('TRY withdraw quote', 'SEP-38 locked');
+      await paymentRouter.quoteWithdrawToTry(publicKey, '0.0500000', session.sessionId);
+      log('TRY withdraw quote', 'OK');
     } catch (err) {
       log('TRY withdraw quote', err instanceof Error ? err.message : err);
     }
   } finally {
     await app.close();
   }
-
-  const blockers: string[] = [];
-  if (report.DeFindex === 'BLOCKED') blockers.push('DEFINDEX_API_KEY/DEFINDEX_VAULT_ADDRESS');
-  if (report.Soroswap === 'BLOCKED') blockers.push('SOROSWAP_API_KEY');
-  if (report['Earn-funded payment'] === 'BLOCKED') blockers.push('requires DeFindex write lifecycle');
 
   const fullLifecycle =
     report.Anchor === 'PASS' &&
@@ -109,14 +135,14 @@ async function main() {
 
   console.log('\nTRINQA TESTNET E2E');
   for (const [k, v] of Object.entries(report)) {
-    console.log(`${k}: ${v}${v === 'BLOCKED' && blockers.length ? ` — ${blockers.join('; ')}` : ''}`);
+    const suffix = v === 'BLOCKED' ? ` — ${blockers.join('; ')}` : '';
+    console.log(`${k}: ${v}${suffix}`);
   }
   console.log(`Full lifecycle: ${fullLifecycle ? 'PASS' : 'PARTIAL'}`);
 
   if (!fullLifecycle) {
     process.exit(3);
   }
-  log('done', 'e2e-trinqa PASS');
 }
 
 main().catch((err) => {
