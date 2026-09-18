@@ -31,6 +31,9 @@ const envSchema = z.object({
 
   DEFINDEX_API_KEY: z.string().optional(),
   SOROSWAP_API_KEY: z.string().optional(),
+
+  POLICY_CONTRACT_ID: z.string().optional(),
+  POLICY_WASM_HASH: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof envSchema> & {

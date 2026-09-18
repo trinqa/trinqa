@@ -6,6 +6,8 @@ import { TrMockAnchorAdapter } from './adapters/tr-mock-anchor.adapter.js';
 import { registerHealthRoutes } from './routes/v1/health.js';
 import { registerCapabilitiesRoutes } from './routes/v1/capabilities.js';
 import { registerDemoRoutes } from './routes/v1/demo.js';
+import { PolicyService } from './services/policy.service.js';
+import { registerPolicyRoutes } from './routes/v1/policy.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: env.NODE_ENV !== 'test' });
@@ -14,12 +16,14 @@ export async function buildApp() {
 
   const stellar = new StellarService(env);
   const anchor = new TrMockAnchorAdapter(env, stellar.networkPassphrase);
+  const policy = new PolicyService(env, stellar);
 
   registerHealthRoutes(app, stellar, anchor);
-  registerCapabilitiesRoutes(app);
+  registerCapabilitiesRoutes(app, policy);
   registerDemoRoutes(app, stellar, anchor);
+  registerPolicyRoutes(app, policy);
 
   app.get('/', async () => ({ service: 'trinqa-backend', api: '/api/v1/health' }));
 
-  return { app, stellar, anchor };
+  return { app, stellar, anchor, policy };
 }

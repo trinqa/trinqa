@@ -10,8 +10,8 @@ BFF between Expo mobile and Stellar / TR Mock Anchor / DeFindex / Soroswap. Mobi
 
 | # | Scope | Status |
 |---|--------|--------|
-| M1 | Fastify bootstrap, config, money helpers, StellarService, TrMockAnchorAdapter, health/capabilities, demo signer guard, unit + anchor tests, `scripts/e2e-anchor.ts` | In progress |
-| M2 | `contracts/trinqa-policy` (Soroban), testnet deploy, PolicyService | Planned |
+| M1 | Fastify bootstrap, config, money helpers, StellarService, TrMockAnchorAdapter, health/capabilities, demo signer guard, unit + anchor tests, `scripts/e2e-anchor.ts` | Done (`9dce8f9`) |
+| M2 | `contracts/trinqa-policy` (Soroban), testnet deploy, PolicyService, policy API | Done |
 | M3 | DeFindex + Soroswap adapters, PaymentRouter, OperationStore | Planned |
 | M4 | Full `/api/v1/*` routes, E2E scripts, CI, integration audit (SEP-6 vs SEP-24) | Planned |
 
@@ -36,6 +36,6 @@ No secrets in git. `DEMO_SIGNER_SECRET` optional for local/e2e signing on testne
 
 | Item | Status |
 |------|--------|
-| Rust / Soroban CLI (M2 contracts) | Not installed on dev machine — install before M2 |
+| Rust / Soroban CLI (M2 contracts) | Installed (Rust 1.98.1, stellar CLI 23.1.4) |
 | DeFindex / Soroswap API keys | Placeholders until M3 |
 | Google Docs hackathon handbook | Auth-gated — use vercel site + SKILL.md |
