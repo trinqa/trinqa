@@ -21,6 +21,13 @@ export default function RootLayout() {
             gestureEnabled: true,
           }}
         />
+        <Stack.Screen
+          name="put-to-work"
+          options={{
+            animation: 'slide_from_right',
+            gestureEnabled: true,
+          }}
+        />
       </Stack>
     </>
   );

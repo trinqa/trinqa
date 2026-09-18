@@ -57,4 +57,17 @@ export const screenTokens = {
     processingIconSize: 88,
     successIconSize: 92,
   },
+  putToWork: {
+    contentWidth: 366,
+    headerToContent: 20,
+    availableHeight: 64,
+    strategyRowHeight: 62,
+    strategyGap: 8,
+    horizonTopGap: 18,
+    horizonHeight: 44,
+    explanationHeight: 48,
+    summaryHeight: 120,
+    cardPadding: 16,
+    cardGap: 12,
+  },
 } as const;

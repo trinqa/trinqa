@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
 import { font, foregroundStyle, frame, padding } from '@expo/ui/swift-ui/modifiers';
+import { useRouter } from 'expo-router';
 
 import { ActivityChart } from '@/components/ActivityChart';
 import { EarnDetailsPanel } from '@/components/EarnDetailsPanel';
@@ -21,6 +22,7 @@ import type { EarnSegment } from '@/types';
 const METRIC_WIDTHS = [112, 112, 112] as const;
 
 export function EarnScreen() {
+  const router = useRouter();
   const [segment, setSegment] = useState<EarnSegment>('earnings');
   const items = earnListItems.filter((item) => item.segment === segment);
   const earn = screenTokens.earn;
@@ -87,7 +89,14 @@ export function EarnScreen() {
       </HStack>
 
       <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
-        <EarnDetailsPanel segment={segment} onChange={setSegment} items={items} />
+        <EarnDetailsPanel
+          segment={segment}
+          onChange={setSegment}
+          items={items}
+          onManageStrategy={() =>
+            router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })
+          }
+        />
       </VStack>
     </SwiftUIScreenShell>
   );

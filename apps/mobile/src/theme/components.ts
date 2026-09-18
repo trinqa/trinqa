@@ -59,6 +59,7 @@ export const componentTokens = {
   actionButton: {
     height: 48,
     radius: 14,
+    highlightOpacity: 0.12,
   },
   selectionRow: {
     height: 64,

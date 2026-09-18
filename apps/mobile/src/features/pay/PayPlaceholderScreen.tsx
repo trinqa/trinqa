@@ -18,6 +18,7 @@ import {
   shapes,
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
+import { useRouter } from 'expo-router';
 
 import { BalanceSummary } from '@/components/BalanceSummary';
 import { CardLimitGauge } from '@/components/CardLimitGauge';
@@ -34,6 +35,7 @@ const GAUGE_WIDTH = 298;
 const GAUGE_HEIGHT = 28;
 
 export function WalletScreen() {
+  const router = useRouter();
   const wallet = screenTokens.wallet;
   const transactionContentWidth =
     wallet.contentWidth - wallet.detailsHorizontalPadding * 2;
@@ -132,7 +134,9 @@ export function WalletScreen() {
                 </VStack>
 
                 <Button
-                  onPress={() => undefined}
+                  onPress={() =>
+                    router.push({ pathname: '/put-to-work', params: { origin: 'wallet' } })
+                  }
                   modifiers={[
                     buttonStyle('plain'),
                     padding({ horizontal: 14 }),

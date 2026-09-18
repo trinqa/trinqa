@@ -67,6 +67,33 @@ export interface AddMoneyQuote {
 
 export type AddMoneyStep = 'amount' | 'review' | 'processing' | 'success';
 
+export type PutToWorkRiskId = 'stable' | 'balanced' | 'growth';
+export type PutToWorkHorizonId = 'anytime' | 'three-months' | 'one-year';
+export type PutToWorkStep = 'strategy' | 'amount' | 'review' | 'success';
+export type PutToWorkOrigin = 'add-money' | 'wallet' | 'earn';
+
+export interface PutToWorkRiskProfile {
+  id: PutToWorkRiskId;
+  title: string;
+  riskLabel: string;
+  reviewRiskLabel: string;
+  estimatedApy: number;
+}
+
+export interface PutToWorkHorizon {
+  id: PutToWorkHorizonId;
+  title: string;
+  accessLabel: string;
+  explanation: string;
+}
+
+export interface PutToWorkQuote {
+  amount: number;
+  estimatedYearlyReturn: number;
+  availableAfter: number;
+  earningAfter: number;
+}
+
 export interface ActivityListItem {
   id: string;
   title: string;

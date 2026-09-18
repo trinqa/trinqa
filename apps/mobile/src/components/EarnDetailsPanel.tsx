@@ -11,9 +11,15 @@ interface EarnDetailsPanelProps {
   segment: EarnSegment;
   onChange: (segment: EarnSegment) => void;
   items: EarnListItem[];
+  onManageStrategy: () => void;
 }
 
-export function EarnDetailsPanel({ segment, onChange, items }: EarnDetailsPanelProps) {
+export function EarnDetailsPanel({
+  segment,
+  onChange,
+  items,
+  onManageStrategy,
+}: EarnDetailsPanelProps) {
   const earn = screenTokens.earn;
 
   return (
@@ -53,9 +59,9 @@ export function EarnDetailsPanel({ segment, onChange, items }: EarnDetailsPanelP
                     : 'checkmark.circle.fill'
                 }
                 footerTrailingColor={colors.action}
-                onFooterPress={() => {
-                  // Prepared for the future Manage Strategy / detail destination.
-                }}
+                onFooterPress={
+                  item.action === 'manage-strategy' ? onManageStrategy : () => undefined
+                }
               />
             );
           })}
