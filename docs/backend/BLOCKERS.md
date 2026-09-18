@@ -7,7 +7,6 @@
 | Partner API down | Health `degraded` | — |
 | BRL payout | `NO_SUPPORTED_PAYOUT_RAIL` (by design) | — |
 | **Earn-funded pay** | `PaymentRouter` throws `EARN_UNWIND_REQUIRED` only — **no** orchestration of policy authorize → DeFindex withdraw → payment | **INCOMPLETE** — do not claim pay-from-earn complete |
-| **`e2e:anchor` scope** | Script stops after SEP-38; no SEP-6 TRY deposit / bank sim / withdraw proof | **INCOMPLETE** — anchor lifecycle evidence gap |
 | M4 rebase on `main` | Branch may diverge from mobile monorepo `main` | Verify before merge (not merged in this run) |
 
 Never mark external partner calls as success without a real response.

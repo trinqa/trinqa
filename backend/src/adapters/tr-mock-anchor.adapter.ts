@@ -143,18 +143,29 @@ export class TrMockAnchorAdapter {
     return toml.transferServer ?? `https://${this.domain}/sep6`;
   }
 
-  async sep6DepositInteractive(
+  async sep6Deposit(
     token: string,
-    body: { asset_code: string; account: string; amount?: string },
+    params: {
+      asset_code: string;
+      account: string;
+      amount: string;
+      type?: string;
+      quote_id?: string;
+    },
   ): Promise<unknown> {
     const base = await this.transferServerBase();
-    const res = await fetch(`${base}/transactions/deposit/interactive`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
+    const qs = new URLSearchParams({
+      asset_code: params.asset_code,
+      account: params.account,
+      amount: params.amount,
+      type: params.type ?? 'bank_account',
+    });
+    if (params.quote_id) {
+      qs.set('quote_id', params.quote_id);
+    }
+    const res = await fetch(`${base}/deposit?${qs}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const err = await res.text();
@@ -163,22 +174,72 @@ export class TrMockAnchorAdapter {
     return res.json();
   }
 
-  async sep6WithdrawInteractive(
+  /** @deprecated alias — TR mock anchor implements SEP-6 GET /deposit, not POST /interactive */
+  async sep6DepositInteractive(
     token: string,
-    body: { asset_code: string; account: string; amount: string; dest: string; dest_extra?: string },
+    body: { asset_code: string; account: string; amount?: string; quote_id?: string },
+  ): Promise<unknown> {
+    if (!body.amount) {
+      throw new Error('SEP-6 deposit requires amount');
+    }
+    return this.sep6Deposit(token, {
+      asset_code: body.asset_code,
+      account: body.account,
+      amount: body.amount,
+      quote_id: body.quote_id,
+    });
+  }
+
+  async sep6Withdraw(
+    token: string,
+    params: {
+      asset_code: string;
+      account: string;
+      amount: string;
+      dest: string;
+      type?: string;
+      dest_extra?: string;
+    },
   ): Promise<unknown> {
     const base = await this.transferServerBase();
-    const res = await fetch(`${base}/transactions/withdraw/interactive`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
+    const qs = new URLSearchParams({
+      asset_code: params.asset_code,
+      account: params.account,
+      amount: params.amount,
+      dest: params.dest,
+      type: params.type ?? 'bank_account',
+    });
+    if (params.dest_extra) {
+      qs.set('dest_extra', params.dest_extra);
+    }
+    const res = await fetch(`${base}/withdraw?${qs}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const err = await res.text();
       throw new Error(`SEP-6 withdraw failed (${res.status}): ${err.slice(0, 300)}`);
+    }
+    return res.json();
+  }
+
+  /** @deprecated alias — TR mock anchor implements SEP-6 GET /withdraw */
+  async sep6WithdrawInteractive(
+    token: string,
+    body: { asset_code: string; account: string; amount: string; dest: string; dest_extra?: string },
+  ): Promise<unknown> {
+    return this.sep6Withdraw(token, body);
+  }
+
+  async sep6SimulateBankTransfer(token: string, transactionId: string): Promise<unknown> {
+    const base = await this.transferServerBase();
+    const res = await fetch(`${base}/tx/${encodeURIComponent(transactionId)}/simulate-bank-transfer`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`SEP-6 simulate bank transfer failed (${res.status}): ${err.slice(0, 300)}`);
     }
     return res.json();
   }

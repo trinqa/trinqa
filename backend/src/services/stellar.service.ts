@@ -1,6 +1,7 @@
 import {
   Asset,
   Keypair,
+  Memo,
   Networks,
   Operation,
   TransactionBuilder,
@@ -82,6 +83,34 @@ export class StellarService {
         b.assetCode === this.config.usdcAssetCode &&
         b.assetIssuer === this.config.USDC_ISSUER,
     );
+  }
+
+  publicKeyFromSecret(secretKey: string): string {
+    return Keypair.fromSecret(secretKey).publicKey();
+  }
+
+  async buildUsdcPaymentWithMemoIdXdr(
+    sourcePublicKey: string,
+    destinationPublicKey: string,
+    amount: string,
+    memoId: string,
+  ): Promise<string> {
+    const account = await this.horizon.loadAccount(sourcePublicKey);
+    const tx = new TransactionBuilder(account, {
+      fee: String(await this.horizon.fetchBaseFee()),
+      networkPassphrase: this.networkPassphrase,
+    })
+      .addMemo(Memo.id(memoId))
+      .addOperation(
+        Operation.payment({
+          destination: destinationPublicKey,
+          asset: this.usdc,
+          amount: formatStellarAmount(amount),
+        }),
+      )
+      .setTimeout(120)
+      .build();
+    return tx.toXDR();
   }
 
   async buildPaymentXdr(
