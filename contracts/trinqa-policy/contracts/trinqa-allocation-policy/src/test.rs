@@ -103,3 +103,75 @@ fn rejects_invalid_liquidity_bps() {
     let result = client.try_set_policy(&user, &policy);
     assert_eq!(result, Err(Ok(Error::InvalidLiquidityBps)));
 }
+
+#[test]
+fn set_policy_requires_user_auth() {
+    let env = Env::default();
+    let user = Address::generate(&env);
+    let contract_id = env.register(TrinqaAllocationPolicy, ());
+    let client = TrinqaAllocationPolicyClient::new(&env, &contract_id);
+    let policy = sample_policy(&env);
+    let result = client.try_set_policy(&user, &policy);
+    assert!(result.is_err());
+}
+
+#[test]
+fn update_risk_requires_user_auth() {
+    let env = Env::default();
+    let user = Address::generate(&env);
+    let contract_id = env.register(TrinqaAllocationPolicy, ());
+    let client = TrinqaAllocationPolicyClient::new(&env, &contract_id);
+    let result = client.try_update_risk(&user, &1u32);
+    assert!(result.is_err());
+}
+
+#[test]
+fn authorize_allocation_requires_user_auth() {
+    let env = Env::default();
+    let user = Address::generate(&env);
+    let contract_id = env.register(TrinqaAllocationPolicy, ());
+    let client = TrinqaAllocationPolicyClient::new(&env, &contract_id);
+    let result = client.try_authorize_allocation(&user, &symbol_short!("defindex"), &100);
+    assert!(result.is_err());
+}
+
+#[test]
+fn rejects_invalid_risk_profile_value() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let user = Address::generate(&env);
+    let contract_id = env.register(TrinqaAllocationPolicy, ());
+    let client = TrinqaAllocationPolicyClient::new(&env, &contract_id);
+
+    let mut policy = sample_policy(&env);
+    policy.risk_profile = 99;
+    let result = client.try_set_policy(&user, &policy);
+    assert_eq!(result, Err(Ok(Error::InvalidRiskProfile)));
+}
+
+#[test]
+fn rejects_past_target_timestamp() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let user = Address::generate(&env);
+    let contract_id = env.register(TrinqaAllocationPolicy, ());
+    let client = TrinqaAllocationPolicyClient::new(&env, &contract_id);
+
+    let mut policy = sample_policy(&env);
+    policy.target_timestamp = env.ledger().timestamp().saturating_sub(1);
+    let result = client.try_set_policy(&user, &policy);
+    assert_eq!(result, Err(Ok(Error::InvalidTargetTimestamp)));
+}
+
+#[test]
+fn rejects_disallowed_strategy_allocation() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let user = Address::generate(&env);
+    let contract_id = env.register(TrinqaAllocationPolicy, ());
+    let client = TrinqaAllocationPolicyClient::new(&env, &contract_id);
+
+    client.set_policy(&user, &sample_policy(&env));
+    let result = client.try_authorize_allocation(&user, &symbol_short!("unknown"), &100);
+    assert_eq!(result, Err(Ok(Error::StrategyNotAllowed)));
+}
