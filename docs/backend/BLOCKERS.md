@@ -1,12 +1,13 @@
-# Backend blockers (M3)
+# Backend blockers
 
-| Blocker | Impact | Exit code (e2e scripts) |
-|---------|--------|-------------------------|
-| `DEFINDEX_API_KEY` missing | Yield deposit/withdraw build, vault reads | `e2e-defindex` → 2 |
-| `DEFINDEX_VAULT_ADDRESS` missing | Strategy list empty, yield e2e blocked | `e2e-defindex` → 2 |
-| `SOROSWAP_API_KEY` missing | Swap quote/build, swap leg of payments | `e2e-soroswap` → 2 |
-| Partner API down | Health `degraded`; capabilities show adapter error | — |
-| BRL payout | Always `NO_SUPPORTED_PAYOUT_RAIL` (by design) | — |
-| Earn-funded pay | `EARN_UNWIND_REQUIRED` — no silent unwind | — |
+| Blocker | Impact | Status / exit |
+|---------|--------|----------------|
+| `DEFINDEX_API_KEY` / `DEFINDEX_VAULT_ADDRESS` missing | Yield deposit/withdraw, vault reads, `e2e-defindex` | **BLOCKED** — exit 2 (verified 2026-09-18, no local `.env`) |
+| `SOROSWAP_API_KEY` missing | Swap quote/build | **BLOCKED** — exit 2 (verified 2026-09-18) |
+| Partner API down | Health `degraded` | — |
+| BRL payout | `NO_SUPPORTED_PAYOUT_RAIL` (by design) | — |
+| **Earn-funded pay** | `PaymentRouter` throws `EARN_UNWIND_REQUIRED` only — **no** orchestration of policy authorize → DeFindex withdraw → payment | **INCOMPLETE** — do not claim pay-from-earn complete |
+| **`e2e:anchor` scope** | Script stops after SEP-38; no SEP-6 TRY deposit / bank sim / withdraw proof | **INCOMPLETE** — anchor lifecycle evidence gap |
+| M4 rebase on `main` | Branch may diverge from mobile monorepo `main` | Verify before merge (not merged in this run) |
 
 Never mark external partner calls as success without a real response.

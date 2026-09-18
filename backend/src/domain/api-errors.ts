@@ -2,7 +2,8 @@ export type ApiErrorCode =
   | RouteUnavailableReason
   | 'VALIDATION_ERROR'
   | 'ADAPTER_UNAVAILABLE'
-  | 'NOT_FOUND';
+  | 'NOT_FOUND'
+  | 'ANCHOR_SESSION_INVALID';
 
 export type RouteUnavailableReason =
   | 'ROUTE_UNAVAILABLE'

@@ -168,7 +168,7 @@ export class PaymentRouter {
           assetCode: 'USDC',
           amount: quote.source.amount,
           destinationCurrency: quote.destination.currency,
-          note: 'Client must complete SEP-10 + SEP-6 withdraw with user JWT',
+          note: 'Complete SEP-10 via /api/v1/anchor/auth/* then SEP-6 withdraw with sessionId',
         },
         steps: [
           { type: 'sep10', description: 'Authenticate with TR mock anchor' },

@@ -1,6 +1,7 @@
 import TOML from 'toml';
 import {
   Keypair,
+  Transaction,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import type { AppConfig } from '../config/env.js';
@@ -194,29 +195,46 @@ export class TrMockAnchorAdapter {
     return res.json();
   }
 
-  async sep10Authenticate(secretKey: string): Promise<Sep10Token> {
-    const kp = Keypair.fromSecret(secretKey);
-    const account = kp.publicKey();
+  async sep10Challenge(account: string): Promise<{ transaction: string; networkPassphrase: string }> {
     const toml = await this.discover();
     const authBase = toml.webAuthEndpoint ?? `https://${this.domain}/auth`;
-
     const challengeRes = await fetch(`${authBase}?account=${encodeURIComponent(account)}`);
     if (!challengeRes.ok) {
       throw new Error(`SEP-10 challenge failed: ${challengeRes.status}`);
     }
     const { transaction } = (await challengeRes.json()) as { transaction: string };
-    const tx = TransactionBuilder.fromXDR(transaction, this.networkPassphrase);
-    tx.sign(kp);
+    return { transaction, networkPassphrase: this.networkPassphrase };
+  }
+
+  async sep10TokenFromSignedTransaction(signedTransactionXdr: string): Promise<Sep10Token & { account: string }> {
+    const toml = await this.discover();
+    const authBase = toml.webAuthEndpoint ?? `https://${this.domain}/auth`;
+    const tx = TransactionBuilder.fromXDR(signedTransactionXdr, this.networkPassphrase);
+    if (!(tx instanceof Transaction)) {
+      throw new Error('SEP-10 token requires a signed transaction envelope');
+    }
+    const account = tx.source;
 
     const tokenRes = await fetch(authBase, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transaction: tx.toXDR() }),
+      body: JSON.stringify({ transaction: signedTransactionXdr }),
     });
     if (!tokenRes.ok) {
       const err = await tokenRes.text();
       throw new Error(`SEP-10 token failed (${tokenRes.status}): ${err.slice(0, 200)}`);
     }
-    return tokenRes.json() as Promise<Sep10Token>;
+    const token = (await tokenRes.json()) as Sep10Token;
+    return { ...token, account };
+  }
+
+  async sep10Authenticate(secretKey: string): Promise<Sep10Token> {
+    const kp = Keypair.fromSecret(secretKey);
+    const account = kp.publicKey();
+    const { transaction } = await this.sep10Challenge(account);
+    const tx = TransactionBuilder.fromXDR(transaction, this.networkPassphrase);
+    tx.sign(kp);
+    const { token } = await this.sep10TokenFromSignedTransaction(tx.toXDR());
+    return { token };
   }
 }

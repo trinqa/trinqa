@@ -56,9 +56,11 @@ Base URL: `http://localhost:8787` (default)
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/v1/anchor/session` | Domain + SEP-10 hint |
-| POST | `/api/v1/anchor/quotes` | SEP-38 quote (JWT body) |
-| POST | `/api/v1/anchor/deposits` | SEP-6 interactive deposit |
-| POST | `/api/v1/anchor/withdrawals` | SEP-6 interactive withdraw |
+| GET | `/api/v1/anchor/auth/challenge?account=G…` | SEP-10 challenge XDR (client signs) |
+| POST | `/api/v1/anchor/auth/complete` | `{ transaction }` → opaque `{ sessionId, expiresAt }` (JWT server-side only) |
+| POST | `/api/v1/anchor/quotes` | SEP-38 quote (`sessionId` body) |
+| POST | `/api/v1/anchor/deposits` | SEP-6 interactive deposit (`sessionId`) |
+| POST | `/api/v1/anchor/withdrawals` | SEP-6 interactive withdraw (`sessionId`) |
 
 ## Operations & activity
 

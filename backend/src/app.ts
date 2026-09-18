@@ -21,6 +21,7 @@ import { registerPaymentRoutes } from './routes/v1/payments.js';
 import { registerOperationRoutes } from './routes/v1/operations.js';
 import { registerActivityRoutes } from './routes/v1/activity.js';
 import { registerAnchorRoutes } from './routes/v1/anchor.js';
+import { AnchorSessionStore } from './services/anchor-session-store.service.js';
 import { registerAccountRoutes } from './routes/v1/accounts.js';
 import { registerTransactionRoutes } from './routes/v1/transactions.js';
 import { registerSwapRoutes } from './routes/v1/swaps.js';
@@ -40,6 +41,7 @@ export async function buildApp() {
   const quotes = new QuoteStore();
   const dataDir = env.OPERATIONS_DATA_DIR ?? path.resolve(process.cwd(), '.data');
   const operations = createOperationStore(dataDir);
+  const anchorSessions = new AnchorSessionStore();
   const paymentRouter = new PaymentRouter(
     env,
     stellar,
@@ -58,7 +60,7 @@ export async function buildApp() {
   registerPaymentRoutes(app, paymentRouter, stellar, operations);
   registerOperationRoutes(app, operations);
   registerActivityRoutes(app, operations);
-  registerAnchorRoutes(app, anchor);
+  registerAnchorRoutes(app, anchor, anchorSessions);
   registerAccountRoutes(app, stellar);
   registerTransactionRoutes(app, stellar);
   registerSwapRoutes(app, soroswap);
