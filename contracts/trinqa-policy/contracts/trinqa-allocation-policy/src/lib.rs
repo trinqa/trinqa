@@ -36,6 +36,7 @@ pub enum Error {
     InvalidTargetTimestamp = 4,
     AutomationPaused = 5,
     StrategyNotAllowed = 6,
+    ZeroAllocationAmount = 7,
 }
 
 #[contractevent]
@@ -241,6 +242,9 @@ impl TrinqaAllocationPolicy {
         amount_bps: u32,
     ) -> Result<bool, Error> {
         user.require_auth();
+        if amount_bps == 0 {
+            return Err(Error::ZeroAllocationAmount);
+        }
         if amount_bps > MAX_LIQUIDITY_BPS {
             return Err(Error::InvalidLiquidityBps);
         }

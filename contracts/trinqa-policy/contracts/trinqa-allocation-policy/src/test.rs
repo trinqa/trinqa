@@ -78,6 +78,19 @@ fn pause_blocks_authorization() {
 }
 
 #[test]
+fn rejects_zero_allocation_bps() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let user = Address::generate(&env);
+    let contract_id = env.register(TrinqaAllocationPolicy, ());
+    let client = TrinqaAllocationPolicyClient::new(&env, &contract_id);
+
+    client.set_policy(&user, &sample_policy(&env));
+    let result = client.try_authorize_allocation(&user, &symbol_short!("defindex"), &0u32);
+    assert_eq!(result, Err(Ok(Error::ZeroAllocationAmount)));
+}
+
+#[test]
 fn rejects_invalid_liquidity_bps() {
     let env = Env::default();
     env.mock_all_auths();

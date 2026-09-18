@@ -4,12 +4,14 @@ on:
   push:
     paths:
       - 'backend/**'
+      - 'contracts/**'
       - 'scripts/e2e-*.ts'
       - 'deployments/**'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     paths:
       - 'backend/**'
+      - 'contracts/**'
       - 'scripts/e2e-*.ts'
       - 'deployments/**'
       - '.github/workflows/backend-ci.yml'
@@ -34,3 +36,15 @@ jobs:
       - run: pnpm verify
       - name: npm audit (high+)
         run: pnpm audit --audit-level=high || true
+
+  contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts/trinqa-policy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup target add wasm32v1-none
+      - run: cargo test
+      - run: cargo build --target wasm32v1-none --release -p trinqa-allocation-policy
