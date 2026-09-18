@@ -1,7 +1,6 @@
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-// CJS entry avoids ESM default-import typing issues under NodeNext.
 const Decimal = require('decimal.js') as typeof import('decimal.js').default;
 
 export { Decimal };
@@ -16,22 +15,44 @@ Decimal.set({ precision: 40, rounding: Decimal.ROUND_HALF_UP });
 
 export type DecimalString = string;
 
-export function assertDecimalString(value: string, label: string): void {
-  if (!/^-?\d+(\.\d+)?$/.test(value)) {
-    throw new Error(`${label} must be a decimal string, got: ${value}`);
+export class MoneyPrecisionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MoneyPrecisionError';
   }
 }
 
-/** Parse human decimal → atomic bigint (no float). */
+export function assertDecimalString(value: string, label: string): void {
+  if (!/^-?\d+(\.\d+)?$/.test(value)) {
+    throw new MoneyPrecisionError(`${label} must be a decimal string, got: ${value}`);
+  }
+}
+
+export function assertScale(value: DecimalString, decimals: number, label = 'amount'): void {
+  if (!Number.isInteger(decimals) || decimals < 0) {
+    throw new MoneyPrecisionError(`${label}: decimals must be a non-negative integer`);
+  }
+  assertDecimalString(value, label);
+  const parts = value.split('.');
+  const frac = parts[1] ?? '';
+  if (frac.length > decimals) {
+    throw new MoneyPrecisionError(`${label} exceeds ${decimals} decimal places: ${value}`);
+  }
+}
+
+/** Parse human decimal → atomic bigint (exact; never silently rounds). */
 export function toAtomic(value: DecimalString, decimals: number): bigint {
-  assertDecimalString(value, 'amount');
+  assertScale(value, decimals, 'amount');
   const d = new Decimal(value);
   if (!d.isFinite()) {
-    throw new Error(`Invalid amount: ${value}`);
+    throw new MoneyPrecisionError(`Invalid amount: ${value}`);
   }
   const factor = new Decimal(10).pow(decimals);
-  const atomic = d.mul(factor).toFixed(0, Decimal.ROUND_HALF_UP);
-  return BigInt(atomic);
+  const product = d.mul(factor);
+  if (!product.isInteger()) {
+    throw new MoneyPrecisionError(`Amount ${value} is not representable at ${decimals} decimals`);
+  }
+  return BigInt(product.toFixed(0));
 }
 
 /** Atomic bigint → fixed-width decimal string. */

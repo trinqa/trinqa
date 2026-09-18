@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { Keypair } from '@stellar/stellar-sdk';
+import { Keypair, TransactionBuilder } from '@stellar/stellar-sdk';
 import { z } from 'zod';
 import { demoSignerGuard } from '../../guards/demo-signer.guard.js';
 import { env } from '../../config/env.js';
 import type { StellarService } from '../../services/stellar.service.js';
 import type { TrMockAnchorAdapter } from '../../adapters/tr-mock-anchor.adapter.js';
+import type { AnchorSessionStore } from '../../services/anchor-session-store.service.js';
 
 const trustlineBody = z.object({
   account: z.string().regex(/^G[A-Z0-9]{55}$/),
@@ -14,6 +15,7 @@ export function registerDemoRoutes(
   app: FastifyInstance,
   stellar: StellarService,
   anchor: TrMockAnchorAdapter,
+  sessions: AnchorSessionStore,
 ): void {
   app.post(
     '/api/v1/demo/trustline/usdc',
@@ -40,8 +42,17 @@ export function registerDemoRoutes(
     '/api/v1/demo/sep10',
     { preHandler: demoSignerGuard },
     async () => {
-      const token = await anchor.sep10Authenticate(env.DEMO_SIGNER_SECRET!);
-      return { token: token.token, expiresIn: 'see JWT' };
+      const secret = env.DEMO_SIGNER_SECRET!;
+      const kp = Keypair.fromSecret(secret);
+      const account = kp.publicKey();
+      const { transaction } = await anchor.sep10Challenge(account);
+      const envelope = TransactionBuilder.fromXDR(transaction, stellar.networkPassphrase);
+      envelope.sign(kp);
+      const { token, account: resolvedAccount } = await anchor.sep10TokenFromSignedTransaction(
+        envelope.toXDR(),
+      );
+      const session = sessions.create(token, resolvedAccount);
+      return { sessionId: session.sessionId, expiresAt: session.expiresAt };
     },
   );
 }
