@@ -40,6 +40,14 @@ describe('DeterministicRiskEngine', () => {
     expect(ranked[0]?.strategy.risk).toBe('conservative');
   });
 
+  it('applies riskProfile only to asset risk fit, not intrinsic safety', () => {
+    const conservative = strategies[0]!;
+    const lowFit = engine.scoreStrategy({ riskProfile: 2, daysToTarget: 7, strategy: conservative });
+    const highFit = engine.scoreStrategy({ riskProfile: 0, daysToTarget: 7, strategy: conservative });
+    expect(lowFit.breakdown.safety).toBe(highFit.breakdown.safety);
+    expect(highFit.breakdown.assetRisk).toBeGreaterThan(lowFit.breakdown.assetRisk);
+  });
+
   it('scores unsupported routes negatively', () => {
     expect(
       scoreRoute({

@@ -1,4 +1,5 @@
 import type { YieldStrategy } from '../domain/yield.js';
+import { riskTierFromProfile, type RiskTier } from '../domain/yield.js';
 
 /** Final PRD yield scoring weights (sum = 100). */
 export const RISK_ENGINE_WEIGHTS = {
@@ -21,7 +22,7 @@ export type ScoredStrategy = {
   breakdown: Record<keyof typeof RISK_ENGINE_WEIGHTS, number>;
 };
 
-function safetyScore(strategy: YieldStrategy): number {
+function strategyIntrinsicSafety(strategy: YieldStrategy): number {
   const tier = strategy.risk === 'conservative' ? 90 : strategy.risk === 'balanced' ? 65 : 40;
   return strategy.trinqaClassification ? tier : Math.min(tier + 5, 100);
 }
@@ -38,9 +39,18 @@ function netYieldScore(estimatedApy: number): number {
   return Math.round((capped / 25) * 100);
 }
 
-function assetRiskScore(strategy: YieldStrategy): number {
-  void strategy;
-  return 70;
+function tierDistance(a: RiskTier, b: RiskTier): number {
+  const order: RiskTier[] = ['conservative', 'balanced', 'growth'];
+  return Math.abs(order.indexOf(a) - order.indexOf(b));
+}
+
+/** User ↔ strategy fit (independent from intrinsic strategy safety classification). */
+function assetRiskFitScore(strategy: YieldStrategy, riskProfile: number): number {
+  const userTier = riskTierFromProfile(riskProfile);
+  const distance = tierDistance(userTier, strategy.risk);
+  if (distance === 0) return 100;
+  if (distance === 1) return 55;
+  return 20;
 }
 
 function diversificationScore(strategy: YieldStrategy): number {
@@ -52,10 +62,10 @@ export class DeterministicRiskEngine {
   scoreStrategy(input: StrategyScoreInput): ScoredStrategy {
     const w = RISK_ENGINE_WEIGHTS;
     const breakdown = {
-      safety: (safetyScore(input.strategy) * w.safety) / 100,
+      safety: (strategyIntrinsicSafety(input.strategy) * w.safety) / 100,
       liquidity: (liquidityScore(input.daysToTarget, input.strategy.withdrawalAvailability) * w.liquidity) / 100,
       netYield: (netYieldScore(input.strategy.estimatedApy) * w.netYield) / 100,
-      assetRisk: (assetRiskScore(input.strategy) * w.assetRisk) / 100,
+      assetRisk: (assetRiskFitScore(input.strategy, input.riskProfile) * w.assetRisk) / 100,
       diversification: (diversificationScore(input.strategy) * w.diversification) / 100,
     };
     const score =
@@ -68,7 +78,6 @@ export class DeterministicRiskEngine {
     riskProfile: number,
     daysToTarget: number,
   ): ScoredStrategy[] {
-    void riskProfile;
     return strategies
       .map((strategy) => this.scoreStrategy({ riskProfile, daysToTarget, strategy }))
       .sort((a, b) => b.score - a.score);
