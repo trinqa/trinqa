@@ -16,21 +16,22 @@ async function main() {
   const { loadTestnetDeployment } = await import('../backend/src/config/deployments.js');
 
   const nodeOk = Number(process.version.slice(1).split('.')[0]) >= 22;
-  rows.push({ label: 'Node 22+', status: nodeOk ? 'PASS' : 'FAIL', action: nodeOk ? undefined : 'nvm use 22' });
+  rows.push({ label: 'Node 22+', status: nodeOk ? 'OK' : 'FAIL', action: nodeOk ? undefined : 'nvm use 22' });
 
   const stellar = new StellarService(env);
   const net = await stellar.probeNetwork().catch(() => ({ horizon: false }));
-  rows.push({ label: 'Stellar Horizon', status: net.horizon ? 'PASS' : 'FAIL' });
+  rows.push({ label: 'Stellar Horizon', status: net.horizon ? 'REACHABLE' : 'UNREACHABLE' });
 
   const anchor = new TrMockAnchorAdapter(env, stellar.networkPassphrase);
   const anchorHealth = await anchor.health().catch(() => ({ ok: false }));
-  rows.push({ label: 'TR Anchor', status: anchorHealth.ok ? 'PASS' : 'FAIL' });
+  rows.push({ label: 'TR Anchor', status: anchorHealth.ok ? 'HEALTHY' : 'UNHEALTHY' });
 
   const deployment = loadTestnetDeployment();
   const policy = new PolicyService(env, stellar);
+  const policyMatched = policy.adapter.contractId === deployment.contractId;
   rows.push({
     label: 'Policy Contract',
-    status: policy.adapter.contractId === deployment.contractId ? 'PASS' : 'FAIL',
+    status: policyMatched ? 'MATCHED' : 'MISMATCH',
   });
 
   rows.push({
@@ -63,7 +64,7 @@ async function main() {
   const soroswapHealth = await soroswap.healthCheck();
   rows.push({
     label: 'Soroswap API',
-    status: !env.SOROSWAP_API_KEY ? 'UNCONFIGURED' : soroswapHealth.ok ? 'PASS' : 'AUTH_FAIL',
+    status: !env.SOROSWAP_API_KEY ? 'UNCONFIGURED' : soroswapHealth.ok ? 'HEALTHY' : 'AUTH_FAIL',
   });
 
   const identity = getTrinqaUsdcIdentity(env);
@@ -80,7 +81,8 @@ async function main() {
     console.log(`${r.label}: ${r.status}${r.action ? ` (${r.action})` : ''}`);
   }
 
-  const infraFail = rows.some((r) => r.status === 'FAIL');
+  const infraFail =
+    !nodeOk || !net.horizon || !anchorHealth.ok || !policyMatched;
   const externalOnly =
     !infraFail &&
     (!env.DEFINDEX_API_KEY || !env.SOROSWAP_API_KEY || vaultStatus !== 'VALID');

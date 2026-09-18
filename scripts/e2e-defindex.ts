@@ -10,6 +10,14 @@ function log(step: string, detail?: unknown) {
   console.log(`\n[${step}]`, detail ?? '');
 }
 
+function assertProviderSend(result: unknown, label: string): string {
+  const r = result as { success?: boolean; hash?: string; txHash?: string };
+  if (r.success === false) throw new Error(`${label} provider reported failure`);
+  const txHash = (r.txHash ?? r.hash)?.trim();
+  if (!txHash) throw new Error(`${label} missing txHash`);
+  return txHash;
+}
+
 async function main() {
   const { env } = await import('../backend/src/config/env.js');
   const { StellarService } = await import('../backend/src/services/stellar.service.js');
@@ -59,6 +67,7 @@ async function main() {
     stellar.signXdr(depositRes.xdr, kp.secretKey),
   );
   log('deposit send', depositSend);
+  const depositTxHash = assertProviderSend(depositSend, 'deposit');
 
   const usdcMid = Number(
     (await stellar.getBalances(account)).find((b) => b.assetCode === 'USDC' && b.assetIssuer === env.USDC_ISSUER)
@@ -81,6 +90,7 @@ async function main() {
     stellar.signXdr(withdrawRes.xdr, kp.secretKey),
   );
   log('withdraw send', withdrawSend);
+  const withdrawTxHash = assertProviderSend(withdrawSend, 'withdraw');
 
   const usdcAfter = Number(
     (await stellar.getBalances(account)).find((b) => b.assetCode === 'USDC' && b.assetIssuer === env.USDC_ISSUER)
@@ -100,8 +110,8 @@ async function main() {
   console.log('\nPASS DeFindex write lifecycle', {
     account,
     vault: env.DEFINDEX_VAULT_ADDRESS,
-    depositTx: (depositSend as { txHash?: string }).txHash,
-    withdrawTx: (withdrawSend as { txHash?: string }).txHash,
+    depositTx: depositTxHash,
+    withdrawTx: withdrawTxHash,
   });
 }
 

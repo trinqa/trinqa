@@ -9,15 +9,16 @@ process.env.ENABLE_MOCK_BANK_TRANSFER = process.env.ENABLE_MOCK_BANK_TRANSFER ??
 import { stageLog } from './lib/stage-log.ts';
 import { saveEvidence, type PublicEvidence } from './lib/evidence.ts';
 import { fundRecipientWithUsdcTrustline } from './lib/recipient-usdc-trustline.ts';
+import { fromAtomic, toAtomic } from '../backend/src/domain/money.js';
 
 const TOTAL = 8;
 
-function usdcBalance(
+function usdcBalanceAtomic(
   balances: Awaited<ReturnType<import('../backend/src/services/stellar.service.js').StellarService['getBalances']>>,
   issuer: string,
-): number {
+): bigint {
   const line = balances.find((b) => b.assetCode === 'USDC' && b.assetIssuer === issuer);
-  return Number(line?.balance ?? '0');
+  return toAtomic(line?.balance ?? '0', 7);
 }
 
 async function pollSep6Completed(
@@ -66,18 +67,19 @@ async function main() {
   const policy = new PolicyService(env, stellar);
 
   try {
-    stageLog(1, TOTAL, 'Fund payer + USDC trustline', 'PASS');
     const kp = stellar.createRandomKeypair();
     await stellar.friendbotFund(kp.publicKey);
     const trustUnsigned = await stellar.buildUsdcTrustlineXdr(kp.publicKey);
-    await stellar.submitSignedXdr(stellar.signXdr(trustUnsigned, kp.secretKey));
+    const trustSubmit = await stellar.submitSignedXdr(stellar.signXdr(trustUnsigned, kp.secretKey));
+    if (!trustSubmit.successful) throw new Error('USDC trustline submit failed');
     evidence.accounts!.payer = kp.publicKey;
+    stageLog(1, TOTAL, 'Fund payer + USDC trustline', 'PASS');
 
-    stageLog(2, TOTAL, 'SEP-10 auth', 'PASS');
     const { token } = await anchor.sep10Authenticate(kp.secretKey);
+    if (!token) throw new Error('SEP-10 auth returned no token');
     const session = anchorSessions.create(token, kp.publicKey);
+    stageLog(2, TOTAL, 'SEP-10 auth', 'PASS');
 
-    stageLog(3, TOTAL, 'SEP-38 + SEP-6 TRY→USDC deposit', 'PASS');
     const tryAmount = '500';
     const depositQuote = await anchor.sep38Quote(token, {
       sellAsset: 'iso4217:TRY',
@@ -85,7 +87,7 @@ async function main() {
       sellAmount: tryAmount,
     });
     evidence.quoteIds!.deposit = depositQuote.id;
-    const beforeUsdc = usdcBalance(await stellar.getBalances(kp.publicKey), env.USDC_ISSUER);
+    const beforeUsdc = usdcBalanceAtomic(await stellar.getBalances(kp.publicKey), env.USDC_ISSUER);
     const deposit = (await anchor.sep6Deposit(token, {
       asset_code: 'USDC',
       account: kp.publicKey,
@@ -95,13 +97,16 @@ async function main() {
     evidence.transferIds!.deposit = deposit.id;
     await anchor.sep6SimulateBankTransfer(token, deposit.id);
     const depositDone = await pollSep6Completed(anchor, token, deposit.id);
-    evidence.txHashes!.deposit = depositDone.stellarTxHash ?? 'unknown';
-    const afterUsdc = usdcBalance(await stellar.getBalances(kp.publicKey), env.USDC_ISSUER);
+    if (!depositDone.stellarTxHash?.trim()) {
+      throw new Error('Deposit completed without stellar tx hash');
+    }
+    evidence.txHashes!.deposit = depositDone.stellarTxHash;
+    const afterUsdc = usdcBalanceAtomic(await stellar.getBalances(kp.publicKey), env.USDC_ISSUER);
     if (afterUsdc <= beforeUsdc) {
       throw new Error('USDC balance did not increase after deposit');
     }
+    stageLog(3, TOTAL, 'SEP-38 + SEP-6 TRY→USDC deposit', 'PASS');
 
-    stageLog(4, TOTAL, 'Policy set + read', 'PASS');
     const targetTimestamp = BigInt(Math.floor(Date.now() / 1000) + 172_800);
     const builtPolicy = await policy.buildTransaction({
       action: 'set_policy',
@@ -116,13 +121,15 @@ async function main() {
     });
     const policySigned = stellar.signXdr(builtPolicy.unsignedXdr, kp.secretKey);
     const policySubmit = await policy.submitSignedPolicyTx(policySigned);
-    evidence.txHashes!.policy = (policySubmit as { hash?: string }).hash ?? 'unknown';
+    const policyHash = (policySubmit as { hash?: string }).hash;
+    if (!policyHash?.trim()) throw new Error('Policy submit missing tx hash');
+    evidence.txHashes!.policy = policyHash;
     const policyView = await policy.getPolicy(kp.publicKey);
     if (policyView.riskProfile !== 1) {
       throw new Error('Policy riskProfile not persisted');
     }
+    stageLog(4, TOTAL, 'Policy set + read', 'PASS');
 
-    stageLog(5, TOTAL, 'Recipient trustline', 'PASS');
     const recipientKp = stellar.createRandomKeypair();
     await fundRecipientWithUsdcTrustline({
       stellar,
@@ -130,9 +137,13 @@ async function main() {
       recipientSecret: recipientKp.secretKey,
     });
     evidence.accounts!.recipient = recipientKp.publicKey;
+    stageLog(5, TOTAL, 'Recipient trustline', 'PASS');
 
-    stageLog(6, TOTAL, 'Direct USDC payment', 'PASS');
     const payAmount = '0.1500000';
+    const recipientUsdcBefore = usdcBalanceAtomic(
+      await stellar.getBalances(recipientKp.publicKey),
+      env.USDC_ISSUER,
+    );
     const quote = await paymentRouter.quote({
       fromAccount: kp.publicKey,
       recipient: recipientKp.publicKey,
@@ -146,13 +157,21 @@ async function main() {
       stellar.signXdr(builtPay.unsignedXdr!, kp.secretKey),
     );
     if (!paySubmit.successful) throw new Error('Payment submit failed');
+    if (!paySubmit.hash?.trim()) throw new Error('Payment submit missing tx hash');
     evidence.txHashes!.payment = paySubmit.hash;
-    const recipientUsdc = usdcBalance(await stellar.getBalances(recipientKp.publicKey), env.USDC_ISSUER);
-    if (recipientUsdc < Number(payAmount)) {
-      throw new Error(`Recipient did not receive ${payAmount} USDC (has ${recipientUsdc})`);
+    const recipientUsdcAfter = usdcBalanceAtomic(
+      await stellar.getBalances(recipientKp.publicKey),
+      env.USDC_ISSUER,
+    );
+    const recipientIncrease = recipientUsdcAfter - recipientUsdcBefore;
+    const expectedPayAtomic = toAtomic(payAmount, 7);
+    if (recipientIncrease !== expectedPayAtomic) {
+      throw new Error(
+        `Recipient USDC increase ${fromAtomic(recipientIncrease, 7)} !== ${payAmount} USDC`,
+      );
     }
+    stageLog(6, TOTAL, 'Direct USDC payment', 'PASS');
 
-    stageLog(7, TOTAL, 'SEP-38 USDC→TRY + SEP-6 withdraw', 'PASS');
     const withdrawUsdc = '1.0000000';
     const withdrawQuote = await anchor.sep38Quote(token, {
       sellAsset: `stellar:USDC:${env.USDC_ISSUER}`,
@@ -183,8 +202,12 @@ async function main() {
     if (!withdrawPay.successful) throw new Error('Withdraw funding payment failed');
     evidence.txHashes!.withdrawFunding = withdrawPay.hash;
     const withdrawDone = await pollSep6Completed(anchor, token, withdrawSession.id);
-    evidence.txHashes!.withdraw = withdrawDone.stellarTxHash ?? withdrawPay.hash;
+    if (!withdrawDone.stellarTxHash?.trim()) {
+      throw new Error('Withdraw completed without stellar tx hash');
+    }
+    evidence.txHashes!.withdraw = withdrawDone.stellarTxHash;
 
+    stageLog(7, TOTAL, 'SEP-38 USDC→TRY + SEP-6 withdraw', 'PASS');
     stageLog(8, TOTAL, 'Evidence summary', 'PASS');
     evidence.status = 'PASS';
     const file = saveEvidence('core', evidence);

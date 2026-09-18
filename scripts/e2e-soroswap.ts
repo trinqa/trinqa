@@ -9,6 +9,14 @@ function log(step: string, detail?: unknown) {
   console.log(`\n[${step}]`, detail ?? '');
 }
 
+function assertProviderSend(result: unknown, label: string): string {
+  const r = result as { success?: boolean; hash?: string; txHash?: string };
+  if (r.success === false) throw new Error(`${label} provider reported failure`);
+  const txHash = (r.txHash ?? r.hash)?.trim();
+  if (!txHash) throw new Error(`${label} missing txHash`);
+  return txHash;
+}
+
 async function main() {
   const { env } = await import('../backend/src/config/env.js');
   const { StellarService } = await import('../backend/src/services/stellar.service.js');
@@ -56,6 +64,7 @@ async function main() {
   }
   const sent = await soroswap.sendSignedXdr(stellar.signXdr(xdr, payer.secretKey));
   log('send', sent);
+  const swapTxHash = assertProviderSend(sent, 'swap');
 
   const balancesAfter = await stellar.getBalances(recipient.publicKey);
   log('recipient balances after', balancesAfter);
@@ -69,7 +78,7 @@ async function main() {
 
   console.log('\nPASS Soroswap swap', {
     pair: 'USDC→XLM',
-    txHash: (sent as { txHash?: string }).txHash,
+    txHash: swapTxHash,
     recipient: recipient.publicKey,
   });
 }
