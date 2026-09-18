@@ -30,10 +30,17 @@ const envSchema = z.object({
   DEMO_SIGNER_SECRET: z.string().optional(),
 
   DEFINDEX_API_KEY: z.string().optional(),
-  SOROSWAP_API_KEY: z.string().optional(),
+  DEFINDEX_API_URL: z.string().url().optional(),
+  DEFINDEX_VAULT_ADDRESS: z.string().optional(),
 
+  SOROSWAP_API_KEY: z.string().optional(),
+  SOROSWAP_API_URL: z.string().url().optional(),
+
+  TRINQA_POLICY_CONTRACT_ID: z.string().optional(),
   POLICY_CONTRACT_ID: z.string().optional(),
   POLICY_WASM_HASH: z.string().optional(),
+
+  OPERATIONS_DATA_DIR: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof envSchema> & {
@@ -51,8 +58,13 @@ function parseEnv(): AppConfig {
     throw new Error('Trinqa backend Phase 1 is testnet-only');
   }
 
+  const data = parsed.data;
+  const policyContractId =
+    data.TRINQA_POLICY_CONTRACT_ID ?? data.POLICY_CONTRACT_ID;
+
   return {
-    ...parsed.data,
+    ...data,
+    POLICY_CONTRACT_ID: policyContractId,
     usdcAssetCode: 'USDC',
   };
 }

@@ -38,6 +38,34 @@
 - `POST /api/v1/policy/build` — body uses camelCase; adapter maps to contract snake_case
 - `POST /api/v1/policy/submit` — signed Soroban transaction XDR
 
-## Planned (M3+)
+## DeFindex (M3)
 
-- DeFindex SDK, Soroswap SDK, payment router
+- Package: `@defindex/sdk` 0.3.x
+- Adapter: `DefindexYieldAdapter` — health, vault info/APY/balance, deposit/withdraw XDR
+- Env: `DEFINDEX_API_KEY`, `DEFINDEX_VAULT_ADDRESS`, optional `DEFINDEX_API_URL`
+- BFF: `/api/v1/yield/*`
+- E2E: `pnpm e2e:defindex` (exit 2 if env missing)
+
+## Soroswap (M3)
+
+- Package: `@soroswap/sdk` 0.5.x (Node ≥ 22)
+- Adapter: `SoroswapAdapter` — asset list, quote, build, send
+- Env: `SOROSWAP_API_KEY`, optional `SOROSWAP_API_URL`
+- BFF: `/api/v1/swaps/*`
+- E2E: `pnpm e2e:soroswap` (exit 2 if key missing)
+
+## Payment router (M3)
+
+- Routes: `stellar_transfer`, `stellar_swap_transfer`, `fiat_payout`
+- TRY/USDC via TR mock anchor; **BRL → `NO_SUPPORTED_PAYOUT_RAIL`**
+- Earn balance pay → `EARN_UNWIND_REQUIRED` (policy/yield unwind explicit)
+- Off-chain scoring: `DeterministicRiskEngine` + route scoring weights
+
+## Operations (M3)
+
+- `JsonFileOperationStore` (`.data/operations.json`) + `MemoryOperationStore` for tests
+- `GET /api/v1/operations/:id`, `GET /api/v1/activity/:accountId`
+
+## Policy contract ID
+
+Default from `deployments/testnet.json` or `TRINQA_POLICY_CONTRACT_ID` / `POLICY_CONTRACT_ID`.

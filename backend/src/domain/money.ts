@@ -1,4 +1,10 @@
-import Decimal from 'decimal.js';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+// CJS entry avoids ESM default-import typing issues under NodeNext.
+const Decimal = require('decimal.js') as typeof import('decimal.js').default;
+
+export { Decimal };
 
 /** Stellar classic assets use 7 decimal places max. */
 export const STELLAR_MAX_DECIMALS = 7;

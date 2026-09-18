@@ -84,10 +84,33 @@ export class StellarService {
     );
   }
 
+  async buildPaymentXdr(
+    sourcePublicKey: string,
+    destinationPublicKey: string,
+    amount: string,
+    asset: Asset = this.usdc,
+  ): Promise<string> {
+    const account = await this.horizon.loadAccount(sourcePublicKey);
+    const tx = new TransactionBuilder(account, {
+      fee: String(await this.horizon.fetchBaseFee()),
+      networkPassphrase: this.networkPassphrase,
+    })
+      .addOperation(
+        Operation.payment({
+          destination: destinationPublicKey,
+          asset,
+          amount: formatStellarAmount(amount),
+        }),
+      )
+      .setTimeout(60)
+      .build();
+    return tx.toXDR();
+  }
+
   async buildUsdcTrustlineXdr(publicKey: string, limit = '922337203685.4775807'): Promise<string> {
     const account = await this.horizon.loadAccount(publicKey);
     const tx = new TransactionBuilder(account, {
-      fee: await this.horizon.fetchBaseFee(),
+      fee: String(await this.horizon.fetchBaseFee()),
       networkPassphrase: this.networkPassphrase,
     })
       .addOperation(

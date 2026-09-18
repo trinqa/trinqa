@@ -137,6 +137,63 @@ export class TrMockAnchorAdapter {
     return res.json() as Promise<Sep38Quote>;
   }
 
+  private async transferServerBase(): Promise<string> {
+    const toml = await this.discover();
+    return toml.transferServer ?? `https://${this.domain}/sep6`;
+  }
+
+  async sep6DepositInteractive(
+    token: string,
+    body: { asset_code: string; account: string; amount?: string },
+  ): Promise<unknown> {
+    const base = await this.transferServerBase();
+    const res = await fetch(`${base}/transactions/deposit/interactive`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`SEP-6 deposit failed (${res.status}): ${err.slice(0, 300)}`);
+    }
+    return res.json();
+  }
+
+  async sep6WithdrawInteractive(
+    token: string,
+    body: { asset_code: string; account: string; amount: string; dest: string; dest_extra?: string },
+  ): Promise<unknown> {
+    const base = await this.transferServerBase();
+    const res = await fetch(`${base}/transactions/withdraw/interactive`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`SEP-6 withdraw failed (${res.status}): ${err.slice(0, 300)}`);
+    }
+    return res.json();
+  }
+
+  async sep6Transaction(token: string, id: string): Promise<unknown> {
+    const base = await this.transferServerBase();
+    const res = await fetch(`${base}/transaction?id=${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`SEP-6 transaction failed (${res.status}): ${err.slice(0, 300)}`);
+    }
+    return res.json();
+  }
+
   async sep10Authenticate(secretKey: string): Promise<Sep10Token> {
     const kp = Keypair.fromSecret(secretKey);
     const account = kp.publicKey();

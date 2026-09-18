@@ -12,8 +12,8 @@ BFF between Expo mobile and Stellar / TR Mock Anchor / DeFindex / Soroswap. Mobi
 |---|--------|--------|
 | M1 | Fastify bootstrap, config, money helpers, StellarService, TrMockAnchorAdapter, health/capabilities, demo signer guard, unit + anchor tests, `scripts/e2e-anchor.ts` | Done (`9dce8f9`) |
 | M2 | `contracts/trinqa-policy` (Soroban), testnet deploy, PolicyService, policy API | Done |
-| M3 | DeFindex + Soroswap adapters, PaymentRouter, OperationStore | Planned |
-| M4 | Full `/api/v1/*` routes, E2E scripts, CI, integration audit (SEP-6 vs SEP-24) | Planned |
+| M3 | DeFindex + Soroswap adapters, PaymentRouter, OperationStore, core `/api/v1` routes, e2e scripts, CI | Done |
+| M4 | Integration audit polish, richer activity indexing, production hardening | Planned |
 
 ## Stack
 
