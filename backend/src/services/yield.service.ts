@@ -19,22 +19,12 @@ export class YieldService {
   ) {}
 
   async listStrategies(accountId?: string): Promise<YieldStrategy[]> {
-    if (!this.defindex.vaultAddress) {
-      return [];
-    }
-    let apy = 0;
-    if (this.defindex.isConfigured) {
-      try {
-        apy = await this.defindex.getVaultAPY();
-      } catch {
-        apy = 0;
-      }
-    }
+    if (!this.defindex.vaultAddress) return [];
     const riskProfile = accountId
       ? ((await this.policy.getPolicy(accountId)).riskProfile ?? 1)
       : 1;
-    const base = this.defindex.normalizeStrategies(riskProfile);
-    return base.map((s) => ({ ...s, estimatedApy: apy }));
+    const one = await this.defindex.normalizeStrategy(riskProfile);
+    return one ? [one] : [];
   }
 
   async rankedStrategies(accountId: string, daysToTarget: number) {
@@ -91,20 +81,14 @@ export class YieldService {
   }
 
   async getPositions(accountId: string) {
-    const strategies = await this.listStrategies(accountId);
-    const positions = [];
-    for (const s of strategies) {
-      if (!this.defindex.isConfigured) continue;
-      try {
-        const pos = await this.defindex.normalizePosition(accountId, s.id);
-        if (pos && Number(pos.shares) > 0) {
-          positions.push(pos);
-        }
-      } catch {
-        // vault read failures surface as empty position set
-      }
+    if (!this.defindex.isConfigured || !this.defindex.vaultAddress) return [];
+    const strategyId = strategyIdForVault(this.defindex.vaultAddress);
+    try {
+      const pos = await this.defindex.normalizePosition(accountId, strategyId);
+      return pos ? [pos] : [];
+    } catch {
+      return [];
     }
-    return positions;
   }
 
   async buildDeposit(params: {
@@ -116,12 +100,11 @@ export class YieldService {
   }) {
     this.requireConfigured();
     const vault = this.defindex.requireVault();
-    const expectedId = strategyIdForVault(vault, 'balanced');
-    if (!params.strategyId.includes(vault.slice(0, 8))) {
+    const expectedId = strategyIdForVault(vault);
+    if (params.strategyId !== expectedId) {
       throw new ApiError('VALIDATION_ERROR', 'strategyId does not match configured vault', 400);
     }
-    void expectedId;
-    const atomic = Number(toAtomic(params.amount, params.assetDecimals ?? 7));
+    const atomic = toAtomic(params.amount, params.assetDecimals ?? 7);
     const res = await this.defindex.depositToVault(params.accountId, [atomic], params.invest ?? false);
     return {
       unsignedXdr: res.xdr,
@@ -139,14 +122,18 @@ export class YieldService {
   }) {
     this.requireConfigured();
     const vault = this.defindex.requireVault();
+    const expectedId = strategyIdForVault(vault);
+    if (params.strategyId !== expectedId) {
+      throw new ApiError('VALIDATION_ERROR', 'strategyId does not match configured vault', 400);
+    }
     if (params.shares) {
-      const res = await this.defindex.withdrawShares(params.accountId, Number(params.shares));
+      const res = await this.defindex.withdrawShares(params.accountId, BigInt(params.shares));
       return { unsignedXdr: res.xdr, vaultAddress: vault, strategyId: params.strategyId };
     }
     if (!params.amount) {
       throw new ApiError('VALIDATION_ERROR', 'amount or shares required', 400);
     }
-    const atomic = Number(toAtomic(params.amount, params.assetDecimals ?? 7));
+    const atomic = toAtomic(params.amount, params.assetDecimals ?? 7);
     const res = await this.defindex.withdrawFromVault(params.accountId, [atomic]);
     return { unsignedXdr: res.xdr, vaultAddress: vault, strategyId: params.strategyId };
   }

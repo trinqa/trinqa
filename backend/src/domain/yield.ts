@@ -5,11 +5,15 @@ export type RiskTier = 'conservative' | 'balanced' | 'growth';
 export type YieldStrategy = {
   id: string;
   name: string;
+  /** Trinqa product classification — not a separate on-chain vault. */
   risk: RiskTier;
   estimatedApy: number;
   withdrawalAvailability: 'flexible' | '30d' | '90d';
   vaultAddress: string;
   symbol?: string;
+  assets?: string[];
+  /** When true, metadata is Trinqa heuristic rather than provider fact. */
+  trinqaClassification?: boolean;
 };
 
 export type YieldPosition = {
@@ -26,7 +30,6 @@ export function riskTierFromProfile(riskProfile: number): RiskTier {
   return 'growth';
 }
 
-export function strategyIdForVault(vaultAddress: string, risk: RiskTier): string {
-  const suffix = risk === 'conservative' ? 'cons' : risk === 'balanced' ? 'bal' : 'growth';
-  return `defindex:${vaultAddress.slice(0, 8)}:${suffix}`;
+export function strategyIdForVault(vaultAddress: string): string {
+  return `defindex:${vaultAddress}`;
 }

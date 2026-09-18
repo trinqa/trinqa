@@ -1,13 +1,15 @@
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import type { AppConfig } from '../config/env.js';
 import {
-  type RiskTier,
+  riskTierFromProfile,
   type YieldPosition,
   type YieldStrategy,
-  riskTierFromProfile,
   strategyIdForVault,
 } from '../domain/yield.js';
 import { fromAtomic } from '../domain/money.js';
+import { bigintToSafeNumber } from '../domain/safe-integer.js';
+import { normalizeProviderError } from '../util/provider-error.js';
+import { ApiError } from '../domain/api-errors.js';
 
 export type DefindexHealth = {
   ok: boolean;
@@ -16,6 +18,26 @@ export type DefindexHealth = {
   detail?: unknown;
   error?: string;
 };
+
+type VaultTxResponse = {
+  xdr?: string | null;
+  operationXDR?: string | null;
+  isSmartWallet?: boolean;
+};
+
+function requireClassicXdr(res: VaultTxResponse): string {
+  if (res.isSmartWallet || (res.xdr == null && res.operationXDR)) {
+    throw new ApiError(
+      'SMART_WALLET_FLOW_REQUIRED',
+      'DeFindex returned a smart-wallet flow; classic G-account xdr required',
+      422,
+    );
+  }
+  if (!res.xdr) {
+    throw new ApiError('ADAPTER_UNAVAILABLE', 'DeFindex did not return unsigned XDR', 502);
+  }
+  return res.xdr;
+}
 
 export class DefindexYieldAdapter {
   private readonly sdk: DefindexSDK | null;
@@ -64,8 +86,12 @@ export class DefindexYieldAdapter {
       }
       return { ok: true, configured: Boolean(this.vaultAddress), vaultAddress: this.vaultAddress, detail };
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { ok: false, configured: Boolean(this.vaultAddress), vaultAddress: this.vaultAddress, error: message };
+      return {
+        ok: false,
+        configured: Boolean(this.vaultAddress),
+        vaultAddress: this.vaultAddress,
+        error: normalizeProviderError(err),
+      };
     }
   }
 
@@ -88,34 +114,31 @@ export class DefindexYieldAdapter {
     return sdk.getVaultBalance(vault, accountId, this.network);
   }
 
-  async depositToVault(accountId: string, amounts: number[], invest = false) {
+  async depositToVault(accountId: string, amounts: bigint[], invest = false) {
     const sdk = this.requireSdk();
     const vault = this.requireVault();
-    return sdk.depositToVault(
-      vault,
-      { amounts, invest, caller: accountId },
-      this.network,
-    );
+    const nums = amounts.map((a, i) => bigintToSafeNumber(a, `amounts[${i}]`));
+    const res = await sdk.depositToVault(vault, { amounts: nums, invest, caller: accountId }, this.network);
+    return { ...res, xdr: requireClassicXdr(res as VaultTxResponse) };
   }
 
-  async withdrawFromVault(accountId: string, amounts: number[]) {
+  async withdrawFromVault(accountId: string, amounts: bigint[]) {
     const sdk = this.requireSdk();
     const vault = this.requireVault();
-    return sdk.withdrawFromVault(
-      vault,
-      { amounts, caller: accountId },
-      this.network,
-    );
+    const nums = amounts.map((a, i) => bigintToSafeNumber(a, `amounts[${i}]`));
+    const res = await sdk.withdrawFromVault(vault, { amounts: nums, caller: accountId }, this.network);
+    return { ...res, xdr: requireClassicXdr(res as VaultTxResponse) };
   }
 
-  async withdrawShares(accountId: string, shares: number) {
+  async withdrawShares(accountId: string, shares: bigint) {
     const sdk = this.requireSdk();
     const vault = this.requireVault();
-    return sdk.withdrawShares(
+    const res = await sdk.withdrawShares(
       vault,
-      { shares, caller: accountId },
+      { shares: bigintToSafeNumber(shares, 'shares'), caller: accountId },
       this.network,
     );
+    return { ...res, xdr: requireClassicXdr(res as VaultTxResponse) };
   }
 
   async sendSignedXdr(signedXdr: string) {
@@ -123,41 +146,74 @@ export class DefindexYieldAdapter {
     return sdk.sendTransaction(signedXdr, this.network);
   }
 
-  /** Map vault + policy risk into Trinqa strategy cards (same vault, tier metadata). */
-  normalizeStrategies(riskProfile = 1): YieldStrategy[] {
+  /** One configured vault → one real YieldStrategy (risk tier is Trinqa metadata). */
+  async normalizeStrategy(riskProfile = 1): Promise<YieldStrategy | null> {
     const vault = this.vaultAddress;
-    if (!vault) {
-      return [];
+    if (!vault) return null;
+    const risk = riskTierFromProfile(riskProfile);
+    let name = `DeFindex vault ${vault.slice(0, 8)}…`;
+    let symbol: string | undefined;
+    let assets: string[] | undefined;
+    let apy = 0;
+    if (this.isConfigured) {
+      try {
+        const info = await this.getVaultInfo();
+        name = (info as { name?: string }).name ?? name;
+        symbol = (info as { symbol?: string }).symbol;
+        const rawAssets = (info as { assets?: Array<{ code?: string; symbol?: string }> }).assets;
+        if (rawAssets?.length) {
+          assets = rawAssets.map((a) => a.code ?? a.symbol ?? 'asset').filter(Boolean);
+        }
+        apy = await this.getVaultAPY();
+      } catch {
+        // keep minimal metadata
+      }
     }
-    const tiers: RiskTier[] = ['conservative', 'balanced', 'growth'];
-    const availability: Record<RiskTier, YieldStrategy['withdrawalAvailability']> = {
-      conservative: 'flexible',
-      balanced: '30d',
-      growth: '90d',
-    };
-    void riskProfile;
-    return tiers.map((risk) => ({
-      id: strategyIdForVault(vault, risk),
-      name: `DeFindex ${risk.charAt(0).toUpperCase()}${risk.slice(1)}`,
+    return {
+      id: strategyIdForVault(vault),
+      name,
       risk,
-      estimatedApy: 0,
-      withdrawalAvailability: availability[risk],
+      estimatedApy: apy,
+      withdrawalAvailability: 'flexible',
       vaultAddress: vault,
-      symbol: undefined,
-    }));
+      symbol,
+      assets,
+      trinqaClassification: true,
+    };
+  }
+
+  /** @deprecated use normalizeStrategy */
+  normalizeStrategies(riskProfile = 1): YieldStrategy[] {
+    void riskProfile;
+    const vault = this.vaultAddress;
+    if (!vault) return [];
+    return [
+      {
+        id: strategyIdForVault(vault),
+        name: `DeFindex vault ${vault.slice(0, 8)}…`,
+        risk: riskTierFromProfile(riskProfile),
+        estimatedApy: 0,
+        withdrawalAvailability: 'flexible',
+        vaultAddress: vault,
+        trinqaClassification: true,
+      },
+    ];
   }
 
   async normalizePosition(accountId: string, strategyId: string): Promise<YieldPosition | null> {
-    if (!this.isConfigured) {
+    if (!this.isConfigured) return null;
+    const vault = this.requireVault();
+    if (strategyId !== strategyIdForVault(vault)) return null;
+    const balance = await this.getVaultBalance(accountId);
+    const shares = String(balance.dfTokens ?? 0);
+    const underlying = (balance.underlyingBalance ?? []).map((n: number) => {
+      const atomic = BigInt(Math.trunc(n));
+      return fromAtomic(atomic, 7);
+    });
+    const totalUnderlying = underlying[0] ?? '0';
+    if (Number(shares) <= 0 && Number(totalUnderlying) <= 0) {
       return null;
     }
-    const balance = await this.getVaultBalance(accountId);
-    const vault = this.requireVault();
-    const shares = String(balance.dfTokens ?? 0);
-    const underlying = (balance.underlyingBalance ?? []).map((n: number) =>
-      fromAtomic(BigInt(Math.round(n)), 7),
-    );
-    const totalUnderlying = underlying[0] ?? '0';
     return {
       strategyId,
       accountId,
@@ -165,5 +221,10 @@ export class DefindexYieldAdapter {
       shares,
       underlyingBalances: underlying,
     };
+  }
+
+  async earningBalanceUsdc(accountId: string): Promise<string> {
+    const pos = await this.normalizePosition(accountId, strategyIdForVault(this.requireVault()));
+    return pos?.positionValue.amount ?? '0';
   }
 }
