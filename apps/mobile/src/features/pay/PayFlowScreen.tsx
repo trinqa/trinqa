@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  BottomSheet,
   Button,
   Divider,
   Group,
@@ -21,6 +22,9 @@ import {
   frame,
   padding,
   shapes,
+  presentationBackground,
+  presentationDetents,
+  presentationDragIndicator,
 } from '@expo/ui/swift-ui/modifiers';
 import { useRouter } from 'expo-router';
 import type { SFSymbol } from 'sf-symbols-typescript';
@@ -34,18 +38,20 @@ import {
   FlowProcessingState,
   FlowStepLayout,
   FlowSuccessState,
+  PrimaryActionButton,
+  SecondaryActionButton,
   type FlowProcessingRowState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
+import { FlowInlineState } from '@/components/FlowStates';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   createPaymentQuote,
-  maximumReceiveAmount,
   paymentCurrencies,
   paymentRecipients,
   quickPaymentAmounts,
 } from '@/data/mocks/pay';
-import { recordCompletedPayment } from '@/data/mocks/paymentActivity';
+import { recordPayment, useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
@@ -61,6 +67,7 @@ const CURRENCY_SYMBOLS: Record<PaymentCurrency, string> = {
   TRY: '₺',
   USD: '$',
   EUR: '€',
+  BRL: 'R$',
 };
 
 const PAYMENT_STATUS_ORDER: Exclude<PaymentStatus, 'failed'>[] = [
@@ -277,39 +284,113 @@ function RecipientStep({
 function PaymentAmountSummary({
   intent,
   quote,
+  onAddMoney,
 }: {
   intent: PaymentIntent;
   quote: PaymentQuote;
+  onAddMoney: () => void;
 }) {
   return (
-    <FlowCard height={screenTokens.paymentFlow.summaryHeight}>
-      <VStack
-        alignment="leading"
-        spacing={8}
-        modifiers={[
-          padding({ horizontal: screenTokens.paymentFlow.cardPadding, vertical: 12 }),
-          frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
-        ]}
-      >
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
-          {intent.recipient.name} receives
-        </Text>
-        <Text
+    <VStack spacing={8}>
+      <FlowCard height={screenTokens.paymentFlow.summaryHeight}>
+        <VStack
+          alignment="leading"
+          spacing={8}
           modifiers={[
-            font({ size: typography.sectionTitle, weight: 'semibold' }),
-            foregroundStyle(colors.textPrimary),
+            padding({ horizontal: screenTokens.paymentFlow.cardPadding, vertical: 12 }),
+            frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
           ]}
         >
-          {formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency)}
-        </Text>
-        <Divider />
-        <FlowInfoRow label="You’ll pay" value={formatTry(quote.debitAmount)} />
-        <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
-          <FlowInfoRow label="Fee" value={formatTry(quote.fee)} />
-          <FlowInfoRow label="Arrival" value={quote.estimatedArrival} />
-        </HStack>
-      </VStack>
-    </FlowCard>
+          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+            {intent.recipient.name} receives
+          </Text>
+          <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+            {formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency)}
+          </Text>
+          <Divider />
+          <FlowInfoRow label="Total deducted" value={formatTry(quote.debitAmount)} />
+          <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
+            <FlowInfoRow label="Fee" value={formatTry(quote.fee)} />
+            <FlowInfoRow label="Arrival" value={quote.estimatedArrival} />
+          </HStack>
+        </VStack>
+      </FlowCard>
+      {quote.status === 'unavailable' ? (
+        <FlowInlineState
+          symbol="exclamationmark.triangle"
+          title="Quote unavailable"
+          subtitle="Change the amount and try again."
+        />
+      ) : !quote.hasSufficientTotal ? (
+        <VStack spacing={8}>
+          <FlowInlineState
+            symbol="exclamationmark.circle"
+            title="Not enough balance"
+            subtitle="Add money or change the amount to continue."
+          />
+          <SecondaryActionButton label="Add Money" onPress={onAddMoney} />
+        </VStack>
+      ) : quote.earnContribution > 0 ? (
+        <FlowInlineState
+          symbol="arrow.uturn.backward.circle"
+          title="Part of this payment is currently earning"
+          subtitle={`Needed from Earn ${formatTry(quote.earnContribution)}`}
+        />
+      ) : null}
+    </VStack>
+  );
+}
+
+function EarnLiquidityApprovalSheet({
+  anchor,
+  isPresented,
+  onApprove,
+  onCancel,
+  quote,
+}: {
+  anchor: React.ReactElement;
+  isPresented: boolean;
+  onApprove: () => void;
+  onCancel: () => void;
+  quote: PaymentQuote;
+}) {
+  return (
+    <BottomSheet
+      isPresented={isPresented}
+      onIsPresentedChange={(next) => {
+        if (!next) onCancel();
+      }}
+      anchor={anchor}
+    >
+      <Group
+        modifiers={[
+          presentationDetents([{ height: 380 }]),
+          presentationDragIndicator('visible'),
+          presentationBackground(colors.surface),
+        ]}
+      >
+        <VStack alignment="leading" spacing={14} modifiers={[padding({ top: 18, bottom: 14, horizontal: 18 })]}>
+          <VStack alignment="leading" spacing={4}>
+            <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+              Use money from Earn?
+            </Text>
+            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+              Trinqa needs to move part of this payment back to available.
+            </Text>
+          </VStack>
+          <Divider />
+          <FlowInfoRow label="From Available" value={formatTry(quote.availableContribution)} />
+          <FlowInfoRow label="Needed from Earn" value={formatTry(quote.earnContribution)} emphasized />
+          <FlowInlineState
+            symbol="info.circle"
+            title="Explicit approval"
+            subtitle="The Earn amount is included in the total deducted."
+          />
+          <PrimaryActionButton label="Approve and review" onPress={onApprove} />
+          <SecondaryActionButton label="Cancel" onPress={onCancel} />
+        </VStack>
+      </Group>
+    </BottomSheet>
   );
 }
 
@@ -375,6 +456,13 @@ function ReviewStep({
               label="Exchange rate"
               value={`${CURRENCY_SYMBOLS[intent.receiveCurrency]}1 ≈ ${formatTry(quote.exchangeRate)}`}
             />
+            {quote.earnContribution > 0 ? (
+              <VStack alignment="leading" spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>
+                <Divider />
+                <FlowInfoRow label="From Available" value={formatTry(quote.availableContribution)} />
+                <FlowInfoRow label="From Earn" value={formatTry(quote.earnContribution)} />
+              </VStack>
+            ) : null}
           </VStack>
         </FlowCard>
 
@@ -390,22 +478,24 @@ function ReviewStep({
 
 export function PayFlowScreen() {
   const router = useRouter();
+  const { balances } = useMockAppState();
   const [step, setStep] = useState<PaymentStep>('recipient');
   const [recipient, setRecipient] = useState(paymentRecipients[0]);
-  const [currency, setCurrency] = useState<PaymentCurrency>('EUR');
-  const [amount, setAmount] = useState(250);
+  const [currency, setCurrency] = useState<PaymentCurrency>('BRL');
+  const [amount, setAmount] = useState(500);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('initiated');
+  const [earnApprovalPresented, setEarnApprovalPresented] = useState(false);
   const paymentId = useMemo(
     () => `payment-${recipient.id}-${currency.toLowerCase()}-${amount}`,
     [amount, currency, recipient.id]
   );
-  const amountText = useNativeState(formatWholeAmount(250));
+  const amountText = useNativeState(formatWholeAmount(500));
 
   const intent = useMemo<PaymentIntent>(
-    () => ({ recipient, receiveAmount: amount, receiveCurrency: currency }),
+    () => ({ recipientId: recipient.id, recipient, receiveAmount: amount, receiveCurrency: currency }),
     [amount, currency, recipient],
   );
-  const quote = useMemo(() => createPaymentQuote(intent), [intent]);
+  const quote = useMemo(() => createPaymentQuote(intent, balances), [balances, intent]);
   const receiveAmount = formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
 
   useEffect(() => {
@@ -416,7 +506,7 @@ export function PayFlowScreen() {
     const sendingTimer = setTimeout(() => setPaymentStatus('sending'), 1350);
     const completedTimer = setTimeout(() => {
       setPaymentStatus('completed');
-      recordCompletedPayment(paymentId, intent, receiveAmount);
+      recordPayment(paymentId, intent, quote);
       setStep('success');
     }, 2600);
 
@@ -425,12 +515,12 @@ export function PayFlowScreen() {
       clearTimeout(sendingTimer);
       clearTimeout(completedTimer);
     };
-  }, [intent, paymentId, receiveAmount, step]);
+  }, [intent, paymentId, quote, step]);
 
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
     const requestedAmount = digits ? Number(digits) : 0;
-    const nextAmount = Math.min(requestedAmount, maximumReceiveAmount(currency));
+    const nextAmount = requestedAmount;
     const formatted = nextAmount ? formatWholeAmount(nextAmount) : '';
 
     setAmount(nextAmount);
@@ -438,16 +528,17 @@ export function PayFlowScreen() {
   };
 
   const chooseQuickAmount = (value: number) => {
-    const nextAmount = Math.min(value, maximumReceiveAmount(currency));
+    const nextAmount = value;
     setAmount(nextAmount);
     amountText.set(formatWholeAmount(nextAmount));
   };
 
   const chooseCurrency = (nextCurrency: PaymentCurrency) => {
-    const nextAmount = Math.min(amount, maximumReceiveAmount(nextCurrency));
     setCurrency(nextCurrency);
-    setAmount(nextAmount);
-    amountText.set(nextAmount ? formatWholeAmount(nextAmount) : '');
+    if (recipient.preferredCurrency !== nextCurrency) {
+      setAmount(amount);
+      amountText.set(amount ? formatWholeAmount(amount) : '');
+    }
   };
 
   const goBack = () => {
@@ -501,13 +592,22 @@ export function PayFlowScreen() {
           onBack={goBack}
           onSelectRecipient={(nextRecipient) => {
             setRecipient(nextRecipient);
+            if (nextRecipient.preferredCurrency) setCurrency(nextRecipient.preferredCurrency);
             setStep('amount');
           }}
         />
       ) : null}
 
       {step === 'amount' ? (
-        <FlowAmountEntry
+        <EarnLiquidityApprovalSheet
+          isPresented={earnApprovalPresented}
+          onCancel={() => setEarnApprovalPresented(false)}
+          onApprove={() => {
+            setEarnApprovalPresented(false);
+            setStep('review');
+          }}
+          quote={quote}
+          anchor={<FlowAmountEntry
           amount={amount}
           amountAccessory={(
             <FlowCurrencyMenu
@@ -520,16 +620,20 @@ export function PayFlowScreen() {
           amountText={amountText}
           currencySymbol={CURRENCY_SYMBOLS[currency]}
           formatQuickAmount={(value) => formatPaymentAmount(value, currency, false)}
-          isContinueDisabled={amount <= 0 || !quote.hasSufficientAvailable}
+          isContinueDisabled={amount <= 0 || !quote.hasSufficientTotal || quote.status === 'unavailable'}
           onAmountChange={updateAmount}
           onBack={goBack}
-          onContinue={() => setStep('review')}
+          onContinue={() => {
+            if (quote.earnContribution > 0) setEarnApprovalPresented(true);
+            else setStep('review');
+          }}
           onQuickAmount={chooseQuickAmount}
           quickAmounts={quickPaymentAmounts}
           selectionSymbol={recipient.symbol}
           selectionTitle={recipient.name}
-          summary={<PaymentAmountSummary intent={intent} quote={quote} />}
+          summary={<PaymentAmountSummary intent={intent} quote={quote} onAddMoney={() => router.push('/add-money')} />}
           title="Pay"
+        />}
         />
       ) : null}
 

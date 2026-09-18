@@ -6,58 +6,42 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { ActivitySegmentPicker } from '@/components/ActivitySegmentPicker';
 import { ActivityTimeline } from '@/components/ActivityTimeline';
+import { FlowEmptyState } from '@/components/FlowStates';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
-import { activityItems } from '@/data/mocks/activity';
-import { useCompletedPayments } from '@/data/mocks/paymentActivity';
-import { useWithdrawalState } from '@/data/mocks/withdrawalState';
+import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
+import { toActivityListItem, transactionSection } from '@/domain/transactionPresentation';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, typography } from '@/theme';
-import type { ActivitySegment } from '@/types';
-
-const GROUPS = [
-  { id: 'today', title: 'Today' },
-  { id: 'yesterday', title: 'Yesterday' },
-  { id: 'november-18', title: 'Nov 18, 2025' },
-] as const;
+import type { ActivitySegment, Transaction } from '@/types';
 
 export function ActivityScreen() {
-  const params = useLocalSearchParams<{ segment?: string }>();
-  const completedPayments = useCompletedPayments();
-  const withdrawalState = useWithdrawalState();
+  const params = useLocalSearchParams<{ segment?: string; transactionId?: string }>();
+  const { transactions } = useMockAppState();
   const [segment, setSegment] = useState<ActivitySegment>('all');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const activity = screenTokens.activity;
-  const paymentActivity = completedPayments.map((payment) => ({
-    id: payment.id,
-    title: payment.recipient.name,
-    subtitle: 'Sent',
-    amount: `-${payment.displayAmount}`,
-    timestamp: payment.timestamp,
-    category: 'payments' as const,
-    group: 'today' as const,
-    symbol: payment.recipient.symbol,
-  }));
-  const withdrawalActivity = withdrawalState.withdrawals.map((withdrawal) => ({
-    id: withdrawal.id,
-    title: withdrawal.destination.kind === 'bank' ? 'Bank withdrawal' : 'Wallet withdrawal',
-    subtitle: 'Completed',
-    amount: `-${withdrawal.displayAmount}`,
-    timestamp: withdrawal.timestamp,
-    category: 'payments' as const,
-    group: 'today' as const,
-    symbol: 'arrow.down.to.line' as const,
-  }));
-  const filteredItems = [...withdrawalActivity, ...paymentActivity, ...activityItems].filter(
+  const activityItems = transactions.map(toActivityListItem);
+  const filteredItems = activityItems.filter(
     (item) => segment === 'all' || item.category === segment,
   );
-  const sections = GROUPS.map((group) => ({
-    ...group,
-    items: filteredItems.filter((item) => item.group === group.id),
-  })).filter((group) => group.items.length > 0);
+  const sections = Array.from(
+    new Map(
+      transactions
+        .filter((transaction) => filteredItems.some((item) => item.id === transaction.id))
+        .map((transaction) => {
+          const section = transactionSection(transaction);
+          return [section.id, section];
+        }),
+    ).values(),
+  ).map((section) => ({ ...section, items: filteredItems.filter((item) => item.group === section.id) }));
 
   useEffect(() => {
     const requestedSegment = Array.isArray(params.segment) ? params.segment[0] : params.segment;
     if (requestedSegment === 'payments') setSegment('payments');
-  }, [params.segment]);
+    const transactionId = Array.isArray(params.transactionId) ? params.transactionId[0] : params.transactionId;
+    if (transactionId) setSelectedTransaction(transactions.find((item) => item.id === transactionId) ?? null);
+  }, [params.segment, params.transactionId, transactions]);
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
@@ -99,7 +83,20 @@ export function ActivityScreen() {
         </Group>
 
         <Group modifiers={[padding({ top: activity.segmentToPanel })]}>
-          <ActivityTimeline sections={sections} />
+          <TransactionDetailsSheet
+            transaction={selectedTransaction}
+            onDismiss={() => setSelectedTransaction(null)}
+            anchor={
+              sections.length > 0 ? (
+                <ActivityTimeline
+                  sections={sections}
+                  onSelect={(id) => setSelectedTransaction(transactions.find((item) => item.id === id) ?? null)}
+                />
+              ) : (
+                <FlowEmptyState title="No activity yet." subtitle="Your activity will appear here." />
+              )
+            }
+          />
         </Group>
       </VStack>
     </SwiftUIScreenShell>

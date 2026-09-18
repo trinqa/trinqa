@@ -18,10 +18,11 @@ interface ActivitySection {
 
 interface ActivityTimelineProps {
   sections: ActivitySection[];
+  onSelect: (id: string) => void;
 }
 
 /** Chronological grouped Activity list using the shared Home transaction card. */
-export function ActivityTimeline({ sections }: ActivityTimelineProps) {
+export function ActivityTimeline({ sections, onSelect }: ActivityTimelineProps) {
   const activity = screenTokens.activity;
   const timelineContentWidth =
     homeTokens.recent.width - homeTokens.recent.horizontalPadding * 2;
@@ -54,7 +55,7 @@ export function ActivityTimeline({ sections }: ActivityTimelineProps) {
               />
               <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
                 {section.items.map((item) => (
-                  <ActivityTransactionRow key={item.id} item={item} />
+                  <ActivityTransactionRow key={item.id} item={item} onPress={() => onSelect(item.id)} />
                 ))}
               </VStack>
             </VStack>

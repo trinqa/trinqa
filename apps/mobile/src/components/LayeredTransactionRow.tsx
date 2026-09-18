@@ -1,6 +1,8 @@
-import { HStack, Image, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import { Button, HStack, Image, Text, VStack, ZStack } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   background,
+  buttonStyle,
   clipShape,
   font,
   foregroundStyle,
@@ -28,6 +30,7 @@ interface LayeredTransactionRowProps {
   footerTrailingText: string;
   footerSymbol?: SFSymbol;
   onFooterPress?: () => void;
+  onPress?: () => void;
   iconBackgroundColor?: string;
   iconColor?: string;
   iconLetterColor?: string;
@@ -48,6 +51,7 @@ export function LayeredTransactionRow({
   footerTrailingText,
   footerSymbol,
   onFooterPress,
+  onPress,
   iconBackgroundColor = colors.surfaceSecondary,
   iconColor = colors.textSecondary,
   iconLetterColor = colors.textSecondary,
@@ -58,6 +62,70 @@ export function LayeredTransactionRow({
   const initial = iconLetter ?? title.charAt(0).toUpperCase();
   const row = componentTokens.transactionRow;
   const surface = componentTokens.surface;
+  const body = (
+    <HStack
+      alignment="center"
+      spacing={row.contentGap}
+      modifiers={[
+        padding({ horizontal: row.horizontalPadding, vertical: row.verticalPadding }),
+        frame({ maxWidth: Infinity, height: row.mainHeight }),
+        background(colors.surface, shapes.roundedRectangle({ cornerRadius: surface.cardRadius })),
+        strokeBorder({
+          content: colors.borderStrong,
+          style: { lineWidth: surface.borderWidth },
+          shape: 'roundedRectangle',
+          cornerRadius: surface.cardRadius,
+        }),
+        shadow({
+          radius: componentTokens.layer.seamShadowRadius,
+          y: componentTokens.layer.seamShadowY,
+          color: componentTokens.layer.seamShadowColor,
+        }),
+      ]}
+    >
+      <ZStack
+        modifiers={[
+          frame({ width: row.iconSize, height: row.iconSize }),
+          background(iconBackgroundColor, shapes.circle()),
+        ]}
+      >
+        {symbol ? (
+          <Image systemName={symbol} size={row.symbolSize} color={iconColor} />
+        ) : (
+          <ZStack>
+            <Text modifiers={[font({ size: 14, weight: 'semibold' }), foregroundStyle(iconLetterColor)]}>
+              {initial}
+            </Text>
+            {iconAccentText ? (
+              <Text modifiers={[font({ size: row.brandAccentSize, weight: 'bold' }), foregroundStyle(iconAccentColor), offset({ y: row.brandAccentOffsetY })]}>
+                {iconAccentText}
+              </Text>
+            ) : null}
+          </ZStack>
+        )}
+      </ZStack>
+
+      <VStack alignment="leading" spacing={row.textGap} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+        <Text modifiers={[font({ size: typography.transactionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+          {title}
+        </Text>
+        <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(colors.textSecondary)]}>
+          {subtitle}
+        </Text>
+      </VStack>
+
+      <VStack alignment="trailing" spacing={row.textGap} modifiers={[layoutPriority(1), frame({ alignment: 'trailing' })]}>
+        <Text modifiers={[font({ size: typography.transactionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+          {amount}
+        </Text>
+        {meta ? (
+          <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(colors.textSecondary)]}>
+            {meta}
+          </Text>
+        ) : null}
+      </VStack>
+    </HStack>
+  );
 
   return (
     <VStack
@@ -79,107 +147,14 @@ export function LayeredTransactionRow({
         }),
       ]}
     >
-      <HStack
-        alignment="center"
-        spacing={row.contentGap}
-        modifiers={[
-          padding({ horizontal: row.horizontalPadding, vertical: row.verticalPadding }),
-          frame({ maxWidth: Infinity, height: row.mainHeight }),
-          background(colors.surface, shapes.roundedRectangle({ cornerRadius: surface.cardRadius })),
-          strokeBorder({
-            content: colors.borderStrong,
-            style: { lineWidth: surface.borderWidth },
-            shape: 'roundedRectangle',
-            cornerRadius: surface.cardRadius,
-          }),
-          shadow({
-            radius: componentTokens.layer.seamShadowRadius,
-            y: componentTokens.layer.seamShadowY,
-            color: componentTokens.layer.seamShadowColor,
-          }),
-        ]}
-      >
-        <ZStack
-          modifiers={[
-            frame({ width: row.iconSize, height: row.iconSize }),
-            background(iconBackgroundColor, shapes.circle()),
-          ]}
+      {onPress ? (
+        <Button
+          onPress={onPress}
+          modifiers={[buttonStyle('plain'), accessibilityLabel(`${title}, ${amount}, ${meta ?? subtitle}`), frame({ maxWidth: Infinity })]}
         >
-          {symbol ? (
-            <Image systemName={symbol} size={row.symbolSize} color={iconColor} />
-          ) : (
-            <ZStack>
-              <Text
-                modifiers={[
-                  font({ size: 14, weight: 'semibold' }),
-                  foregroundStyle(iconLetterColor),
-                ]}
-              >
-                {initial}
-              </Text>
-              {iconAccentText ? (
-                <Text
-                  modifiers={[
-                    font({ size: row.brandAccentSize, weight: 'bold' }),
-                    foregroundStyle(iconAccentColor),
-                    offset({ y: row.brandAccentOffsetY }),
-                  ]}
-                >
-                  {iconAccentText}
-                </Text>
-              ) : null}
-            </ZStack>
-          )}
-        </ZStack>
-
-        <VStack
-          alignment="leading"
-          spacing={row.textGap}
-          modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
-        >
-          <Text
-            modifiers={[
-              font({ size: typography.transactionTitle, weight: 'semibold' }),
-              foregroundStyle(colors.textPrimary),
-            ]}
-          >
-            {title}
-          </Text>
-          <Text
-            modifiers={[
-              font({ size: typography.transactionMeta }),
-              foregroundStyle(colors.textSecondary),
-            ]}
-          >
-            {subtitle}
-          </Text>
-        </VStack>
-
-        <VStack
-          alignment="trailing"
-          spacing={row.textGap}
-          modifiers={[layoutPriority(1), frame({ alignment: 'trailing' })]}
-        >
-          <Text
-            modifiers={[
-              font({ size: typography.transactionTitle, weight: 'semibold' }),
-              foregroundStyle(colors.textPrimary),
-            ]}
-          >
-            {amount}
-          </Text>
-          {meta ? (
-            <Text
-              modifiers={[
-                font({ size: typography.transactionMeta }),
-                foregroundStyle(colors.textSecondary),
-              ]}
-            >
-              {meta}
-            </Text>
-          ) : null}
-        </VStack>
-      </HStack>
+          {body}
+        </Button>
+      ) : body}
 
       <LayeredInfoBar
         leadingText={footerLeadingText}

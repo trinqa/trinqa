@@ -76,9 +76,15 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
 export function ShortcutRow({
   onPay,
   onWithdraw,
+  onReceive,
+  onAccountDetails,
+  onSettings,
 }: {
   onPay: () => void;
   onWithdraw: () => void;
+  onReceive: () => void;
+  onAccountDetails: () => void;
+  onSettings: () => void;
 }) {
   return (
     <HStack
@@ -94,9 +100,9 @@ export function ShortcutRow({
         modifiers={[buttonStyle('plain'), accessibilityLabel('More')]}
       >
         <Button label="Withdraw" systemImage="arrow.down.to.line" onPress={onWithdraw} />
-        <Button label="Receive" systemImage="arrow.down.circle" onPress={() => undefined} />
-        <Button label="Account Details" systemImage="doc.text" onPress={() => undefined} />
-        <Button label="Settings" systemImage="gearshape" onPress={() => undefined} />
+        <Button label="Receive" systemImage="arrow.down.circle" onPress={onReceive} />
+        <Button label="Account Details" systemImage="doc.text" onPress={onAccountDetails} />
+        <Button label="Settings" systemImage="gearshape" onPress={onSettings} />
       </Menu>
     </HStack>
   );

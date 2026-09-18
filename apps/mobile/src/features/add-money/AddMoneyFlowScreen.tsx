@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  Button,
   Divider,
+  Group,
   HStack,
   Image,
   Spacer,
@@ -11,17 +13,23 @@ import {
   ZStack,
 } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   background,
+  buttonStyle,
+  clipShape,
   font,
   foregroundStyle,
   frame,
   padding,
   shapes,
+  strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { SFSymbol } from 'sf-symbols-typescript';
+import { currencyCapability } from '@/data/capabilities';
 
 import { FlowAmountEntry } from '@/components/FlowAmountEntry';
+import { FlowCurrencyMenu } from '@/components/FlowCurrencyMenu';
 import {
   FlowCard,
   FlowInfoRow,
@@ -31,30 +39,21 @@ import {
   FlowSuccessState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
+import { ScreenHeader } from '@/components/ScreenHeader';
+import { depositNetworks } from '@/data/capabilities';
 import {
+  addMoneyCurrencies,
   addMoneySources,
   createAddMoneyQuote,
   quickAddMoneyAmounts,
 } from '@/data/mocks/addMoney';
+import { formatMoney } from '@/domain/money';
+import { recordDeposit } from '@/state/mockAppState';
 import { colors, screenTokens, typography } from '@/theme';
-import type { AddMoneyQuote, AddMoneySourceId, AddMoneyStep } from '@/types';
+import type { AddMoneyQuote, AddMoneySourceId, AddMoneyStep, CurrencyCode, NetworkCapability } from '@/types';
 
 function formatWholeAmount(value: number) {
   return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
-}
-
-function formatTry(value: number, decimals = true) {
-  return `₺${value.toLocaleString('en-US', {
-    minimumFractionDigits: decimals ? 2 : 0,
-    maximumFractionDigits: decimals ? 2 : 0,
-  })}`;
-}
-
-function formatUsdc(value: number) {
-  return `≈ ${value.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} USDC`;
 }
 
 interface AmountStepProps {
@@ -65,6 +64,8 @@ interface AmountStepProps {
   onContinue: () => void;
   onQuickAmount: (value: number) => void;
   quote: AddMoneyQuote;
+  currency: CurrencyCode;
+  onCurrencyChange: (currency: CurrencyCode) => void;
   sourceTitle: string;
   sourceSymbol: SFSymbol;
 }
@@ -77,6 +78,8 @@ function AmountStep({
   onContinue,
   onQuickAmount,
   quote,
+  currency,
+  onCurrencyChange,
   sourceTitle,
   sourceSymbol,
 }: AmountStepProps) {
@@ -84,8 +87,16 @@ function AmountStep({
     <FlowAmountEntry
       amount={amount}
       amountText={amountText}
-      currencySymbol="₺"
-      formatQuickAmount={(value) => formatTry(value, false)}
+      amountAccessory={(
+        <FlowCurrencyMenu
+          accessibilityName="Deposit currency"
+          value={currency}
+          options={addMoneyCurrencies}
+          onChange={onCurrencyChange}
+        />
+      )}
+      currencySymbol={currencyCapability(currency).symbol}
+      formatQuickAmount={(value) => formatMoney(value, currency, { decimals: false })}
       isContinueDisabled={amount <= 0}
       onAmountChange={onAmountChange}
       onBack={onBack}
@@ -119,11 +130,11 @@ function AmountStep({
                 foregroundStyle(colors.textPrimary),
               ]}
             >
-              {formatUsdc(quote.receivedAmount)}
+              {formatMoney(quote.receivedAmount, quote.receivedCurrency, { code: true })}
             </Text>
             <Divider />
             <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
-              <FlowInfoRow label="Fee" value={formatTry(quote.fee)} />
+              <FlowInfoRow label="Fee" value={formatMoney(quote.fee, quote.currency)} />
               <FlowInfoRow label="Time" value={quote.estimatedTime} />
             </HStack>
           </VStack>
@@ -171,7 +182,7 @@ function ReviewStep({
                     foregroundStyle(colors.textPrimary),
                   ]}
                 >
-                  {formatTry(quote.amount)}
+                  {formatMoney(quote.amount, quote.currency)}
                 </Text>
               </VStack>
               <Spacer />
@@ -200,7 +211,7 @@ function ReviewStep({
                     foregroundStyle(colors.textPrimary),
                   ]}
                 >
-                  {formatUsdc(quote.receivedAmount)}
+                  {formatMoney(quote.receivedAmount, quote.receivedCurrency, { code: true })}
                 </Text>
               </VStack>
               <Spacer />
@@ -208,11 +219,8 @@ function ReviewStep({
             </HStack>
 
             <Divider />
-            <FlowInfoRow
-              label="Exchange rate"
-              value={`1 USDC ≈ ₺${quote.exchangeRate.toFixed(2)}`}
-            />
-            <FlowInfoRow label="Fee" value={formatTry(quote.fee)} />
+            <FlowInfoRow label="Destination" value="Available balance" />
+            <FlowInfoRow label="Fee" value={formatMoney(quote.fee, quote.currency)} />
             <FlowInfoRow label="Estimated time" value={quote.estimatedTime} />
           </VStack>
         </FlowCard>
@@ -245,7 +253,7 @@ function ProcessingStep({ onBack }: { onBack: () => void }) {
           subtitle: 'This won’t take long',
           state: 'current',
         },
-        { id: 'convert', title: 'Converting to USDC', subtitle: 'Next', state: 'pending' },
+        { id: 'convert', title: 'Preparing available balance', subtitle: 'Next', state: 'pending' },
         { id: 'balance', title: 'Updating your balance', subtitle: 'Final step', state: 'pending' },
       ]}
       noticeTitle="You can close this screen"
@@ -266,7 +274,7 @@ function SuccessStep({
 }) {
   return (
     <FlowSuccessState
-      amount={formatTry(quote.amount)}
+      amount={formatMoney(quote.amount, quote.currency)}
       noticeSubtitle="Your funds are now in your Trinqa account."
       noticeSymbol="wallet.bifold.fill"
       noticeTitle="Available balance updated"
@@ -274,9 +282,55 @@ function SuccessStep({
       onDone={onDone}
       onSecondaryPress={onPutToWork}
       secondaryLabel="Put it to work"
-      supportingText={formatUsdc(quote.receivedAmount)}
+      supportingText={formatMoney(quote.receivedAmount, quote.receivedCurrency, { code: true })}
       title="Money added"
     />
+  );
+}
+
+function NetworkStep({
+  onBack,
+  onSelect,
+}: {
+  onBack: () => void;
+  onSelect: (network: NetworkCapability) => void;
+}) {
+  const networks = depositNetworks();
+  return (
+    <VStack alignment="leading" spacing={0} modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}>
+      <Group modifiers={[padding({ horizontal: 8 })]}>
+        <ScreenHeader showBack title="Source network" onBackPress={onBack} />
+      </Group>
+      <VStack alignment="leading" spacing={8} modifiers={[padding({ top: 28 })]}>
+        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          Choose the network your funds are coming from. These options are frontend mocks.
+        </Text>
+        {networks.map((network) => (
+          <Button
+            key={network.id}
+            onPress={() => onSelect(network)}
+            modifiers={[
+              buttonStyle('plain'),
+              accessibilityLabel(`${network.displayName}, mock supported network`),
+              frame({ width: screenTokens.addMoney.contentWidth, height: 60 }),
+              background(colors.surface, shapes.roundedRectangle({ cornerRadius: 14 })),
+              clipShape('roundedRectangle', 14),
+              strokeBorder({ content: colors.borderStrong, style: { lineWidth: 0.5 }, shape: 'roundedRectangle', cornerRadius: 14 }),
+            ]}
+          >
+            <HStack spacing={12} modifiers={[padding({ horizontal: 14 }), frame({ maxWidth: Infinity })]}>
+              <Image systemName="network" size={17} color={colors.textPrimary} />
+              <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+                {network.displayName}
+              </Text>
+              <Spacer />
+              <Image systemName="chevron.right" size={12} color={colors.textSecondary} />
+            </HStack>
+          </Button>
+        ))}
+      </VStack>
+      <Spacer />
+    </VStack>
   );
 }
 
@@ -288,10 +342,13 @@ export function AddMoneyFlowScreen() {
     sourceParam === 'card' || sourceParam === 'wallet' ? sourceParam : 'bank';
   const source = addMoneySources.find((option) => option.id === sourceId) ?? addMoneySources[0];
 
-  const [step, setStep] = useState<AddMoneyStep>('amount');
+  const [step, setStep] = useState<AddMoneyStep>(sourceId === 'wallet' ? 'network' : 'amount');
   const [amount, setAmount] = useState(10000);
+  const [currency, setCurrency] = useState<CurrencyCode>('TRY');
+  const [sourceNetwork, setSourceNetwork] = useState<NetworkCapability | null>(null);
   const amountText = useNativeState(formatWholeAmount(10000));
-  const quote = useMemo(() => createAddMoneyQuote(amount), [amount]);
+  const quote = useMemo(() => createAddMoneyQuote(amount, currency), [amount, currency]);
+  const depositId = useMemo(() => `deposit-${sourceId}-${currency.toLowerCase()}-${amount}`, [amount, currency, sourceId]);
 
   useEffect(() => {
     if (step !== 'processing') return;
@@ -299,6 +356,17 @@ export function AddMoneyFlowScreen() {
     const timer = setTimeout(() => setStep('success'), 2600);
     return () => clearTimeout(timer);
   }, [step]);
+
+  useEffect(() => {
+    if (step !== 'success') return;
+    recordDeposit({
+      id: depositId,
+      amount,
+      creditedAmount: quote.receivedAmount,
+      currency,
+      source: sourceNetwork ? `${sourceNetwork.displayName} wallet` : source.title,
+    });
+  }, [amount, currency, depositId, quote.receivedAmount, source.title, sourceNetwork, step]);
 
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -316,9 +384,12 @@ export function AddMoneyFlowScreen() {
 
   const goBack = () => {
     if (step === 'amount') {
-      router.back();
+      if (sourceId === 'wallet') setStep('network');
+      else router.back();
       return;
     }
+
+    if (step === 'network') router.back();
 
     if (step === 'review') setStep('amount');
     if (step === 'processing') setStep('review');
@@ -330,6 +401,16 @@ export function AddMoneyFlowScreen() {
 
   return (
     <FlowScreenShell>
+      {step === 'network' ? (
+        <NetworkStep
+          onBack={goBack}
+          onSelect={(network) => {
+            setSourceNetwork(network);
+            setStep('amount');
+          }}
+        />
+      ) : null}
+
       {step === 'amount' ? (
         <AmountStep
           amount={amount}
@@ -339,6 +420,8 @@ export function AddMoneyFlowScreen() {
           onContinue={() => setStep('review')}
           onQuickAmount={chooseQuickAmount}
           quote={quote}
+          currency={currency}
+          onCurrencyChange={setCurrency}
           sourceTitle={source.title}
           sourceSymbol={source.symbol}
         />

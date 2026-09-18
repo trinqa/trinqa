@@ -45,19 +45,16 @@ import {
   type FlowProcessingRowState,
 } from '@/components/FlowControls';
 import { FlowCurrencyMenu } from '@/components/FlowCurrencyMenu';
+import { FlowInlineState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   createWithdrawalQuote,
-  maximumWithdrawalAmount,
   quickWithdrawalAmounts,
   withdrawalCurrencies,
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
-import {
-  recordCompletedWithdrawal,
-  useWithdrawalState,
-} from '@/data/mocks/withdrawalState';
+import { recordWithdrawal, useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
@@ -73,6 +70,7 @@ const CURRENCY_SYMBOLS: Record<WithdrawalCurrency, string> = {
   TRY: '₺',
   EUR: '€',
   USD: '$',
+  BRL: 'R$',
 };
 
 function formatWholeAmount(value: number) {
@@ -91,14 +89,14 @@ function formatPayoutAmount(
 }
 
 function formatUsd(value: number) {
-  return `$${value.toLocaleString('en-US', {
+  return `₺${value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
 function formatUsdRate(value: number) {
-  return `$${value.toLocaleString('en-US', {
+  return `₺${value.toLocaleString('en-US', {
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
   })}`;
@@ -394,11 +392,18 @@ function WithdrawalAmountSummary({
         </VStack>
       </FlowCard>
 
-      {quote.requiresEarnUnwind ? (
+      {quote.requiresEarnUnwind && quote.hasSufficientTotal ? (
         <FlowNotice
           symbol="arrow.uturn.backward.circle"
           title="Part of this amount is currently earning"
           subtitle={`Needed from Earn ${formatUsd(quote.earnUnwindAmount)}`}
+        />
+      ) : null}
+      {!quote.hasSufficientTotal ? (
+        <FlowInlineState
+          symbol="exclamationmark.circle"
+          title="Not enough balance"
+          subtitle="Add money or change the amount to continue."
         />
       ) : null}
     </VStack>
@@ -490,7 +495,7 @@ function ReviewStep({
 
 export function WithdrawFlowScreen() {
   const router = useRouter();
-  const walletState = useWithdrawalState();
+  const { balances } = useMockAppState();
   const [step, setStep] = useState<WithdrawalStep>('amount');
   const [currency, setCurrency] = useState<WithdrawalCurrency>('EUR');
   const [amount, setAmount] = useState(500);
@@ -503,8 +508,8 @@ export function WithdrawFlowScreen() {
     [amount, currency, destination.id],
   );
   const quote = useMemo(
-    () => createWithdrawalQuote(intent, walletState),
-    [intent, walletState],
+    () => createWithdrawalQuote(intent, balances),
+    [balances, intent],
   );
   const receiveAmount = formatPayoutAmount(amount, currency);
   const withdrawalId = useMemo(
@@ -529,7 +534,7 @@ export function WithdrawFlowScreen() {
     );
     const completedTimer = setTimeout(() => {
       setWithdrawalStatus('completed');
-      recordCompletedWithdrawal(withdrawalId, intent, quote, destination, receiveAmount);
+      recordWithdrawal(withdrawalId, intent, quote, destination);
       setStep('success');
     }, quote.requiresEarnUnwind ? 3100 : 2600);
 
@@ -544,32 +549,21 @@ export function WithdrawFlowScreen() {
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
     const requestedAmount = digits ? Number(digits) : 0;
-    const totalBalance = walletState.available + walletState.earning;
-    const nextAmount = Math.min(
-      requestedAmount,
-      maximumWithdrawalAmount(currency, totalBalance),
-    );
+    const nextAmount = requestedAmount;
     const formatted = nextAmount ? formatWholeAmount(nextAmount) : '';
     setAmount(nextAmount);
     if (formatted !== value) amountText.set(formatted);
   };
 
   const chooseQuickAmount = (value: number) => {
-    const totalBalance = walletState.available + walletState.earning;
-    const nextAmount = Math.min(value, maximumWithdrawalAmount(currency, totalBalance));
+    const nextAmount = value;
     setAmount(nextAmount);
     amountText.set(formatWholeAmount(nextAmount));
   };
 
   const chooseCurrency = (nextCurrency: WithdrawalCurrency) => {
-    const totalBalance = walletState.available + walletState.earning;
-    const nextAmount = Math.min(
-      amount,
-      maximumWithdrawalAmount(nextCurrency, totalBalance),
-    );
     setCurrency(nextCurrency);
-    setAmount(nextAmount);
-    amountText.set(nextAmount ? formatWholeAmount(nextAmount) : '');
+    amountText.set(amount ? formatWholeAmount(amount) : '');
   };
 
   const goBack = () => {
@@ -647,7 +641,7 @@ export function WithdrawFlowScreen() {
           onQuickAmount={chooseQuickAmount}
           quickAmounts={quickWithdrawalAmounts}
           selectionSymbol="wallet.bifold.fill"
-          selectionTitle={`Available ${formatUsd(walletState.available)}`}
+          selectionTitle={`Available ${formatUsd(balances.available)}`}
           summary={<WithdrawalAmountSummary intent={intent} quote={quote} />}
           title="Withdraw"
         />

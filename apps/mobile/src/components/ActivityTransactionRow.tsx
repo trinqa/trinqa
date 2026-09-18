@@ -1,13 +1,15 @@
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { colors } from '@/theme';
 import type { ActivityListItem } from '@/types';
+import { transactionStatusLabel } from '@/domain/transactionPresentation';
 
 interface ActivityTransactionRowProps {
   item: ActivityListItem;
+  onPress: () => void;
 }
 
 /** Reference-matched Activity presentation of the shared layered transaction row. */
-export function ActivityTransactionRow({ item }: ActivityTransactionRowProps) {
+export function ActivityTransactionRow({ item, onPress }: ActivityTransactionRowProps) {
   const isEarning = item.iconStyle === 'earning';
   const isAmazon = item.iconStyle === 'amazon';
 
@@ -26,9 +28,11 @@ export function ActivityTransactionRow({ item }: ActivityTransactionRowProps) {
       iconLetterColor={isAmazon ? colors.surface : undefined}
       iconAccentText={isAmazon ? '⌣' : undefined}
       iconAccentColor={isAmazon ? colors.merchantLogoAccent : undefined}
-      footerLeadingText="Completed"
+      footerLeadingText={transactionStatusLabel(item.status)}
+      footerSymbol={item.status === 'pending' ? 'clock.fill' : item.status === 'failed' ? 'xmark.circle.fill' : 'checkmark.circle.fill'}
       footerTrailingText="Details"
-      onFooterPress={() => undefined}
+      onFooterPress={onPress}
+      onPress={onPress}
       footerTrailingColor={colors.action}
     />
   );

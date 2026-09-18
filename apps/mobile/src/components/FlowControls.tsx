@@ -357,6 +357,7 @@ interface FlowSuccessStateProps {
   secondaryLabel?: string;
   supportingText: string;
   title: string;
+  outcomeStatus?: 'completed' | 'pending' | 'failed';
 }
 
 export function FlowSuccessState({
@@ -370,7 +371,11 @@ export function FlowSuccessState({
   secondaryLabel,
   supportingText,
   title,
+  outcomeStatus = 'completed',
 }: FlowSuccessStateProps) {
+  const outcomeSymbol =
+    outcomeStatus === 'pending' ? 'clock' : outcomeStatus === 'failed' ? 'xmark' : 'checkmark';
+  const outcomeColor = outcomeStatus === 'failed' ? colors.notificationBadge : colors.action;
   return (
     <VStack
       alignment="center"
@@ -402,10 +407,10 @@ export function FlowSuccessState({
           modifiers={[
             frame({ width: screenTokens.addMoney.successIconSize, height: screenTokens.addMoney.successIconSize }),
             background(colors.surfaceSecondary, shapes.circle()),
-            strokeBorder({ content: colors.action, style: { lineWidth: 1 }, shape: 'circle' }),
+            strokeBorder({ content: outcomeColor, style: { lineWidth: 1 }, shape: 'circle' }),
           ]}
         >
-          <Image systemName="checkmark" size={34} color={colors.action} />
+          <Image systemName={outcomeSymbol} size={34} color={outcomeColor} />
         </ZStack>
 
         <Text

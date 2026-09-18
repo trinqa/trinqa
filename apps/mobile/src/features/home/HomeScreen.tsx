@@ -8,10 +8,13 @@ import { HomeRecentGroup } from '@/components/HomeRecentGroup';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { ShortcutRow } from '@/components/ShortcutRow';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
-import { homeAccountSummary } from '@/data/mocks/home';
+import { currencyCapability } from '@/data/capabilities';
+import { convertFromTry } from '@/domain/money';
+import { useMockAppState } from '@/state/mockAppState';
 import { homeTokens, spacing } from '@/theme';
+import type { AccountSummary } from '@/types';
 
-function HomeWalletHost() {
+function HomeWalletHost({ account }: { account: AccountSummary }) {
   const { width: windowWidth } = useWindowDimensions();
   const shellWidth = windowWidth - spacing.screenHorizontal * 2;
   const walletHeight = shellWidth * (
@@ -22,7 +25,7 @@ function HomeWalletHost() {
     <Group modifiers={[frame({ width: shellWidth, height: walletHeight, alignment: 'center' })]}>
       <RNHostView matchContents>
         <View style={[styles.walletShell, { width: shellWidth, height: walletHeight }]}>
-          <AccountCardStack account={homeAccountSummary} width={shellWidth} />
+          <AccountCardStack account={account} width={shellWidth} />
         </View>
       </RNHostView>
     </Group>
@@ -31,6 +34,18 @@ function HomeWalletHost() {
 
 export function HomeScreen() {
   const router = useRouter();
+  const { account, balances } = useMockAppState();
+  const totalTry = balances.available + balances.earning;
+  const capability = currencyCapability(account.displayCurrency);
+  const homeAccount: AccountSummary = {
+    accountName: 'Trinqa Account',
+    cardLabel: 'Account Balance',
+    displayCurrency: capability.symbol,
+    balance: convertFromTry(totalTry, account.displayCurrency).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+  };
 
   return (
     <SwiftUIScreenShell sectionGap={0}>
@@ -39,13 +54,16 @@ export function HomeScreen() {
       </Group>
 
       <Group modifiers={[padding({ top: homeTokens.layout.headerWalletGap })]}>
-        <HomeWalletHost />
+        <HomeWalletHost account={homeAccount} />
       </Group>
 
       <Group modifiers={[padding({ top: homeTokens.layout.walletShortcutGap })]}>
         <ShortcutRow
           onPay={() => router.push('/send-money')}
           onWithdraw={() => router.push('/withdraw')}
+          onReceive={() => router.push('/receive')}
+          onAccountDetails={() => router.push('/account-details')}
+          onSettings={() => router.push('/settings')}
         />
       </Group>
 

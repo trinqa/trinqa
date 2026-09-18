@@ -4,13 +4,11 @@ import type {
   WithdrawalIntent,
   WithdrawalQuote,
 } from '@/types';
+import { currenciesFor } from '@/data/capabilities';
+import { calculateBalanceContribution } from '@/domain/balance';
+import { mockTryRates, roundMoney } from '@/domain/money';
 
-export const initialWithdrawalBalances = {
-  available: 4220.14,
-  earning: 8260.18,
-} as const;
-
-export const withdrawalCurrencies: WithdrawalCurrency[] = ['TRY', 'EUR', 'USD'];
+export const withdrawalCurrencies = currenciesFor('withdraw') as WithdrawalCurrency[];
 export const quickWithdrawalAmounts = [250, 500, 1000] as const;
 
 export const withdrawalDestinations: WithdrawalDestination[] = [
@@ -32,44 +30,39 @@ export const withdrawalDestinations: WithdrawalDestination[] = [
 
 const currencyConfiguration: Record<
   WithdrawalCurrency,
-  { exchangeRate: number; fee: number; routeId: string }
+  { fee: number; routeId: string }
 > = {
-  TRY: { exchangeRate: 0.027, fee: 1.2, routeId: 'mock-exit-try' },
-  EUR: { exchangeRate: 1.0832, fee: 1.2, routeId: 'mock-exit-eur' },
-  USD: { exchangeRate: 1, fee: 1.2, routeId: 'mock-exit-usd' },
+  TRY: { fee: 15, routeId: 'mock-exit-try' },
+  EUR: { fee: 35, routeId: 'mock-exit-eur' },
+  USD: { fee: 35, routeId: 'mock-exit-usd' },
+  BRL: { fee: 25, routeId: 'mock-exit-brl' },
 };
-
-function roundCurrency(value: number) {
-  return Math.round(value * 100) / 100;
-}
 
 export function createWithdrawalQuote(
   intent: WithdrawalIntent,
   balances: { available: number; earning: number },
 ): WithdrawalQuote {
   const configuration = currencyConfiguration[intent.payoutCurrency];
-  const debitAmount = roundCurrency(
-    intent.amount * configuration.exchangeRate + configuration.fee,
+  const exchangeRate = mockTryRates[intent.payoutCurrency];
+  const debitAmount = roundMoney(
+    intent.amount * exchangeRate + configuration.fee,
   );
-  const availableDebitAmount = Math.min(debitAmount, balances.available);
-  const earnUnwindAmount = roundCurrency(
-    Math.max(0, debitAmount - availableDebitAmount),
-  );
+  const contribution = calculateBalanceContribution(debitAmount, balances);
 
   return {
     receiveAmount: intent.amount,
     receiveCurrency: intent.payoutCurrency,
     debitAmount,
-    debitCurrency: 'USD',
+    debitCurrency: 'TRY',
     fee: configuration.fee,
-    exchangeRate: configuration.exchangeRate,
+    exchangeRate,
     estimatedArrival: '~1–2 min',
     availableAmount: balances.available,
-    availableDebitAmount,
-    requiresEarnUnwind: earnUnwindAmount > 0,
-    earnUnwindAmount,
+    availableDebitAmount: contribution.availableContribution,
+    requiresEarnUnwind: contribution.earnContribution > 0,
+    earnUnwindAmount: contribution.earnContribution,
     routeId: configuration.routeId,
-    hasSufficientTotal: debitAmount <= balances.available + balances.earning,
+    hasSufficientTotal: contribution.hasSufficientTotal,
   };
 }
 
@@ -79,6 +72,6 @@ export function maximumWithdrawalAmount(
 ) {
   const configuration = currencyConfiguration[currency];
   return Math.floor(
-    Math.max(0, totalBalance - configuration.fee) / configuration.exchangeRate,
+    Math.max(0, totalBalance - configuration.fee) / mockTryRates[currency],
   );
 }

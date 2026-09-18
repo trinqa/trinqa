@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import {
   Button,
+  DatePicker,
   Divider,
   Group,
   HStack,
@@ -24,6 +25,7 @@ import {
   padding,
   shapes,
   strokeBorder,
+  datePickerStyle,
 } from '@expo/ui/swift-ui/modifiers';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -37,13 +39,14 @@ import {
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { NativeSegmentedControl } from '@/components/NativeSegmentedControl';
+import { StrategyDetailsSheet } from '@/components/StrategyDetailsSheet';
 import {
-  availableToAllocate,
   createPutToWorkQuote,
   putToWorkHorizons,
   putToWorkRiskProfiles,
   quickPutToWorkAmounts,
 } from '@/data/mocks/putToWork';
+import { recordAllocation, useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import type {
   PutToWorkHorizon,
@@ -65,7 +68,7 @@ function formatWholeAmount(value: number) {
 }
 
 function formatUsd(value: number, decimals = true) {
-  return `$${value.toLocaleString('en-US', {
+  return `₺${value.toLocaleString('en-US', {
     minimumFractionDigits: decimals ? 2 : 0,
     maximumFractionDigits: decimals ? 2 : 0,
   })}`;
@@ -157,6 +160,9 @@ function StrategyStep({
   onHorizonChange,
   onProfileChange,
   profile,
+  targetDate,
+  onTargetDateChange,
+  availableAmount,
 }: {
   horizon: PutToWorkHorizon;
   onBack: () => void;
@@ -164,6 +170,9 @@ function StrategyStep({
   onHorizonChange: (horizon: PutToWorkHorizonId) => void;
   onProfileChange: (profile: PutToWorkRiskId) => void;
   profile: PutToWorkRiskProfile;
+  targetDate: Date;
+  onTargetDateChange: (date: Date) => void;
+  availableAmount: number;
 }) {
   const flow = screenTokens.putToWork;
 
@@ -203,7 +212,7 @@ function StrategyStep({
                     foregroundStyle(colors.textPrimary),
                   ]}
                 >
-                  {formatUsd(availableToAllocate)}
+                  {formatUsd(availableAmount)}
                 </Text>
               </VStack>
               <Spacer />
@@ -261,6 +270,16 @@ function StrategyStep({
         >
           {horizon.explanation}
         </Text>
+        {horizon.id === 'date' ? (
+          <DatePicker
+            title="Target date"
+            selection={targetDate}
+            displayedComponents={['date']}
+            range={{ start: new Date(), end: new Date(2028, 11, 31) }}
+            onDateChange={onTargetDateChange}
+            modifiers={[datePickerStyle('compact'), frame({ width: flow.contentWidth, height: 44 })]}
+          />
+        ) : null}
       </VStack>
     </FlowStepLayout>
   );
@@ -402,6 +421,7 @@ function ReviewStep({
           title="Flexible access"
           subtitle="You can move money back to available whenever needed."
         />
+        <StrategyDetailsSheet profile={profile} />
       </VStack>
     </FlowStepLayout>
   );
@@ -409,6 +429,7 @@ function ReviewStep({
 
 export function PutToWorkFlowScreen() {
   const router = useRouter();
+  const { balances } = useMockAppState();
   const params = useLocalSearchParams<{ origin?: string }>();
   const originParam = Array.isArray(params.origin) ? params.origin[0] : params.origin;
   const origin: PutToWorkOrigin =
@@ -418,18 +439,19 @@ export function PutToWorkFlowScreen() {
   const [profileId, setProfileId] = useState<PutToWorkRiskId>('balanced');
   const [horizonId, setHorizonId] = useState<PutToWorkHorizonId>('anytime');
   const [amount, setAmount] = useState(2500);
+  const [targetDate, setTargetDate] = useState(new Date(2026, 9, 25));
   const amountText = useNativeState(formatWholeAmount(2500));
 
   const profile =
     putToWorkRiskProfiles.find((option) => option.id === profileId) ?? putToWorkRiskProfiles[1];
   const horizon =
     putToWorkHorizons.find((option) => option.id === horizonId) ?? putToWorkHorizons[0];
-  const quote = useMemo(() => createPutToWorkQuote(amount, profile), [amount, profile]);
+  const quote = useMemo(() => createPutToWorkQuote(amount, profile, balances), [amount, balances, profile]);
 
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 7);
     const requestedAmount = digits ? Number(digits) : 0;
-    const nextAmount = Math.min(requestedAmount, Math.floor(availableToAllocate));
+    const nextAmount = Math.min(requestedAmount, Math.floor(balances.available));
     const formatted = nextAmount ? formatWholeAmount(nextAmount) : '';
 
     setAmount(nextAmount);
@@ -437,7 +459,7 @@ export function PutToWorkFlowScreen() {
   };
 
   const chooseQuickAmount = (value: number) => {
-    const nextAmount = Math.min(value, Math.floor(availableToAllocate));
+    const nextAmount = Math.min(value, Math.floor(balances.available));
     setAmount(nextAmount);
     amountText.set(formatWholeAmount(nextAmount));
   };
@@ -464,6 +486,9 @@ export function PutToWorkFlowScreen() {
           onHorizonChange={setHorizonId}
           onProfileChange={setProfileId}
           profile={profile}
+          targetDate={targetDate}
+          onTargetDateChange={setTargetDate}
+          availableAmount={balances.available}
         />
       ) : null}
 
@@ -471,9 +496,9 @@ export function PutToWorkFlowScreen() {
         <FlowAmountEntry
           amount={amount}
           amountText={amountText}
-          currencySymbol="$"
+          currencySymbol="₺"
           formatQuickAmount={(value) => formatUsd(value, false)}
-          isContinueDisabled={amount <= 0 || amount > availableToAllocate}
+          isContinueDisabled={amount <= 0 || amount > balances.available}
           onAmountChange={updateAmount}
           onBack={goBack}
           onContinue={() => setStep('review')}
@@ -490,7 +515,18 @@ export function PutToWorkFlowScreen() {
         <ReviewStep
           horizon={horizon}
           onBack={goBack}
-          onConfirm={() => setStep('success')}
+          onConfirm={() => {
+            recordAllocation({
+              id: `allocation-${profile.id}-${horizon.id}-${amount}`,
+              amountTry: amount,
+              risk: profile.id,
+              timeHorizon: {
+                kind: horizon.id,
+                ...(horizon.id === 'date' ? { targetDate: targetDate.toISOString() } : {}),
+              },
+            });
+            setStep('success');
+          }}
           profile={profile}
           quote={quote}
         />

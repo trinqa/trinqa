@@ -18,6 +18,7 @@ import { InsetLayer } from '@/components/InsetLayer';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 interface BalanceSummaryProps {
+  currencySymbol?: string;
   totalLabel: string;
   totalValue: string;
   leftLabel: string;
@@ -30,10 +31,12 @@ function MetricTile({
   label,
   value,
   width,
+  currencySymbol,
 }: {
   label: string;
   value: string;
   width: number;
+  currencySymbol: string;
 }) {
   return (
     <VStack
@@ -49,13 +52,14 @@ function MetricTile({
     >
       <Text modifiers={[font({ size: 13 }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
       <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
-        ${value}
+        {currencySymbol}{value}
       </Text>
     </VStack>
   );
 }
 
 export function BalanceSummary({
+  currencySymbol = '$',
   totalLabel,
   totalValue,
   leftLabel,
@@ -107,7 +111,7 @@ export function BalanceSummary({
                 foregroundStyle(colors.textSecondary),
               ]}
             >
-              $
+              {currencySymbol}
             </Text>
             <Text
               modifiers={[
@@ -145,8 +149,8 @@ export function BalanceSummary({
             axis="horizontal"
             height={wallet.metricLayerHeight}
           >
-            <MetricTile label={leftLabel} value={leftValue} width={159} />
-            <MetricTile label={rightLabel} value={rightValue} width={159} />
+            <MetricTile label={leftLabel} value={leftValue} width={159} currencySymbol={currencySymbol} />
+            <MetricTile label={rightLabel} value={rightValue} width={159} currencySymbol={currencySymbol} />
           </InsetLayer>
         </Group>
       </VStack>

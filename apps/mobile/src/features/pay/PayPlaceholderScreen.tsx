@@ -28,8 +28,10 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { WalletTransactionRow } from '@/components/WalletTransactionRow';
-import { walletTransactions } from '@/data/mocks/wallet';
-import { useWithdrawalState } from '@/data/mocks/withdrawalState';
+import { currencyCapability } from '@/data/capabilities';
+import { convertFromTry, formatMoney } from '@/domain/money';
+import { toWalletTransactionItem, transactionSection, walletTransactions } from '@/domain/transactionPresentation';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 const GAUGE_WIDTH = 298;
@@ -88,27 +90,25 @@ function WalletActionRow({
 
 export function WalletScreen() {
   const router = useRouter();
-  const withdrawalState = useWithdrawalState();
+  const { account, balances, transactions } = useMockAppState();
   const wallet = screenTokens.wallet;
   const transactionContentWidth =
     wallet.contentWidth - wallet.detailsHorizontalPadding * 2;
-  const walletTotal = withdrawalState.available + withdrawalState.earning;
-  const allocationProgress = walletTotal > 0 ? withdrawalState.earning / walletTotal : 0;
-  const completedWithdrawals = withdrawalState.withdrawals.map((withdrawal) => ({
-    id: withdrawal.id,
-    title: withdrawal.destination.kind === 'bank' ? 'Bank withdrawal' : 'Wallet withdrawal',
-    detail: withdrawal.destination.name,
-    amount: `-${withdrawal.displayAmount}`,
-    time: withdrawal.timestamp.replace('Today, ', ''),
-    symbol: 'arrow.down.to.line' as const,
-    iconStyle: 'neutral' as const,
-    group: 'today' as const,
+  const walletTotal = balances.available + balances.earning;
+  const allocationProgress = walletTotal > 0 ? balances.earning / walletTotal : 0;
+  const capability = currencyCapability(account.displayCurrency);
+  const walletRows = walletTransactions(transactions).map(toWalletTransactionItem);
+  const sections = Array.from(
+    new Map(
+      walletTransactions(transactions).map((transaction) => {
+        const section = transactionSection(transaction);
+        return [section.id, section];
+      }),
+    ).values(),
+  ).map((section) => ({
+    ...section,
+    items: walletRows.filter((item) => item.group === section.id),
   }));
-  const today = [
-    ...completedWithdrawals,
-    ...walletTransactions.filter((item) => item.group === 'today'),
-  ];
-  const yesterday = walletTransactions.filter((item) => item.group === 'yesterday');
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
@@ -119,11 +119,12 @@ export function WalletScreen() {
       <VStack modifiers={[padding({ top: wallet.headerToBalance })]}>
         <BalanceSummary
           totalLabel="Total Balance"
-          totalValue={formatBalance(walletTotal)}
+          totalValue={formatBalance(convertFromTry(walletTotal, account.displayCurrency))}
+          currencySymbol={capability.symbol}
           leftLabel="Available"
-          leftValue={formatBalance(withdrawalState.available)}
+          leftValue={formatBalance(convertFromTry(balances.available, account.displayCurrency))}
           rightLabel="Earning"
-          rightValue={formatBalance(withdrawalState.earning)}
+          rightValue={formatBalance(convertFromTry(balances.earning, account.displayCurrency))}
         />
       </VStack>
 
@@ -196,7 +197,7 @@ export function WalletScreen() {
                         foregroundStyle(colors.textPrimary),
                       ]}
                     >
-                      {`$${formatBalance(withdrawalState.earning)}/$${formatBalance(walletTotal)}`}
+                      {`${formatMoney(convertFromTry(balances.earning, account.displayCurrency), account.displayCurrency)}/${formatMoney(convertFromTry(walletTotal, account.displayCurrency), account.displayCurrency)}`}
                     </Text>
                   </HStack>
                 </VStack>
@@ -226,35 +227,20 @@ export function WalletScreen() {
               Transaction
             </Text>
 
-            <DateSectionDivider
-              contentWidth={transactionContentWidth}
-              label="Today"
-              modifiers={[padding({ top: wallet.transactionTitleToGroup })]}
-            />
-            <VStack
-              alignment="leading"
-              spacing={wallet.transactionRowGap}
-              modifiers={[padding({ top: componentTokens.dateSectionDivider.toRowsGap })]}
-            >
-              {today.map((item) => (
-                <WalletTransactionRow key={item.id} item={item} />
-              ))}
-            </VStack>
-
-            <DateSectionDivider
-              contentWidth={transactionContentWidth}
-              label="Yesterday"
-              modifiers={[padding({ top: 12 })]}
-            />
-            <VStack
-              alignment="leading"
-              spacing={wallet.transactionRowGap}
-              modifiers={[padding({ top: componentTokens.dateSectionDivider.toRowsGap })]}
-            >
-              {yesterday.map((item) => (
-                <WalletTransactionRow key={item.id} item={item} />
-              ))}
-            </VStack>
+            {sections.map((section, index) => (
+              <VStack key={section.id} alignment="leading" spacing={componentTokens.dateSectionDivider.toRowsGap}>
+                <DateSectionDivider
+                  contentWidth={transactionContentWidth}
+                  label={section.title}
+                  modifiers={[padding({ top: index === 0 ? wallet.transactionTitleToGroup : 12 })]}
+                />
+                <VStack alignment="leading" spacing={wallet.transactionRowGap}>
+                  {section.items.map((item) => (
+                    <WalletTransactionRow key={item.id} item={item} />
+                  ))}
+                </VStack>
+              </VStack>
+            ))}
           </VStack>
         </SurfacePanel>
       </VStack>

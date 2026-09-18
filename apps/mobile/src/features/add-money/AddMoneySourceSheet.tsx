@@ -99,7 +99,8 @@ export function AddMoneySourceSheet({ anchor }: AddMoneySourceSheetProps) {
   const handleDismiss = () => {
     if (!pendingSource) return;
 
-    router.push({ pathname: '/add-money', params: { source: pendingSource } });
+    if (pendingSource === 'receive') router.push('/receive');
+    else router.push({ pathname: '/add-money', params: { source: pendingSource } });
     setPendingSource(null);
   };
 

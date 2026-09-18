@@ -1,3 +1,5 @@
+import type { SFSymbol } from 'sf-symbols-typescript';
+
 export interface AccountSummary {
   accountName: string;
   cardLabel: string;
@@ -47,7 +49,7 @@ export interface ChartPoint {
   displayValue?: string;
 }
 
-export type AddMoneySourceId = 'bank' | 'card' | 'wallet';
+export type AddMoneySourceId = 'bank' | 'card' | 'wallet' | 'receive';
 
 export interface AddMoneySourceOption {
   id: AddMoneySourceId;
@@ -58,18 +60,18 @@ export interface AddMoneySourceOption {
 
 export interface AddMoneyQuote {
   amount: number;
-  currency: 'TRY';
+  currency: CurrencyCode;
   receivedAmount: number;
-  receivedCurrency: 'USDC';
+  receivedCurrency: CurrencyCode;
   exchangeRate: number;
   fee: number;
   estimatedTime: string;
 }
 
-export type AddMoneyStep = 'amount' | 'review' | 'processing' | 'success';
+export type AddMoneyStep = 'network' | 'amount' | 'review' | 'processing' | 'success';
 
 export type PutToWorkRiskId = 'stable' | 'balanced' | 'growth';
-export type PutToWorkHorizonId = 'anytime' | 'three-months' | 'one-year';
+export type PutToWorkHorizonId = 'anytime' | 'seven-days' | 'thirty-days' | 'date';
 export type PutToWorkStep = 'strategy' | 'amount' | 'review' | 'success';
 export type PutToWorkOrigin = 'add-money' | 'wallet' | 'earn';
 
@@ -79,6 +81,10 @@ export interface PutToWorkRiskProfile {
   riskLabel: string;
   reviewRiskLabel: string;
   estimatedApy: number;
+  accessDescription: string;
+  mainRisk: string;
+  recommendationReason: string;
+  underlyingProvider?: string;
 }
 
 export interface PutToWorkHorizon {
@@ -95,7 +101,7 @@ export interface PutToWorkQuote {
   earningAfter: number;
 }
 
-export type PaymentCurrency = 'TRY' | 'USD' | 'EUR';
+export type PaymentCurrency = CurrencyCode;
 export type PaymentStep = 'recipient' | 'amount' | 'review' | 'processing' | 'success';
 export type PaymentStatus = 'initiated' | 'converting' | 'sending' | 'completed' | 'failed';
 
@@ -104,9 +110,12 @@ export interface PaymentRecipient {
   name: string;
   detail: string;
   symbol: import('sf-symbols-typescript').SFSymbol;
+  country?: string;
+  preferredCurrency?: PaymentCurrency;
 }
 
 export interface PaymentIntent {
+  recipientId: string;
   recipient: PaymentRecipient;
   receiveAmount: number;
   receiveCurrency: PaymentCurrency;
@@ -116,12 +125,16 @@ export interface PaymentQuote {
   receiveAmount: number;
   receiveCurrency: PaymentCurrency;
   debitAmount: number;
-  debitCurrency: 'TRY';
+  debitCurrency: CurrencyCode;
   fee: number;
   exchangeRate: number;
   estimatedArrival: string;
   routeId: string;
   hasSufficientAvailable: boolean;
+  hasSufficientTotal: boolean;
+  availableContribution: number;
+  earnContribution: number;
+  status: 'ready' | 'unavailable';
 }
 
 export interface CompletedPayment {
@@ -134,7 +147,7 @@ export interface CompletedPayment {
   status: Extract<PaymentStatus, 'completed'>;
 }
 
-export type WithdrawalCurrency = 'TRY' | 'EUR' | 'USD';
+export type WithdrawalCurrency = CurrencyCode;
 export type WithdrawalStep = 'amount' | 'destination' | 'review' | 'processing' | 'success';
 export type WithdrawalStatus =
   | 'initiated'
@@ -162,7 +175,7 @@ export interface WithdrawalQuote {
   receiveAmount: number;
   receiveCurrency: WithdrawalCurrency;
   debitAmount: number;
-  debitCurrency: 'USD';
+  debitCurrency: CurrencyCode;
   fee: number;
   exchangeRate: number;
   estimatedArrival: string;
@@ -194,9 +207,10 @@ export interface ActivityListItem {
   amount: string;
   timestamp: string;
   category: Exclude<ActivitySegment, 'all'>;
-  group: 'today' | 'yesterday' | 'november-18';
+  group: string;
   symbol?: import('sf-symbols-typescript').SFSymbol;
   iconStyle?: 'default' | 'earning' | 'amazon';
+  status: TransactionStatus;
 }
 
 export type ActivitySegment = 'all' | 'payments' | 'earnings';
@@ -211,7 +225,7 @@ export interface WalletTransactionItem {
   time: string;
   symbol: import('sf-symbols-typescript').SFSymbol;
   iconStyle: 'neutral' | 'accent';
-  group: 'today' | 'yesterday';
+  group: string;
 }
 
 export interface EarnListItem {
@@ -226,4 +240,132 @@ export interface EarnListItem {
   iconStyle: 'earning' | 'strategy';
   segment: EarnSegment;
   action?: 'manage-strategy' | 'details';
+}
+export type CurrencyCode = 'TRY' | 'USD' | 'EUR' | 'BRL';
+export type CapabilityStatus = 'mock' | 'unavailable';
+export type MoneyOperation = 'deposit' | 'receive' | 'pay' | 'withdraw' | 'display';
+
+export interface CurrencyCapability {
+  code: CurrencyCode;
+  symbol: string;
+  name: string;
+  locale: string;
+  decimals: number;
+  canDeposit: boolean;
+  canReceive: boolean;
+  canPay: boolean;
+  canWithdraw: boolean;
+  canDisplay: boolean;
+  status: CapabilityStatus;
+}
+
+export interface NetworkCapability {
+  id: 'stellar' | 'ethereum' | 'base';
+  displayName: string;
+  canDeposit: boolean;
+  status: CapabilityStatus;
+}
+
+export type AccountBootstrapState = 'new' | 'creating' | 'ready' | 'error';
+
+export interface AccountIdentity {
+  id: string;
+  displayName: string;
+  initials: string;
+  displayCurrency: CurrencyCode;
+  publicReceiveIdentifier?: string;
+  networkDetails?: {
+    network: string;
+    address: string;
+    asset: string;
+  };
+}
+
+export interface BalanceState {
+  available: number;
+  earning: number;
+  baseCurrency: 'TRY';
+}
+
+export type OperationState =
+  | 'idle'
+  | 'loading'
+  | 'processing'
+  | 'pending'
+  | 'success'
+  | 'error';
+
+export type TransactionType =
+  | 'payment'
+  | 'received'
+  | 'deposit'
+  | 'withdrawal'
+  | 'yield-earned'
+  | 'added-to-earning'
+  | 'returned-to-available'
+  | 'rebalance';
+
+export type TransactionStatus = 'completed' | 'pending' | 'failed';
+export type TransactionDirection = 'in' | 'out' | 'neutral';
+
+export interface TransactionRouteDetails {
+  network?: string;
+  transactionHash?: string;
+  provider?: string;
+  route?: string;
+}
+
+/** Backend-ready normalized transaction read model shared by every screen. */
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  title: string;
+  subtitle: string;
+  amount: number;
+  currency: CurrencyCode;
+  direction: TransactionDirection;
+  status: TransactionStatus;
+  occurredAt: string;
+  symbol?: SFSymbol;
+  iconStyle?: 'default' | 'earning' | 'amazon';
+  fee?: { amount: number; currency: CurrencyCode };
+  recipient?: string;
+  source?: string;
+  arrival?: string;
+  routeDetails?: TransactionRouteDetails;
+}
+
+export interface StrategyPreference {
+  risk: PutToWorkRiskId;
+  timeHorizon: {
+    kind: PutToWorkHorizonId;
+    targetDate?: string;
+  };
+}
+
+export interface StrategyRecommendation {
+  id: PutToWorkRiskId;
+  title: string;
+  riskLabel: string;
+  estimatedApy: number;
+  accessDescription: string;
+  mainRisk: string;
+  recommendationReason: string;
+  underlyingProvider?: string;
+  currentAllocation?: string;
+}
+
+export interface ReceiveIntent {
+  amount?: string;
+  currency?: CurrencyCode;
+  recipientAccountId: string;
+}
+
+export interface ReceivePresentation {
+  displayAmount?: string;
+  displayCurrency?: CurrencyCode;
+  qrPayload: string;
+  shareText: string;
+  receiveIdentifier: string;
+  networkDetails?: AccountIdentity['networkDetails'];
 }

@@ -42,7 +42,7 @@ export const screenTokens = {
   },
   addMoney: {
     contentWidth: 366,
-    sheetHeight: 374,
+    sheetHeight: 448,
     headerToContent: 28,
     methodHeight: 44,
     amountTopGap: 30,

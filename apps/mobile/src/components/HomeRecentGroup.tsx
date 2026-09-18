@@ -12,38 +12,19 @@ import {
 import { useWindowDimensions } from 'react-native';
 
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
-import { homeRecentActivity } from '@/data/mocks/home';
-import { useCompletedPayments } from '@/data/mocks/paymentActivity';
-import { useWithdrawalState } from '@/data/mocks/withdrawalState';
+import { toActivityListItem, transactionStatusLabel } from '@/domain/transactionPresentation';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, homeTokens, spacing } from '@/theme';
 
 /** Recent grouped card follows the reference's narrow outer inset and compact rows. */
 export function HomeRecentGroup() {
   const { width: windowWidth } = useWindowDimensions();
-  const completedPayments = useCompletedPayments();
-  const withdrawalState = useWithdrawalState();
+  const { transactions } = useMockAppState();
   const shellWidth = windowWidth - spacing.screenHorizontal * 2;
-  const recentActivity = [
-    ...withdrawalState.withdrawals.map((withdrawal) => ({
-      id: withdrawal.id,
-      title: withdrawal.destination.kind === 'bank' ? 'Bank withdrawal' : 'Wallet withdrawal',
-      subtitle: 'Completed',
-      amount: `-${withdrawal.displayAmount}`,
-      amountDirection: 'out' as const,
-      date: withdrawal.timestamp,
-      symbol: 'arrow.down.to.line' as const,
-    })),
-    ...completedPayments.map((payment) => ({
-      id: payment.id,
-      title: payment.recipient.name,
-      subtitle: 'Sent',
-      amount: `-${payment.displayAmount}`,
-      amountDirection: 'out' as const,
-      date: payment.timestamp,
-      symbol: payment.recipient.symbol,
-    })),
-    ...homeRecentActivity,
-  ].slice(0, 3);
+  const recentActivity = transactions.slice(0, 3).map((transaction) => ({
+    transaction,
+    item: toActivityListItem(transaction),
+  }));
 
   return (
     <Group modifiers={[frame({ width: shellWidth, alignment: 'center' })]}>
@@ -79,15 +60,15 @@ export function HomeRecentGroup() {
         </Text>
 
         <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
-          {recentActivity.map((item) => (
+          {recentActivity.map(({ item, transaction }) => (
             <LayeredTransactionRow
               key={item.id}
               title={item.title}
               subtitle={item.subtitle}
               amount={item.amount}
-              meta={item.date}
+              meta={item.timestamp}
               symbol={item.symbol}
-              footerLeadingText="Completed"
+              footerLeadingText={transactionStatusLabel(transaction.status)}
               footerTrailingText="Details"
               onFooterPress={() => undefined}
             />

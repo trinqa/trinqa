@@ -10,11 +10,12 @@ import { MetricCard } from '@/components/MetricCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import {
-  earnListItems,
   earnChartPoints,
-  earnHeadline,
-  earnMetrics,
 } from '@/data/mocks/earnAnalytics';
+import { putToWorkRiskProfiles } from '@/data/mocks/putToWork';
+import { convertFromTry, formatMoney } from '@/domain/money';
+import { earnTransactions, toEarnListItem } from '@/domain/transactionPresentation';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens } from '@/theme';
 import { captionTextModifiers } from '@/theme/swiftUi';
 import type { EarnSegment } from '@/types';
@@ -23,8 +24,37 @@ const METRIC_WIDTHS = [112, 112, 112] as const;
 
 export function EarnScreen() {
   const router = useRouter();
+  const { account, balances, strategy, transactions } = useMockAppState();
   const [segment, setSegment] = useState<EarnSegment>('earnings');
-  const items = earnListItems.filter((item) => item.segment === segment);
+  const profile = putToWorkRiskProfiles.find((item) => item.id === strategy.risk) ?? putToWorkRiskProfiles[1];
+  const dynamicItems = earnTransactions(transactions).map(toEarnListItem);
+  const strategyItem = {
+    id: 'current-strategy',
+    title: profile.title,
+    subtitle: 'Current strategy',
+    amount: `${profile.estimatedApy.toFixed(1)}%`,
+    meta: 'est. APY',
+    footerLeadingText: 'Estimated APY',
+    footerTrailingText: 'Manage Strategy',
+    symbol: 'chart.line.uptrend.xyaxis' as const,
+    iconStyle: 'strategy' as const,
+    segment: 'strategies' as const,
+    action: 'manage-strategy' as const,
+  };
+  const items = [strategyItem, ...dynamicItems].filter((item) => item.segment === segment);
+  const yieldEarned = transactions
+    .filter((transaction) => transaction.type === 'yield-earned')
+    .reduce((total, transaction) => total + transaction.amount, 0);
+  const headline = formatMoney(yieldEarned, 'USD');
+  const metrics = [
+    { id: 'apy', label: 'Current APY', value: `${profile.estimatedApy.toFixed(1)}%` },
+    {
+      id: 'balance',
+      label: 'Earning Balance',
+      value: formatMoney(convertFromTry(balances.earning, account.displayCurrency), account.displayCurrency),
+    },
+    { id: 'risk', label: 'Risk', value: profile.title },
+  ];
   const earn = screenTokens.earn;
 
   return (
@@ -49,14 +79,14 @@ export function EarnScreen() {
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
-          {earnHeadline.label}
+          Total Earned
         </Text>
         <HStack alignment="firstTextBaseline" spacing={0}>
           <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>
-            {earnHeadline.prefix}
+            +
           </Text>
           <Text modifiers={[font({ size: 25, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
-            {earnHeadline.value}
+            {headline}
           </Text>
         </HStack>
       </VStack>
@@ -77,7 +107,7 @@ export function EarnScreen() {
           frame({ width: earn.contentWidth }),
         ]}
       >
-        {earnMetrics.map((metric, index) => (
+        {metrics.map((metric, index) => (
           <MetricCard
             key={metric.id}
             label={metric.label}
