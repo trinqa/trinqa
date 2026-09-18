@@ -21,6 +21,9 @@ export type PaymentQuoteRequest = {
   destinationCurrency: string;
   balanceSource?: BalanceSource;
   anchorSessionId?: string;
+  /** SEP-6 withdraw bank destination (required for TRY / fiat_payout). */
+  withdrawDest?: string;
+  withdrawDestExtra?: string;
 };
 
 export type PaymentRouteQuote = {

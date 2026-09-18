@@ -113,11 +113,51 @@ describe('PaymentRouter', () => {
     });
     const account = 'G'.repeat(56);
     const session = sessions.create('jwt-test', account);
-    const quote = await router.quoteWithdrawToTry(account, '10.0000000', session.sessionId);
+    const withdrawDest = 'TR330006100519786457841326';
+    const quote = await router.quoteWithdrawToTry(
+      account,
+      '10.0000000',
+      session.sessionId,
+      withdrawDest,
+      'branch-1',
+    );
     expect(quote.routeType).toBe('fiat_payout');
     expect(quote.destination.currency).toBe('TRY');
     expect(quote.providerPayload.anchorQuoteId).toBe('q-1');
+    expect(quote.providerPayload.withdrawDest).toBe(withdrawDest);
+    expect(quote.providerPayload.withdrawDestExtra).toBe('branch-1');
     expect(quote.destination.amount).toBe('340.00');
+  });
+
+  it('honors balanceSource available without earn unwind', async () => {
+    const { router, stellar, defindex } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '10.0000000',
+      },
+    ]);
+    vi.spyOn(defindex, 'isConfigured', 'get').mockReturnValue(true);
+    vi.spyOn(defindex, 'requireVault').mockReturnValue('CVAULT1234567890123456789012345678901234567890123456789012');
+    vi.spyOn(defindex, 'normalizePosition').mockResolvedValue({
+      strategyId: 'defindex:CVAULT',
+      accountId: 'G'.repeat(56),
+      positionValue: { assetCode: 'USDC', amount: '50.0000000' },
+      shares: '1',
+      underlyingBalances: ['50.0000000'],
+    });
+    const quote = await router.quote({
+      fromAccount: 'G'.repeat(56),
+      recipient: 'H'.repeat(56),
+      sourceAmount: '7.0000000',
+      sourceAssetCode: 'USDC',
+      destinationCurrency: 'USDC',
+      balanceSource: 'available',
+    });
+    expect(quote.funding?.requiresEarnUnwind).toBe(false);
+    expect(quote.funding?.earnContribution).toBe('0.0000000');
   });
 
   it('computes earn funding without throwing when unwind required', async () => {

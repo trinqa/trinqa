@@ -94,7 +94,12 @@ export class PaymentRouter {
     }
 
     const { available, earning } = await this.resolveBalances(req.fromAccount);
-    const fundingCalc = this.execution.computeFunding(available, earning, req.sourceAmount);
+    const fundingCalc = this.execution.computeFunding(
+      available,
+      earning,
+      req.sourceAmount,
+      req.balanceSource,
+    );
 
     const swapViable =
       this.soroswap.isConfigured &&
@@ -173,6 +178,9 @@ export class PaymentRouter {
       if (!req.anchorSessionId) {
         throw new ApiError('VALIDATION_ERROR', 'anchorSessionId required for TRY cash-out quote', 400);
       }
+      if (!req.withdrawDest?.trim()) {
+        throw new ApiError('VALIDATION_ERROR', 'withdrawDest required for TRY cash-out quote', 400);
+      }
       if (req.recipient !== req.fromAccount) {
         throw new ApiError(
           'VALIDATION_ERROR',
@@ -187,6 +195,10 @@ export class PaymentRouter {
       providerPayload.anchorQuoteId = sep38.quoteId;
       providerPayload.anchorQuoteExpiresAt = sep38.expiresAt;
       providerPayload.anchorPrice = sep38.price;
+      providerPayload.withdrawDest = req.withdrawDest.trim();
+      if (req.withdrawDestExtra?.trim()) {
+        providerPayload.withdrawDestExtra = req.withdrawDestExtra.trim();
+      }
     }
 
     if (chosen.routeType === 'stellar_swap_transfer' && dest === 'XLM') {
@@ -311,6 +323,14 @@ export class PaymentRouter {
     }
 
     if (quote.routeType === 'fiat_payout') {
+      const withdrawPayload = quote.providerPayload as {
+        withdrawDest?: string;
+        withdrawDestExtra?: string;
+        anchorQuoteId?: string;
+      };
+      if (!withdrawPayload.withdrawDest) {
+        throw new ApiError('VALIDATION_ERROR', 'Missing withdrawDest on TRY quote', 400);
+      }
       return {
         operationId: op.id,
         networkPassphrase: this.stellar.networkPassphrase,
@@ -320,7 +340,9 @@ export class PaymentRouter {
           assetCode: 'USDC',
           amount: quote.source.amount,
           destinationCurrency: quote.destination.currency,
-          quoteId: payload.anchorQuoteId,
+          quoteId: withdrawPayload.anchorQuoteId,
+          dest: withdrawPayload.withdrawDest,
+          destExtra: withdrawPayload.withdrawDestExtra,
           note: 'Complete SEP-6 withdraw with sessionId; pass quoteId to lock SEP-38 rate',
         },
         steps: [
@@ -379,6 +401,8 @@ export class PaymentRouter {
     fromAccount: string,
     usdcAmount: string,
     anchorSessionId: string,
+    withdrawDest: string,
+    withdrawDestExtra?: string,
   ): Promise<PaymentRouteQuote> {
     return this.quote({
       fromAccount,
@@ -387,6 +411,8 @@ export class PaymentRouter {
       sourceAssetCode: 'USDC',
       destinationCurrency: 'TRY',
       anchorSessionId,
+      withdrawDest,
+      withdrawDestExtra,
     });
   }
 }

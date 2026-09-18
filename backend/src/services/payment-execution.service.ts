@@ -22,6 +22,8 @@ type PaymentMeta = {
   soroswapQuote?: unknown;
   anchorSessionId?: string;
   anchorQuoteId?: string;
+  withdrawDest?: string;
+  withdrawDestExtra?: string;
 };
 
 export class PaymentExecutionService {
@@ -85,6 +87,8 @@ export class PaymentExecutionService {
         soroswapQuote?: unknown;
         anchorSessionId?: string;
         anchorQuoteId?: string;
+        withdrawDest?: string;
+        withdrawDestExtra?: string;
       };
       const routeType = quote.routeType;
       const completed = [...(meta.completedSteps ?? []), 'yield_withdraw'];
@@ -153,12 +157,18 @@ export class PaymentExecutionService {
         if (!sessionId) {
           throw new ApiError('VALIDATION_ERROR', 'Missing anchor session for TRY withdraw', 400);
         }
+        const withdrawDest = payload.withdrawDest ?? meta.withdrawDest;
+        const withdrawDestExtra = payload.withdrawDestExtra ?? meta.withdrawDestExtra;
+        if (!withdrawDest) {
+          throw new ApiError('VALIDATION_ERROR', 'Missing SEP-6 withdraw destination on quote', 400);
+        }
         const jwt = this.anchorSessions.resolve(sessionId, payload.fromAccount);
         const withdrawSession = await this.anchor.sep6Withdraw(jwt, {
           asset_code: 'USDC',
           account: payload.fromAccount,
           amount: quote.source.amount,
-          dest: 'TR890009903460061605055303',
+          dest: withdrawDest,
+          dest_extra: withdrawDestExtra,
           quote_id: anchorQuoteId,
         });
         const transferId = (withdrawSession as { id?: string }).id;
@@ -177,6 +187,8 @@ export class PaymentExecutionService {
             currentStep: 'anchor_withdraw',
             yieldWithdrawTxHash: txHash,
             anchorWithdrawSession: withdrawSession,
+            withdrawDest,
+            withdrawDestExtra,
           },
         });
         return {
@@ -189,6 +201,8 @@ export class PaymentExecutionService {
             transferId,
             quoteId: anchorQuoteId,
             sessionId,
+            dest: withdrawDest,
+            destExtra: withdrawDestExtra,
             note: 'Fund anchor treasury payment with Memo.id; poll transfer status via BFF',
             withdraw: withdrawSession,
           },
@@ -264,6 +278,8 @@ export class PaymentExecutionService {
       anchorSessionId?: string;
       anchorQuoteId?: string;
       soroswapQuote?: unknown;
+      withdrawDest?: string;
+      withdrawDestExtra?: string;
     };
     const built = await this.yieldSvc.buildWithdraw({
       accountId: fromAccount,
@@ -283,6 +299,8 @@ export class PaymentExecutionService {
         anchorSessionId: payload.anchorSessionId,
         anchorQuoteId: payload.anchorQuoteId,
         soroswapQuote: payload.soroswapQuote,
+        withdrawDest: payload.withdrawDest,
+        withdrawDestExtra: payload.withdrawDestExtra,
       },
     });
     return {
@@ -305,6 +323,7 @@ export class PaymentExecutionService {
     available: string,
     earning: string,
     requested: string,
+    balanceSource?: 'available' | 'earn',
   ): {
     availableContribution: string;
     earnContribution: string;
@@ -315,6 +334,44 @@ export class PaymentExecutionService {
     const earn = new Decimal(earning);
     const req = new Decimal(requested);
     const total = avail.plus(earn);
+    const fmt = (d: InstanceType<typeof Decimal>) => d.toFixed(7);
+
+    if (balanceSource === 'available') {
+      if (req.gt(avail)) {
+        throw new ApiError('INSUFFICIENT_BALANCE', 'Insufficient available USDC balance', 422, {
+          available,
+          earning,
+          requested,
+          balanceSource,
+        });
+      }
+      return {
+        availableContribution: fmt(req),
+        earnContribution: fmt(new Decimal(0)),
+        requiresEarnUnwind: false,
+        totalBalance: fmt(total),
+      };
+    }
+
+    if (balanceSource === 'earn') {
+      if (req.gt(total)) {
+        throw new ApiError('INSUFFICIENT_BALANCE', 'Insufficient total balance (available + earning)', 422, {
+          available,
+          earning,
+          requested,
+          balanceSource,
+        });
+      }
+      const earnCont = Decimal.min(earn, req);
+      const availCont = req.minus(earnCont);
+      return {
+        availableContribution: fmt(availCont),
+        earnContribution: fmt(earnCont),
+        requiresEarnUnwind: earnCont.gt(0),
+        totalBalance: fmt(total),
+      };
+    }
+
     if (req.gt(total)) {
       throw new ApiError('INSUFFICIENT_BALANCE', 'Insufficient total balance (available + earning)', 422, {
         available,
@@ -324,7 +381,6 @@ export class PaymentExecutionService {
     }
     const availCont = Decimal.min(avail, req);
     const earnCont = req.minus(availCont);
-    const fmt = (d: InstanceType<typeof Decimal>) => d.toFixed(7);
     return {
       availableContribution: fmt(availCont),
       earnContribution: fmt(earnCont),

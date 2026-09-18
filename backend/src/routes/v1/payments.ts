@@ -24,6 +24,8 @@ export function registerPaymentRoutes(
           destinationCurrency: z.string().min(3).max(4),
           balanceSource: z.enum(['available', 'earn']).optional(),
           anchorSessionId: z.string().uuid().optional(),
+          withdrawDest: z.string().min(1).optional(),
+          withdrawDestExtra: z.string().optional(),
         })
         .parse(req.body);
       const quote = await router.quote(body);
@@ -70,12 +72,16 @@ export function registerPaymentRoutes(
           fromAccount: z.string().min(56).max(56),
           usdcAmount: z.string().min(1),
           anchorSessionId: z.string().uuid(),
+          withdrawDest: z.string().min(1),
+          withdrawDestExtra: z.string().optional(),
         })
         .parse(req.body);
       const quote = await router.quoteWithdrawToTry(
         body.fromAccount,
         body.usdcAmount,
         body.anchorSessionId,
+        body.withdrawDest,
+        body.withdrawDestExtra,
       );
       return { quote };
     } catch (err) {
