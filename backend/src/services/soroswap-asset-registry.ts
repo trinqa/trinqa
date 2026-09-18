@@ -1,3 +1,4 @@
+import { SupportedAssetLists } from '@soroswap/sdk';
 import type { SoroswapAdapter } from '../adapters/soroswap.adapter.js';
 
 const TTL_MS = 10 * 60 * 1000;
@@ -18,8 +19,19 @@ function flattenAssetList(list: unknown): AssetRow[] {
     const o = list as Record<string, unknown>;
     if (Array.isArray(o.assets)) return o.assets as AssetRow[];
     if (Array.isArray(o.items)) return o.items as AssetRow[];
+    if (Array.isArray(o.tokens)) return o.tokens as AssetRow[];
   }
   return [];
+}
+
+function rowContractId(row: AssetRow): string | null {
+  const id = row.contract ?? row.contractId;
+  return typeof id === 'string' && id.length >= 10 ? id : null;
+}
+
+function rowCode(row: AssetRow): string | undefined {
+  const code = row.code ?? row.assetCode;
+  return typeof code === 'string' ? code : undefined;
 }
 
 export class SoroswapAssetRegistry {
@@ -29,6 +41,11 @@ export class SoroswapAssetRegistry {
 
   private cacheKey(assetCode: string, issuer?: string): string {
     return issuer ? `${assetCode}:${issuer}` : assetCode;
+  }
+
+  private async loadTokenRows(): Promise<AssetRow[]> {
+    const raw = await this.soroswap.discoverAssets(SupportedAssetLists.SOROSWAP);
+    return flattenAssetList(raw);
   }
 
   async resolveClassicAsset(assetCode: string, issuer?: string): Promise<string | null> {
@@ -41,15 +58,14 @@ export class SoroswapAssetRegistry {
       return null;
     }
     try {
-      const raw = await this.soroswap.discoverAssets();
-      const list = flattenAssetList(raw);
+      const list = await this.loadTokenRows();
       const match = list.find((a) => {
-        const code = a.code ?? a.assetCode;
+        const code = rowCode(a);
         if (code !== assetCode) return false;
         if (issuer && a.issuer && a.issuer !== issuer) return false;
-        return true;
+        return Boolean(rowContractId(a));
       });
-      const contractId = match?.contract ?? match?.contractId ?? null;
+      const contractId = match ? rowContractId(match) : null;
       if (contractId) {
         this.cache.set(key, { contractId, fetchedAt: Date.now() });
       }

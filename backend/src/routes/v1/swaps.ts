@@ -55,9 +55,10 @@ export function registerSwapRoutes(app: FastifyInstance, soroswap: SoroswapAdapt
         .object({
           quote: z.record(z.unknown()),
           from: z.string().min(56).max(56),
+          to: z.string().min(56).max(56).optional(),
         })
         .parse(req.body);
-      const built = await soroswap.buildFromQuote(body.quote as never, body.from);
+      const built = await soroswap.buildFromQuote(body.quote as never, body.from, body.to);
       return { unsignedXdr: built.xdr, action: built.action, description: built.description };
     } catch (err) {
       return sendApiError(reply, err);

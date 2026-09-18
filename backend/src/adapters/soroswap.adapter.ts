@@ -53,9 +53,9 @@ export class SoroswapAdapter {
     }
   }
 
-  async discoverAssets() {
+  async discoverAssets(assetList?: Parameters<SoroswapSDK['getAssetList']>[0]) {
     const sdk = this.requireSdk();
-    return sdk.getAssetList();
+    return sdk.getAssetList(assetList);
   }
 
   async quoteExactIn(params: {
@@ -98,9 +98,9 @@ export class SoroswapAdapter {
     );
   }
 
-  async buildFromQuote(quote: QuoteResponse, from: string) {
+  async buildFromQuote(quote: QuoteResponse, from: string, to?: string) {
     const sdk = this.requireSdk();
-    return sdk.build({ quote, from }, this.network);
+    return sdk.build({ quote, from, to }, this.network);
   }
 
   parseUnsignedXdr(xdr: string): Transaction {
