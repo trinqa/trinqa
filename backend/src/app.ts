@@ -37,15 +37,17 @@ export async function buildApp() {
   const soroswap = new SoroswapAdapter(env, stellar.networkPassphrase);
   const policy = new PolicyService(env, stellar);
   const capabilities = new CapabilityService(env, anchor, defindex, soroswap, policy);
-  const yieldSvc = new YieldService(defindex, policy);
   const quotes = new QuoteStore();
   const operations = createOperationStore(resolveOperationsDataDir());
   const anchorSessions = new AnchorSessionStore();
+  const yieldSvc = new YieldService(defindex, policy, operations);
   const paymentExecution = new PaymentExecutionService(
     env,
     stellar,
     defindex,
     soroswap,
+    anchor,
+    anchorSessions,
     yieldSvc,
     quotes,
     operations,

@@ -51,4 +51,8 @@ export type BuiltPayment = {
   steps: Array<{ type: string; description: string }>;
 };
 
-export type PaymentExecutionStep = 'yield_withdraw' | 'stellar_payment' | 'soroswap_swap';
+export type PaymentExecutionStep =
+  | 'yield_withdraw'
+  | 'stellar_payment'
+  | 'soroswap_swap'
+  | 'anchor_withdraw';

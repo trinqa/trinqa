@@ -53,7 +53,7 @@ export function registerPaymentRoutes(
       const body = z
         .object({
           operationId: z.string().uuid(),
-          step: z.enum(['yield_withdraw', 'stellar_payment', 'soroswap_swap']),
+          step: z.enum(['yield_withdraw', 'stellar_payment', 'soroswap_swap', 'anchor_withdraw']),
           signedXdr: z.string().min(10),
         })
         .parse(req.body);

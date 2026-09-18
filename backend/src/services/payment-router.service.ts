@@ -1,7 +1,7 @@
 import type { AppConfig } from '../config/env.js';
 import { ApiError } from '../domain/api-errors.js';
 import type { PaymentQuoteRequest, PaymentRouteQuote } from '../domain/payment.js';
-import { Decimal, formatStellarAmount, formatTryAmount } from '../domain/money.js';
+import { Decimal, formatStellarAmount, formatTryAmount, fromAtomic } from '../domain/money.js';
 import type { TrMockAnchorAdapter } from '../adapters/tr-mock-anchor.adapter.js';
 import type { SoroswapAdapter } from '../adapters/soroswap.adapter.js';
 import type { DefindexYieldAdapter } from '../adapters/defindex-yield.adapter.js';
@@ -96,9 +96,14 @@ export class PaymentRouter {
     const { available, earning } = await this.resolveBalances(req.fromAccount);
     const fundingCalc = this.execution.computeFunding(available, earning, req.sourceAmount);
 
+    const swapViable =
+      this.soroswap.isConfigured &&
+      dest === 'XLM' &&
+      (await this.assetRegistry.canSwap('USDC', 'XLM', this.config.USDC_ISSUER));
+
     const candidates: RouteCandidate[] = [];
 
-    if (dest === 'USDC' || dest === 'XLM') {
+    if (dest === 'USDC') {
       candidates.push({
         routeType: 'stellar_transfer',
         estimatedMinutes: 2,
@@ -124,13 +129,7 @@ export class PaymentRouter {
       });
     }
 
-    const destAssetForSwap = dest === 'XLM' ? 'XLM' : dest === 'USDC' ? 'USDC' : null;
-    if (
-      destAssetForSwap &&
-      destAssetForSwap !== 'USDC' &&
-      this.soroswap.isConfigured &&
-      (await this.assetRegistry.canSwap('USDC', destAssetForSwap, this.config.USDC_ISSUER))
-    ) {
+    if (swapViable) {
       candidates.push({
         routeType: 'stellar_swap_transfer',
         estimatedMinutes: 5,
@@ -172,7 +171,14 @@ export class PaymentRouter {
 
     if (chosen.routeType === 'fiat_payout' && dest === 'TRY') {
       if (!req.anchorSessionId) {
-        throw new ApiError('VALIDATION_ERROR', 'anchorSessionId required for TRY payout quote', 400);
+        throw new ApiError('VALIDATION_ERROR', 'anchorSessionId required for TRY cash-out quote', 400);
+      }
+      if (req.recipient !== req.fromAccount) {
+        throw new ApiError(
+          'VALIDATION_ERROR',
+          'TRY cash-out is withdraw to your linked bank account, not arbitrary P2P TRY pay',
+          400,
+        );
       }
       const sep38 = await this.trySep38TryQuote(req.anchorSessionId, req.fromAccount, req.sourceAmount);
       destinationAmount = formatTryAmount(sep38.buyAmount);
@@ -181,6 +187,29 @@ export class PaymentRouter {
       providerPayload.anchorQuoteId = sep38.quoteId;
       providerPayload.anchorQuoteExpiresAt = sep38.expiresAt;
       providerPayload.anchorPrice = sep38.price;
+    }
+
+    if (chosen.routeType === 'stellar_swap_transfer' && dest === 'XLM') {
+      const usdcContract = await this.assetRegistry.resolveClassicAsset('USDC', this.config.USDC_ISSUER);
+      const xlmContract = await this.assetRegistry.resolveClassicAsset('XLM');
+      if (!usdcContract || !xlmContract) {
+        throw new ApiError('ASSET_ROUTE_UNAVAILABLE', 'Cannot resolve Soroswap asset contracts', 422);
+      }
+      const amountIn = toAtomic(req.sourceAmount, 7);
+      const preview = await this.soroswap.quoteExactIn({
+        assetIn: usdcContract,
+        assetOut: xlmContract,
+        amountIn,
+      });
+      const amountOut = preview.amountOut;
+      const swapQuote = await this.soroswap.quoteExactOut({
+        assetIn: usdcContract,
+        assetOut: xlmContract,
+        amountOut,
+      });
+      destinationAmount = formatStellarAmount(fromAtomic(amountOut, 7));
+      providerPayload.soroswapQuote = swapQuote;
+      providerPayload.swapAmountOut = destinationAmount;
     }
 
     const stored = this.quotes.save({
@@ -245,7 +274,14 @@ export class PaymentRouter {
         fromAccount,
         earnAmount,
         strategyId,
+        quote.routeType,
       );
+      const tailStep =
+        quote.routeType === 'stellar_swap_transfer'
+          ? { type: 'soroswap_swap', description: 'Sign Soroswap swap to recipient' }
+          : quote.routeType === 'fiat_payout'
+            ? { type: 'anchor_withdraw', description: 'Complete SEP-6 withdraw to TRY' }
+            : { type: 'stellar_payment', description: 'Sign final Stellar USDC payment' };
       return {
         operationId: op.id,
         unsignedXdr: step.unsignedXdr,
@@ -253,7 +289,7 @@ export class PaymentRouter {
         networkPassphrase: this.stellar.networkPassphrase,
         steps: [
           { type: 'yield_withdraw', description: 'Sign DeFindex partial withdraw' },
-          { type: 'stellar_payment', description: 'Sign final Stellar payment' },
+          tailStep,
         ],
       };
     }
@@ -298,18 +334,26 @@ export class PaymentRouter {
       if (!this.soroswap.isConfigured) {
         throw new ApiError('ADAPTER_UNAVAILABLE', 'Soroswap not configured', 503);
       }
-      const usdcContract = await this.assetRegistry.resolveClassicAsset('USDC', this.config.USDC_ISSUER);
-      const xlmContract = await this.assetRegistry.resolveClassicAsset('XLM');
-      if (!usdcContract || !xlmContract) {
-        throw new ApiError('ASSET_ROUTE_UNAVAILABLE', 'Cannot resolve Soroswap asset contracts', 422);
+      const payloadSwap = payload.soroswapQuote;
+      let swapQuote = payloadSwap;
+      if (!swapQuote) {
+        const usdcContract = await this.assetRegistry.resolveClassicAsset('USDC', this.config.USDC_ISSUER);
+        const xlmContract = await this.assetRegistry.resolveClassicAsset('XLM');
+        if (!usdcContract || !xlmContract) {
+          throw new ApiError('ASSET_ROUTE_UNAVAILABLE', 'Cannot resolve Soroswap asset contracts', 422);
+        }
+        const amountOut = toAtomic(quote.destination.amount, 7);
+        swapQuote = await this.soroswap.quoteExactOut({
+          assetIn: usdcContract,
+          assetOut: xlmContract,
+          amountOut,
+        });
       }
-      const amountIn = toAtomic(quote.source.amount, 7);
-      const swapQuote = await this.soroswap.quoteExactIn({
-        assetIn: usdcContract,
-        assetOut: xlmContract,
-        amountIn,
-      });
-      const built = await this.soroswap.buildFromQuote(swapQuote, fromAccount);
+      const built = await this.soroswap.buildFromQuote(
+        swapQuote as never,
+        fromAccount,
+        payload.recipient,
+      );
       await this.operations.update(op.id, {
         status: 'awaiting_signature',
         metadata: {

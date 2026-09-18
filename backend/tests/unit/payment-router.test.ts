@@ -24,8 +24,18 @@ function makeRouter() {
   const quotes = new QuoteStore();
   const ops = new MemoryOperationStore();
   const sessions = new AnchorSessionStore();
-  const yieldSvc = new YieldService(defindex, policy);
-  const execution = new PaymentExecutionService(env, stellar, defindex, soroswap, yieldSvc, quotes, ops);
+  const yieldSvc = new YieldService(defindex, policy, ops);
+  const execution = new PaymentExecutionService(
+    env,
+    stellar,
+    defindex,
+    soroswap,
+    anchor,
+    sessions,
+    yieldSvc,
+    quotes,
+    ops,
+  );
   const router = new PaymentRouter(
     env,
     stellar,
@@ -138,6 +148,27 @@ describe('PaymentRouter', () => {
     });
     expect(quote.funding?.requiresEarnUnwind).toBe(true);
     expect(quote.funding?.earnContribution).toBe('3.0000000');
+  });
+
+  it('returns ROUTE_UNAVAILABLE for XLM when Soroswap is not configured', async () => {
+    const { router, stellar } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '10.0000000',
+      },
+    ]);
+    await expect(
+      router.quote({
+        fromAccount: 'G'.repeat(56),
+        recipient: 'H'.repeat(56),
+        sourceAmount: '1.0000000',
+        sourceAssetCode: 'USDC',
+        destinationCurrency: 'XLM',
+      }),
+    ).rejects.toMatchObject({ code: 'ROUTE_UNAVAILABLE' });
   });
 
   it('requires approval before earn unwind build', async () => {
