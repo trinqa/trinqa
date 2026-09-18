@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initialPartnerLegStatus, isFullLifecyclePass } from './lib/e2e-trinqa-report.ts';
+import { fundRecipientWithUsdcTrustline } from './lib/recipient-usdc-trustline.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..');
@@ -40,7 +41,9 @@ async function main() {
   const deployment = loadTestnetDeployment();
   log('policy contract', { policyId: env.POLICY_CONTRACT_ID ?? deployment.contractId, wasmHash: deployment.wasmHash });
 
+  const { PolicyService } = await import('../backend/src/services/policy.service.js');
   const { app, stellar, anchor, defindex, paymentRouter, anchorSessions, execution } = await buildApp();
+  const policySvc = new PolicyService(env, stellar);
 
   const defindexConfigured = Boolean(env.DEFINDEX_API_KEY && env.DEFINDEX_VAULT_ADDRESS);
   const soroswapConfigured = Boolean(env.SOROSWAP_API_KEY);
@@ -55,9 +58,28 @@ async function main() {
     const { token } = await anchor.sep10Authenticate(kp.secretKey);
     const session = anchorSessions.create(token, publicKey);
 
-    const policyRead = await app.inject({ method: 'GET', url: `/api/v1/policy/${publicKey}` });
-    report.Policy = policyRead.statusCode === 200 ? 'PASS' : 'FAIL';
-    log('policy read', policyRead.json());
+    log('policy write (set_policy on-chain)');
+    const targetTimestamp = BigInt(Math.floor(Date.now() / 1000) + 172_800);
+    const builtPolicy = await policySvc.buildTransaction({
+      action: 'set_policy',
+      accountId: publicKey,
+      policy: {
+        riskProfile: 1,
+        targetTimestamp,
+        liquidityTargetBps: 3_000,
+        automationPaused: false,
+        allowedStrategies: defindexConfigured
+          ? [strategyIdForVault(env.DEFINDEX_VAULT_ADDRESS!), 'soroswap']
+          : ['soroswap'],
+      },
+    });
+    const policyTx = await policySvc.submitSignedPolicyTx(
+      stellar.signXdr(builtPolicy.unsignedXdr, kp.secretKey),
+    );
+    const policyView = await policySvc.getPolicy(publicKey);
+    report.Policy =
+      policyView.riskProfile === 1 && Boolean((policyTx as { hash?: string }).hash) ? 'PASS' : 'FAIL';
+    log('policy verified', { riskProfile: policyView.riskProfile, txHash: (policyTx as { hash?: string }).hash });
 
     if (defindexConfigured) {
       report.DeFindex = runPartnerScript('e2e-defindex.ts') ? 'PASS' : 'FAIL';
@@ -74,15 +96,18 @@ async function main() {
         const depositRes = await defindex.depositToVault(publicKey, [depositAmount], true);
         await defindex.sendSignedXdr(stellar.signXdr(depositRes.xdr, kp.secretKey));
 
-        const recipient = stellar.createRandomKeypair().publicKey;
-        await stellar.friendbotFund(recipient);
+        const recipientKp = stellar.createRandomKeypair();
+        const { publicKey: recipient } = await fundRecipientWithUsdcTrustline({
+          stellar,
+          env,
+          recipientSecret: recipientKp.secretKey,
+        });
 
         const quote = await paymentRouter.quote({
           fromAccount: publicKey,
           recipient,
-          sourceAmount: '0.3500000',
-          sourceAssetCode: 'USDC',
-          destinationCurrency: 'USDC',
+          receiveAmount: '0.3500000',
+          receiveCurrency: 'USDC',
           balanceSource: 'earn',
         });
         log('earn-funded quote', { funding: quote.funding, routeType: quote.routeType });

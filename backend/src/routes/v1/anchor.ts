@@ -188,9 +188,10 @@ export function registerAnchorRoutes(
               : status === 'error' || status === 'refunded'
                 ? 'failed'
                 : 'processing';
+        const existing = await operations.get(query.operationId);
         await operations.update(query.operationId, {
           status: mapped,
-          externalRefs: { anchorTransferId: id },
+          externalRefs: { ...existing?.externalRefs, anchorTransferId: id },
         });
       } else {
         const linked = await operations.findByExternalRef('anchorTransferId', id);
@@ -201,7 +202,10 @@ export function registerAnchorRoutes(
               : status === 'error' || status === 'refunded'
                 ? 'failed'
                 : linked.status;
-          await operations.update(linked.id, { status: mapped });
+          await operations.update(linked.id, {
+            status: mapped,
+            externalRefs: { ...linked.externalRefs, anchorTransferId: id },
+          });
         }
       }
       return { transfer: tx };

@@ -22,8 +22,22 @@ export function registerHealthRoutes(
       soroswap.healthCheck(),
     ]);
 
+    const defindexState = !defindexHealth.configured
+      ? 'unconfigured'
+      : defindexHealth.error === 'DEFINDEX_VAULT_ASSET_MISMATCH'
+        ? 'blocked'
+        : defindexHealth.ok
+          ? 'healthy'
+          : 'fragmented';
+
+    const soroswapState = !soroswapHealth.configured
+      ? 'unconfigured'
+      : soroswapHealth.ok
+        ? 'healthy'
+        : 'fragmented';
+
     const adaptersOk =
-      network.horizon && anchorHealth.ok && (defindexHealth.ok || !defindexHealth.configured);
+      network.horizon && anchorHealth.ok && (defindexState === 'healthy' || defindexState === 'unconfigured');
 
     return {
       status: adaptersOk ? 'ok' : 'degraded',
@@ -34,8 +48,8 @@ export function registerHealthRoutes(
         domain: env.TR_ANCHOR_DOMAIN,
         healthy: anchorHealth.ok,
       },
-      defindex: defindexHealth,
-      soroswap: soroswapHealth,
+      defindex: { ...defindexHealth, state: defindexState },
+      soroswap: { ...soroswapHealth, state: soroswapState },
       policy: {
         contractId: policy.adapter.contractId,
         wasmHash: policy.adapter.wasmHash,

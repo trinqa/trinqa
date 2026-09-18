@@ -42,8 +42,16 @@ async function main() {
   log('health', await adapter.healthCheck());
   log('vault info', await adapter.getVaultInfo());
 
+  const usdcBefore = Number(
+    (await stellar.getBalances(account)).find((b) => b.assetCode === 'USDC' && b.assetIssuer === env.USDC_ISSUER)
+      ?.balance ?? 0,
+  );
   const before = await adapter.getVaultBalance(account);
-  log('balance before', before);
+  const posBefore = await adapter.normalizePosition(
+    account,
+    (await import('../backend/src/domain/yield.js')).strategyIdForVault(env.DEFINDEX_VAULT_ADDRESS!),
+  );
+  log('balance before', { usdcAvailable: usdcBefore, vault: before, position: posBefore?.positionValue.amount });
 
   const depositAmount = toAtomic('0.5000000', 7);
   const depositRes = await adapter.depositToVault(account, [depositAmount], true);
@@ -52,8 +60,20 @@ async function main() {
   );
   log('deposit send', depositSend);
 
+  const usdcMid = Number(
+    (await stellar.getBalances(account)).find((b) => b.assetCode === 'USDC' && b.assetIssuer === env.USDC_ISSUER)
+      ?.balance ?? 0,
+  );
   const mid = await adapter.getVaultBalance(account);
-  log('balance after deposit', mid);
+  const posMid = await adapter.normalizePosition(
+    account,
+    (await import('../backend/src/domain/yield.js')).strategyIdForVault(env.DEFINDEX_VAULT_ADDRESS!),
+  );
+  if (usdcMid >= usdcBefore || Number(posMid?.positionValue.amount ?? 0) <= Number(posBefore?.positionValue.amount ?? 0)) {
+    console.error('FAIL: deposit did not decrease available USDC and increase vault position');
+    process.exit(1);
+  }
+  log('balance after deposit', { usdcAvailable: usdcMid, vault: mid, position: posMid?.positionValue.amount });
 
   const withdrawAmount = toAtomic('0.1000000', 7);
   const withdrawRes = await adapter.withdrawFromVault(account, [withdrawAmount]);
@@ -62,8 +82,20 @@ async function main() {
   );
   log('withdraw send', withdrawSend);
 
+  const usdcAfter = Number(
+    (await stellar.getBalances(account)).find((b) => b.assetCode === 'USDC' && b.assetIssuer === env.USDC_ISSUER)
+      ?.balance ?? 0,
+  );
   const after = await adapter.getVaultBalance(account);
-  log('balance after withdraw', after);
+  const posAfter = await adapter.normalizePosition(
+    account,
+    (await import('../backend/src/domain/yield.js')).strategyIdForVault(env.DEFINDEX_VAULT_ADDRESS!),
+  );
+  if (usdcAfter <= usdcMid || Number(posAfter?.positionValue.amount ?? 0) >= Number(posMid?.positionValue.amount ?? 0)) {
+    console.error('FAIL: withdraw did not increase available USDC and decrease vault position');
+    process.exit(1);
+  }
+  log('balance after withdraw', { usdcAvailable: usdcAfter, vault: after, position: posAfter?.positionValue.amount });
 
   console.log('\nPASS DeFindex write lifecycle', {
     account,

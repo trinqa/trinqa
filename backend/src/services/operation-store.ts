@@ -34,6 +34,10 @@ export class MemoryOperationStore implements OperationStore {
     const updated: Operation = {
       ...existing,
       ...patch,
+      externalRefs: patch.externalRefs
+        ? { ...existing.externalRefs, ...patch.externalRefs }
+        : existing.externalRefs,
+      metadata: patch.metadata ? { ...existing.metadata, ...patch.metadata } : existing.metadata,
       updatedAt: new Date().toISOString(),
     };
     this.ops.set(id, updated);
@@ -109,7 +113,15 @@ export class JsonFileOperationStore implements OperationStore {
     this.ensureLoaded();
     const existing = this.ops.get(id);
     if (!existing) throw new Error(`Operation not found: ${id}`);
-    const updated = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+    const updated: Operation = {
+      ...existing,
+      ...patch,
+      externalRefs: patch.externalRefs
+        ? { ...existing.externalRefs, ...patch.externalRefs }
+        : existing.externalRefs,
+      metadata: patch.metadata ? { ...existing.metadata, ...patch.metadata } : existing.metadata,
+      updatedAt: new Date().toISOString(),
+    };
     this.ops.set(id, updated);
     this.persist();
     return updated;

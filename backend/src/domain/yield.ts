@@ -22,6 +22,7 @@ export type YieldPosition = {
   positionValue: { assetCode: string; amount: DecimalString };
   shares: DecimalString;
   underlyingBalances: DecimalString[];
+  usdcAssetIndex?: number;
 };
 
 export function riskTierFromProfile(riskProfile: number): RiskTier {

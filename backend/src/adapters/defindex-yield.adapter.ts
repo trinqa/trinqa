@@ -10,6 +10,8 @@ import { providerNumberToDecimalString } from '../domain/provider-amount.js';
 import { bigintToSafeNumber } from '../domain/safe-integer.js';
 import { normalizeProviderError } from '../util/provider-error.js';
 import { ApiError } from '../domain/api-errors.js';
+import { getTrinqaUsdcIdentity } from '../domain/trinqa-usdc.js';
+import { withProviderReadRetry } from '../util/provider-retry.js';
 
 export type DefindexHealth = {
   ok: boolean;
@@ -80,12 +82,21 @@ export class DefindexYieldAdapter {
       return { ok: false, configured: false, vaultAddress: this.vaultAddress, error: 'missing_api_key' };
     }
     try {
-      const detail = await this.sdk.healthCheck();
+      const detail = await withProviderReadRetry('defindex.health', () => this.sdk!.healthCheck());
       if (this.vaultAddress) {
-        await this.sdk.getVaultInfo(this.vaultAddress, this.network);
+        await this.assertVaultAcceptsTrinqaUsdc();
       }
       return { ok: true, configured: Boolean(this.vaultAddress), vaultAddress: this.vaultAddress, detail };
     } catch (err: unknown) {
+      if (err instanceof ApiError && err.code === 'DEFINDEX_VAULT_ASSET_MISMATCH') {
+        return {
+          ok: false,
+          configured: Boolean(this.vaultAddress),
+          vaultAddress: this.vaultAddress,
+          error: err.code,
+          detail: err.details,
+        };
+      }
       return {
         ok: false,
         configured: Boolean(this.vaultAddress),
@@ -95,10 +106,43 @@ export class DefindexYieldAdapter {
     }
   }
 
+  vaultAssetAddresses(info: unknown): string[] {
+    const raw = (info as { assets?: Array<Record<string, unknown>> }).assets ?? [];
+    return raw
+      .map((a) => {
+        const v = a.address ?? a.contract ?? a.assetAddress ?? a.asset;
+        return typeof v === 'string' ? v : null;
+      })
+      .filter((v): v is string => Boolean(v));
+  }
+
+  async assertVaultAcceptsTrinqaUsdc(): Promise<void> {
+    const identity = getTrinqaUsdcIdentity(this.config);
+    const info = await this.getVaultInfo();
+    const addresses = this.vaultAssetAddresses(info);
+    if (!addresses.includes(identity.sacContractId)) {
+      throw new ApiError('DEFINDEX_VAULT_ASSET_MISMATCH', 'DeFindex vault does not include Trinqa USDC SAC', 422, {
+        expectedIssuer: identity.issuer,
+        expectedUsdcSac: identity.sacContractId,
+        vaultAssets: addresses,
+      });
+    }
+  }
+
+  usdcUnderlyingIndex(info: unknown): number {
+    const identity = getTrinqaUsdcIdentity(this.config);
+    const raw = (info as { assets?: Array<Record<string, unknown>> }).assets ?? [];
+    const idx = raw.findIndex((a) => {
+      const v = a.address ?? a.contract ?? a.assetAddress ?? a.asset;
+      return v === identity.sacContractId;
+    });
+    return idx;
+  }
+
   async getVaultInfo() {
     const sdk = this.requireSdk();
     const vault = this.requireVault();
-    return sdk.getVaultInfo(vault, this.network);
+    return withProviderReadRetry('defindex.vaultInfo', () => sdk.getVaultInfo(vault, this.network));
   }
 
   async getVaultAPY(): Promise<number> {
@@ -111,10 +155,13 @@ export class DefindexYieldAdapter {
   async getVaultBalance(accountId: string) {
     const sdk = this.requireSdk();
     const vault = this.requireVault();
-    return sdk.getVaultBalance(vault, accountId, this.network);
+    return withProviderReadRetry('defindex.vaultBalance', () =>
+      sdk.getVaultBalance(vault, accountId, this.network),
+    );
   }
 
   async depositToVault(accountId: string, amounts: bigint[], invest = false) {
+    await this.assertVaultAcceptsTrinqaUsdc();
     const sdk = this.requireSdk();
     const vault = this.requireVault();
     const nums = amounts.map((a, i) => bigintToSafeNumber(a, `amounts[${i}]`));
@@ -123,6 +170,7 @@ export class DefindexYieldAdapter {
   }
 
   async withdrawFromVault(accountId: string, amounts: bigint[]) {
+    await this.assertVaultAcceptsTrinqaUsdc();
     const sdk = this.requireSdk();
     const vault = this.requireVault();
     const nums = amounts.map((a, i) => bigintToSafeNumber(a, `amounts[${i}]`));
@@ -204,12 +252,17 @@ export class DefindexYieldAdapter {
     if (!this.isConfigured) return null;
     const vault = this.requireVault();
     if (strategyId !== strategyIdForVault(vault)) return null;
+    const info = await this.getVaultInfo();
+    const usdcIndex = this.usdcUnderlyingIndex(info);
+    if (usdcIndex < 0) {
+      throw new ApiError('DEFINDEX_VAULT_ASSET_MISMATCH', 'Vault has no Trinqa USDC asset slot', 422);
+    }
     const balance = await this.getVaultBalance(accountId);
     const shares = String(balance.dfTokens ?? 0);
     const underlying = (balance.underlyingBalance ?? []).map((n: number, i: number) =>
       providerNumberToDecimalString(n, 7, `underlyingBalance[${i}]`),
     );
-    const totalUnderlying = underlying[0] ?? '0';
+    const totalUnderlying = underlying[usdcIndex] ?? '0';
     if (Number(shares) <= 0 && Number(totalUnderlying) <= 0) {
       return null;
     }
@@ -219,6 +272,7 @@ export class DefindexYieldAdapter {
       positionValue: { assetCode: 'USDC', amount: totalUnderlying },
       shares,
       underlyingBalances: underlying,
+      usdcAssetIndex: usdcIndex,
     };
   }
 
