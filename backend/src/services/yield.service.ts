@@ -23,10 +23,7 @@ export class YieldService {
 
   async listStrategies(accountId?: string): Promise<YieldStrategy[]> {
     if (!this.defindex.vaultAddress) return [];
-    const riskProfile = accountId
-      ? ((await this.policy.getPolicy(accountId)).riskProfile ?? 1)
-      : 1;
-    const one = await this.defindex.normalizeStrategy(riskProfile);
+    const one = await this.defindex.normalizeStrategy();
     return one ? [one] : [];
   }
 

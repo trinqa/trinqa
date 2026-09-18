@@ -1,7 +1,7 @@
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import type { AppConfig } from '../config/env.js';
 import {
-  riskTierFromProfile,
+  intrinsicRiskTierForVault,
   type YieldPosition,
   type YieldStrategy,
   strategyIdForVault,
@@ -146,11 +146,10 @@ export class DefindexYieldAdapter {
     return sdk.sendTransaction(signedXdr, this.network);
   }
 
-  /** One configured vault → one real YieldStrategy (risk tier is Trinqa metadata). */
-  async normalizeStrategy(riskProfile = 1): Promise<YieldStrategy | null> {
+  /** One configured vault → one real YieldStrategy (intrinsic risk from Trinqa vault metadata). */
+  async normalizeStrategy(): Promise<YieldStrategy | null> {
     const vault = this.vaultAddress;
     if (!vault) return null;
-    const risk = riskTierFromProfile(riskProfile);
     let name = `DeFindex vault ${vault.slice(0, 8)}…`;
     let symbol: string | undefined;
     let assets: string[] | undefined;
@@ -169,6 +168,7 @@ export class DefindexYieldAdapter {
         // keep minimal metadata
       }
     }
+    const risk = intrinsicRiskTierForVault({ name, assets });
     return {
       id: strategyIdForVault(vault),
       name,
@@ -183,14 +183,15 @@ export class DefindexYieldAdapter {
   }
 
   /** @deprecated use normalizeStrategy */
-  normalizeStrategies(riskProfile = 1): YieldStrategy[] {
+  normalizeStrategies(): YieldStrategy[] {
     const vault = this.vaultAddress;
     if (!vault) return [];
+    const risk = intrinsicRiskTierForVault();
     return [
       {
         id: strategyIdForVault(vault),
         name: `DeFindex vault ${vault.slice(0, 8)}…`,
-        risk: riskTierFromProfile(riskProfile),
+        risk,
         estimatedApy: 0,
         withdrawalAvailability: 'flexible',
         vaultAddress: vault,

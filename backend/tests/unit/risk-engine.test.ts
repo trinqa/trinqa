@@ -5,7 +5,7 @@ import {
   ROUTE_SCORE_WEIGHTS,
   scoreRoute,
 } from '../../src/services/deterministic-risk-engine.js';
-import type { YieldStrategy } from '../../src/domain/yield.js';
+import { intrinsicRiskTierForVault, type YieldStrategy } from '../../src/domain/yield.js';
 
 describe('DeterministicRiskEngine', () => {
   const engine = new DeterministicRiskEngine();
@@ -38,6 +38,29 @@ describe('DeterministicRiskEngine', () => {
   it('ranks conservative higher for low risk + short horizon', () => {
     const ranked = engine.rankStrategies(strategies, 0, 7);
     expect(ranked[0]?.strategy.risk).toBe('conservative');
+  });
+
+  it('ranks stable intrinsic vault above growth for conservative users', () => {
+    const stable: YieldStrategy = {
+      id: 'stable',
+      name: 'USDC Vault',
+      risk: intrinsicRiskTierForVault({ assets: ['USDC'] }),
+      estimatedApy: 5,
+      withdrawalAvailability: 'flexible',
+      vaultAddress: 'CVAULT1111111111111111111111111111111111111111111111111111',
+      trinqaClassification: true,
+    };
+    const growth: YieldStrategy = {
+      id: 'growth',
+      name: 'High Yield Growth',
+      risk: intrinsicRiskTierForVault({ name: 'Growth leveraged vault', assets: ['BTC', 'ETH'] }),
+      estimatedApy: 14,
+      withdrawalAvailability: '90d',
+      vaultAddress: 'CVAULT2222222222222222222222222222222222222222222222222222',
+      trinqaClassification: true,
+    };
+    const ranked = engine.rankStrategies([growth, stable], 0, 30);
+    expect(ranked[0]?.strategy.id).toBe('stable');
   });
 
   it('applies riskProfile only to asset risk fit, not intrinsic safety', () => {

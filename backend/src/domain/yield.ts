@@ -33,3 +33,18 @@ export function riskTierFromProfile(riskProfile: number): RiskTier {
 export function strategyIdForVault(vaultAddress: string): string {
   return `defindex:${vaultAddress}`;
 }
+
+/** Trinqa static/metadata classification — never derived from user riskProfile. */
+export function intrinsicRiskTierForVault(hints?: {
+  assets?: string[];
+  name?: string;
+}): RiskTier {
+  const assets = hints?.assets ?? [];
+  const stableOnly =
+    assets.length > 0 &&
+    assets.every((a) => /USDC|USDT|DAI|USD|TRY/i.test(a));
+  if (stableOnly) return 'conservative';
+  const name = hints?.name?.toLowerCase() ?? '';
+  if (/growth|lever|high.?yield|volatile/i.test(name)) return 'growth';
+  return 'balanced';
+}
