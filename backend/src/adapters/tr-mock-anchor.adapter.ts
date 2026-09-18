@@ -199,6 +199,7 @@ export class TrMockAnchorAdapter {
       dest: string;
       type?: string;
       dest_extra?: string;
+      quote_id?: string;
     },
   ): Promise<unknown> {
     const base = await this.transferServerBase();
@@ -211,6 +212,9 @@ export class TrMockAnchorAdapter {
     });
     if (params.dest_extra) {
       qs.set('dest_extra', params.dest_extra);
+    }
+    if (params.quote_id) {
+      qs.set('quote_id', params.quote_id);
     }
     const res = await fetch(`${base}/withdraw?${qs}`, {
       method: 'GET',

@@ -9,9 +9,12 @@ import { MemoryOperationStore } from '../../src/services/operation-store.js';
 import { PaymentRouter } from '../../src/services/payment-router.service.js';
 import { DefindexYieldAdapter } from '../../src/adapters/defindex-yield.adapter.js';
 import { PolicyService } from '../../src/services/policy.service.js';
+import { AnchorSessionStore } from '../../src/services/anchor-session-store.service.js';
+import { PaymentExecutionService } from '../../src/services/payment-execution.service.js';
+import { YieldService } from '../../src/services/yield.service.js';
 import { ApiError } from '../../src/domain/api-errors.js';
 
-describe('PaymentRouter', () => {
+function makeRouter() {
   const stellar = new StellarService(env);
   const anchor = new TrMockAnchorAdapter(env, stellar.networkPassphrase);
   const defindex = new DefindexYieldAdapter(env);
@@ -20,74 +23,152 @@ describe('PaymentRouter', () => {
   const capabilities = new CapabilityService(env, anchor, defindex, soroswap, policy);
   const quotes = new QuoteStore();
   const ops = new MemoryOperationStore();
+  const sessions = new AnchorSessionStore();
+  const yieldSvc = new YieldService(defindex, policy);
+  const execution = new PaymentExecutionService(env, stellar, defindex, soroswap, yieldSvc, quotes, ops);
+  const router = new PaymentRouter(
+    env,
+    stellar,
+    anchor,
+    soroswap,
+    defindex,
+    capabilities,
+    quotes,
+    ops,
+    sessions,
+    execution,
+  );
+  return { router, stellar, anchor, sessions, defindex };
+}
 
-  const router = new PaymentRouter(env, stellar, anchor, soroswap, capabilities, quotes, ops);
-
+describe('PaymentRouter', () => {
   it('rejects BRL payout', async () => {
+    const { router, stellar } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100',
+      },
+    ]);
     await expect(
       router.quote({
         fromAccount: 'G'.repeat(56),
         recipient: 'G'.repeat(56),
-        sourceAmount: '10',
+        sourceAmount: '10.0000000',
         sourceAssetCode: 'USDC',
         destinationCurrency: 'BRL',
       }),
     ).rejects.toMatchObject({ code: 'NO_SUPPORTED_PAYOUT_RAIL' satisfies ApiError['code'] });
   });
 
-  it('quotes TRY withdraw with single fiat_payout candidate', async () => {
+  it('accepts USDC source when balance sufficient', async () => {
+    const { router, stellar } = makeRouter();
     vi.spyOn(stellar, 'getBalances').mockResolvedValue([
       {
         assetType: 'credit_alphanum4',
         assetCode: 'USDC',
         assetIssuer: env.USDC_ISSUER,
-        balance: '100',
-      },
-    ]);
-    const quote = await router.quoteWithdrawToTry('G'.repeat(56), '25.0000000');
-    expect(quote.routeType).toBe('fiat_payout');
-    expect(quote.candidateCount).toBe(1);
-    expect(quote.destination.currency).toBe('TRY');
-    expect(quote.routeScore).toBeGreaterThan(0);
-  });
-
-  it('builds fiat_payout anchor session for TRY withdraw quote', async () => {
-    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
-      {
-        assetType: 'credit_alphanum4',
-        assetCode: 'USDC',
-        assetIssuer: env.USDC_ISSUER,
-        balance: '100',
-      },
-    ]);
-    const account = 'G'.repeat(56);
-    const quote = await router.quoteWithdrawToTry(account, '10.0000000');
-    const built = await router.build(quote.quoteId, account);
-    expect(built.anchorSession).toMatchObject({
-      kind: 'sep6_withdraw',
-      destinationCurrency: 'TRY',
-    });
-    expect(built.steps.some((s) => s.type === 'sep6_withdraw')).toBe(true);
-  });
-
-  it('requires explicit earn unwind', async () => {
-    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
-      {
-        assetType: 'credit_alphanum4',
-        assetCode: 'USDC',
-        assetIssuer: env.USDC_ISSUER,
-        balance: '100',
+        balance: '100.0000000',
       },
     ]);
     await expect(
       router.quote({
         fromAccount: 'G'.repeat(56),
         recipient: 'G'.repeat(56),
-        sourceAmount: '10',
+        sourceAmount: '10.0000000',
         sourceAssetCode: 'USDC',
         destinationCurrency: 'USDC',
-        balanceSource: 'earn',
       }),
-    ).rejects.toMatchObject({ code: 'EARN_UNWIND_REQUIRED' });
+    ).resolves.toBeDefined();
+  });
+
+  it('quotes TRY withdraw via SEP-38 when session present', async () => {
+    const { router, stellar, anchor, sessions } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100',
+      },
+    ]);
+    vi.spyOn(anchor, 'sep38Quote').mockResolvedValue({
+      id: 'q-1',
+      price: '34',
+      buy_amount: '340.00',
+      sell_amount: '10.0000000',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const account = 'G'.repeat(56);
+    const session = sessions.create('jwt-test', account);
+    const quote = await router.quoteWithdrawToTry(account, '10.0000000', session.sessionId);
+    expect(quote.routeType).toBe('fiat_payout');
+    expect(quote.destination.currency).toBe('TRY');
+    expect(quote.providerPayload.anchorQuoteId).toBe('q-1');
+    expect(quote.destination.amount).toBe('340.00');
+  });
+
+  it('computes earn funding without throwing when unwind required', async () => {
+    const { router, stellar, defindex } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '4.0000000',
+      },
+    ]);
+    vi.spyOn(defindex, 'isConfigured', 'get').mockReturnValue(true);
+    vi.spyOn(defindex, 'requireVault').mockReturnValue('CVAULT1234567890123456789012345678901234567890123456789012');
+    vi.spyOn(defindex, 'normalizePosition').mockResolvedValue({
+      strategyId: 'defindex:CVAULT',
+      accountId: 'G'.repeat(56),
+      positionValue: { assetCode: 'USDC', amount: '6.0000000' },
+      shares: '1',
+      underlyingBalances: ['6.0000000'],
+    });
+    const quote = await router.quote({
+      fromAccount: 'G'.repeat(56),
+      recipient: 'H'.repeat(56),
+      sourceAmount: '7.0000000',
+      sourceAssetCode: 'USDC',
+      destinationCurrency: 'USDC',
+    });
+    expect(quote.funding?.requiresEarnUnwind).toBe(true);
+    expect(quote.funding?.earnContribution).toBe('3.0000000');
+  });
+
+  it('requires approval before earn unwind build', async () => {
+    const { router, stellar, defindex } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '4.0000000',
+      },
+    ]);
+    vi.spyOn(defindex, 'isConfigured', 'get').mockReturnValue(true);
+    vi.spyOn(defindex, 'requireVault').mockReturnValue('CVAULT1234567890123456789012345678901234567890123456789012');
+    vi.spyOn(defindex, 'normalizePosition').mockResolvedValue({
+      strategyId: 'defindex:CVAULT',
+      accountId: 'G'.repeat(56),
+      positionValue: { assetCode: 'USDC', amount: '6.0000000' },
+      shares: '1',
+      underlyingBalances: ['6.0000000'],
+    });
+    const account = 'G'.repeat(56);
+    const quote = await router.quote({
+      fromAccount: account,
+      recipient: 'H'.repeat(56),
+      sourceAmount: '7.0000000',
+      sourceAssetCode: 'USDC',
+      destinationCurrency: 'USDC',
+    });
+    await expect(router.build(quote.quoteId, account)).rejects.toMatchObject({
+      code: 'EARN_UNWIND_APPROVAL_REQUIRED',
+    });
   });
 });

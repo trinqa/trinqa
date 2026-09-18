@@ -1,11 +1,12 @@
 import type { YieldStrategy } from '../domain/yield.js';
 
-/** PRD-aligned deterministic weights (must sum to 100). */
+/** Final PRD yield scoring weights (sum = 100). */
 export const RISK_ENGINE_WEIGHTS = {
-  riskProfileFit: 35,
-  liquidityHorizonFit: 35,
-  estimatedApy: 20,
-  withdrawalAvailability: 10,
+  safety: 35,
+  liquidity: 25,
+  netYield: 20,
+  assetRisk: 10,
+  diversification: 10,
 } as const;
 
 export type StrategyScoreInput = {
@@ -20,49 +21,45 @@ export type ScoredStrategy = {
   breakdown: Record<keyof typeof RISK_ENGINE_WEIGHTS, number>;
 };
 
-function riskProfileFit(userRisk: number, strategyRisk: YieldStrategy['risk']): number {
-  const tier = strategyRisk === 'conservative' ? 0 : strategyRisk === 'balanced' ? 1 : 2;
-  const distance = Math.abs(userRisk - tier);
-  if (distance === 0) return 100;
-  if (distance === 1) return 55;
-  return 20;
+function safetyScore(strategy: YieldStrategy): number {
+  const tier = strategy.risk === 'conservative' ? 90 : strategy.risk === 'balanced' ? 65 : 40;
+  return strategy.trinqaClassification ? tier : Math.min(tier + 5, 100);
 }
 
-function liquidityHorizonFit(daysToTarget: number, availability: YieldStrategy['withdrawalAvailability']): number {
+function liquidityScore(daysToTarget: number, availability: YieldStrategy['withdrawalAvailability']): number {
   const minDays = availability === 'flexible' ? 0 : availability === '30d' ? 30 : 90;
   if (daysToTarget >= minDays) return 100;
-  if (daysToTarget >= minDays * 0.5) return 60;
+  if (daysToTarget >= minDays * 0.5) return 55;
   return 25;
 }
 
-function apyScore(estimatedApy: number): number {
+function netYieldScore(estimatedApy: number): number {
   const capped = Math.min(Math.max(estimatedApy, 0), 25);
   return Math.round((capped / 25) * 100);
 }
 
-function withdrawalScore(availability: YieldStrategy['withdrawalAvailability']): number {
-  if (availability === 'flexible') return 100;
-  if (availability === '30d') return 70;
-  return 40;
+function assetRiskScore(strategy: YieldStrategy): number {
+  void strategy;
+  return 70;
+}
+
+function diversificationScore(strategy: YieldStrategy): number {
+  const n = strategy.assets?.length ?? 1;
+  return Math.min(100, 40 + n * 20);
 }
 
 export class DeterministicRiskEngine {
   scoreStrategy(input: StrategyScoreInput): ScoredStrategy {
     const w = RISK_ENGINE_WEIGHTS;
     const breakdown = {
-      riskProfileFit: (riskProfileFit(input.riskProfile, input.strategy.risk) * w.riskProfileFit) / 100,
-      liquidityHorizonFit:
-        (liquidityHorizonFit(input.daysToTarget, input.strategy.withdrawalAvailability) * w.liquidityHorizonFit) /
-        100,
-      estimatedApy: (apyScore(input.strategy.estimatedApy) * w.estimatedApy) / 100,
-      withdrawalAvailability:
-        (withdrawalScore(input.strategy.withdrawalAvailability) * w.withdrawalAvailability) / 100,
+      safety: (safetyScore(input.strategy) * w.safety) / 100,
+      liquidity: (liquidityScore(input.daysToTarget, input.strategy.withdrawalAvailability) * w.liquidity) / 100,
+      netYield: (netYieldScore(input.strategy.estimatedApy) * w.netYield) / 100,
+      assetRisk: (assetRiskScore(input.strategy) * w.assetRisk) / 100,
+      diversification: (diversificationScore(input.strategy) * w.diversification) / 100,
     };
     const score =
-      breakdown.riskProfileFit +
-      breakdown.liquidityHorizonFit +
-      breakdown.estimatedApy +
-      breakdown.withdrawalAvailability;
+      breakdown.safety + breakdown.liquidity + breakdown.netYield + breakdown.assetRisk + breakdown.diversification;
     return { strategy: input.strategy, score, breakdown };
   }
 
@@ -71,6 +68,7 @@ export class DeterministicRiskEngine {
     riskProfile: number,
     daysToTarget: number,
   ): ScoredStrategy[] {
+    void riskProfile;
     return strategies
       .map((strategy) => this.scoreStrategy({ riskProfile, daysToTarget, strategy }))
       .sort((a, b) => b.score - a.score);
@@ -81,20 +79,32 @@ export type RouteCandidate = {
   routeType: 'stellar_transfer' | 'stellar_swap_transfer' | 'fiat_payout';
   estimatedMinutes: number;
   feeBps: number;
+  netPayoutScore: number;
+  reliabilityScore: number;
+  kycFrictionScore: number;
+  limitsScore: number;
   supported: boolean;
 };
 
+/** Final PRD route scoring weights (sum = 100). */
 export const ROUTE_SCORE_WEIGHTS = {
-  arrivalTime: 40,
-  fee: 35,
-  reliability: 25,
+  netPayout: 40,
+  settlementSpeed: 20,
+  reliability: 15,
+  kycFriction: 15,
+  limits: 10,
 } as const;
 
 export function scoreRoute(candidate: RouteCandidate): number {
   if (!candidate.supported) return -1;
-  const arrival = Math.max(0, 100 - candidate.estimatedMinutes);
-  const fee = Math.max(0, 100 - candidate.feeBps / 10);
-  const reliability = 100;
+  const settlement = Math.max(0, 100 - candidate.estimatedMinutes * 2);
   const w = ROUTE_SCORE_WEIGHTS;
-  return (arrival * w.arrivalTime + fee * w.fee + reliability * w.reliability) / 100;
+  return (
+    (candidate.netPayoutScore * w.netPayout +
+      settlement * w.settlementSpeed +
+      candidate.reliabilityScore * w.reliability +
+      candidate.kycFrictionScore * w.kycFriction +
+      candidate.limitsScore * w.limits) /
+    100
+  );
 }

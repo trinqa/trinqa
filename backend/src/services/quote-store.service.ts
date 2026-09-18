@@ -6,6 +6,11 @@ const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
 type StoredQuote = PaymentRouteQuote & { storedAt: number };
 
+function parseExpiresAt(iso: string): number {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : 0;
+}
+
 export class QuoteStore {
   private readonly quotes = new Map<string, StoredQuote>();
 
@@ -22,21 +27,36 @@ export class QuoteStore {
     return full;
   }
 
+  private assertNotExpired(q: StoredQuote): void {
+    const now = Date.now();
+    if (now - q.storedAt > this.ttlMs) {
+      this.quotes.delete(q.quoteId);
+      throw new ApiError('QUOTE_EXPIRED', 'Quote expired (local TTL)', 410);
+    }
+    const providerExpiry = parseExpiresAt(q.expiresAt);
+    if (providerExpiry > 0 && now > providerExpiry) {
+      this.quotes.delete(q.quoteId);
+      throw new ApiError('QUOTE_EXPIRED', 'Quote expired (provider)', 410);
+    }
+  }
+
   get(quoteId: string): PaymentRouteQuote {
     const q = this.quotes.get(quoteId);
     if (!q) {
       throw new ApiError('NOT_FOUND', `Quote not found: ${quoteId}`, 404);
     }
-    if (Date.now() - q.storedAt > this.ttlMs) {
-      this.quotes.delete(quoteId);
-      throw new ApiError('QUOTE_EXPIRED', 'Quote expired', 410);
-    }
+    this.assertNotExpired(q);
     return q;
   }
 
   isExpired(quoteId: string): boolean {
     const q = this.quotes.get(quoteId);
     if (!q) return true;
-    return Date.now() - q.storedAt > this.ttlMs;
+    try {
+      this.assertNotExpired(q);
+      return false;
+    } catch {
+      return true;
+    }
   }
 }

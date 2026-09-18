@@ -35,13 +35,13 @@ export function recommendationReason(scored: ScoredStrategy): string {
   const top = entries.sort((a, b) => b[1] - a[1])[0]?.[0];
   const access = ACCESS_LABEL[scored.strategy.withdrawalAvailability] ?? 'Flexible access';
   switch (top) {
-    case 'liquidityHorizonFit':
+    case 'liquidity':
       return `Matches your time horizon with ${access.toLowerCase()}.`;
-    case 'riskProfileFit':
+    case 'safety':
       return `${RISK_LABEL[scored.strategy.risk] ?? 'Aligned'} with your risk preference.`;
-    case 'estimatedApy':
+    case 'netYield':
       return `Higher estimated yield (~${scored.strategy.estimatedApy}% APY) for your horizon.`;
-    case 'withdrawalAvailability':
+    case 'diversification':
       return `${access} withdrawal access for upcoming liquidity needs.`;
     default:
       return 'Best overall fit for your policy and target date.';
