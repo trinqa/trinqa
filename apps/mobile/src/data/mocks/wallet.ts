@@ -1,11 +1,11 @@
 import type { WalletTransactionItem } from '@/types';
 
 export const walletSummary = {
-  totalBalance: '248,967.83',
-  available: '43,093.00',
-  earning: '274,825.01',
-  earningAllocation: '$614.93/$43,093.00',
-  allocationProgress: 0.31,
+  totalBalance: '12,480.32',
+  available: '4,220.14',
+  earning: '8,260.18',
+  earningAllocation: '$8,260.18/$12,480.32',
+  allocationProgress: 0.66,
 } as const;
 
 export const walletTransactions: WalletTransactionItem[] = [

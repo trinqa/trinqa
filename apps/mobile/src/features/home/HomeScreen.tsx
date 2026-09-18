@@ -43,7 +43,10 @@ export function HomeScreen() {
       </Group>
 
       <Group modifiers={[padding({ top: homeTokens.layout.walletShortcutGap })]}>
-        <ShortcutRow onPay={() => router.push('/send-money')} />
+        <ShortcutRow
+          onPay={() => router.push('/send-money')}
+          onWithdraw={() => router.push('/withdraw')}
+        />
       </Group>
 
       <Group modifiers={[padding({ top: homeTokens.layout.shortcutRecentGap })]}>

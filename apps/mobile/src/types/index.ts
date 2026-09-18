@@ -134,6 +134,59 @@ export interface CompletedPayment {
   status: Extract<PaymentStatus, 'completed'>;
 }
 
+export type WithdrawalCurrency = 'TRY' | 'EUR' | 'USD';
+export type WithdrawalStep = 'amount' | 'destination' | 'review' | 'processing' | 'success';
+export type WithdrawalStatus =
+  | 'initiated'
+  | 'unwinding'
+  | 'converting'
+  | 'sending'
+  | 'completed'
+  | 'failed';
+
+export interface WithdrawalDestination {
+  id: string;
+  name: string;
+  detail: string;
+  kind: 'bank' | 'wallet';
+  symbol: import('sf-symbols-typescript').SFSymbol;
+}
+
+export interface WithdrawalIntent {
+  amount: number;
+  payoutCurrency: WithdrawalCurrency;
+  destinationId: string;
+}
+
+export interface WithdrawalQuote {
+  receiveAmount: number;
+  receiveCurrency: WithdrawalCurrency;
+  debitAmount: number;
+  debitCurrency: 'USD';
+  fee: number;
+  exchangeRate: number;
+  estimatedArrival: string;
+  availableAmount: number;
+  availableDebitAmount: number;
+  requiresEarnUnwind: boolean;
+  earnUnwindAmount: number;
+  routeId: string;
+  hasSufficientTotal: boolean;
+}
+
+export interface CompletedWithdrawal {
+  id: string;
+  destination: WithdrawalDestination;
+  receiveAmount: number;
+  receiveCurrency: WithdrawalCurrency;
+  displayAmount: string;
+  debitAmount: number;
+  availableDebitAmount: number;
+  earnUnwindAmount: number;
+  timestamp: string;
+  status: Extract<WithdrawalStatus, 'completed'>;
+}
+
 export interface ActivityListItem {
   id: string;
   title: string;

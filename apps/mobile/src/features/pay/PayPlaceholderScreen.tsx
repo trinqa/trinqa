@@ -28,18 +28,86 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { WalletTransactionRow } from '@/components/WalletTransactionRow';
-import { walletSummary, walletTransactions } from '@/data/mocks/wallet';
+import { walletTransactions } from '@/data/mocks/wallet';
+import { useWithdrawalState } from '@/data/mocks/withdrawalState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 const GAUGE_WIDTH = 298;
 const GAUGE_HEIGHT = 28;
 
+function formatBalance(value: number) {
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function WalletActionRow({
+  label,
+  onPress,
+  symbol,
+}: {
+  label: string;
+  onPress: () => void;
+  symbol: 'arrow.right' | 'arrow.down.to.line';
+}) {
+  return (
+    <Button
+      onPress={onPress}
+      modifiers={[
+        buttonStyle('plain'),
+        padding({ horizontal: 14 }),
+        frame({ maxWidth: Infinity, height: 44 }),
+        background(
+          colors.surface,
+          shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
+        ),
+        strokeBorder({
+          content: colors.borderStrong,
+          style: { lineWidth: componentTokens.surface.borderWidth },
+          shape: 'roundedRectangle',
+          cornerRadius: componentTokens.surface.cardRadius,
+        }),
+      ]}
+    >
+      <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
+        <Text
+          modifiers={[
+            font({ size: typography.body, weight: 'medium' }),
+            foregroundStyle(colors.textPrimary),
+          ]}
+        >
+          {label}
+        </Text>
+        <Spacer />
+        <Image systemName={symbol} size={14} color={colors.textPrimary} />
+      </HStack>
+    </Button>
+  );
+}
+
 export function WalletScreen() {
   const router = useRouter();
+  const withdrawalState = useWithdrawalState();
   const wallet = screenTokens.wallet;
   const transactionContentWidth =
     wallet.contentWidth - wallet.detailsHorizontalPadding * 2;
-  const today = walletTransactions.filter((item) => item.group === 'today');
+  const walletTotal = withdrawalState.available + withdrawalState.earning;
+  const allocationProgress = walletTotal > 0 ? withdrawalState.earning / walletTotal : 0;
+  const completedWithdrawals = withdrawalState.withdrawals.map((withdrawal) => ({
+    id: withdrawal.id,
+    title: withdrawal.destination.kind === 'bank' ? 'Bank withdrawal' : 'Wallet withdrawal',
+    detail: withdrawal.destination.name,
+    amount: `-${withdrawal.displayAmount}`,
+    time: withdrawal.timestamp.replace('Today, ', ''),
+    symbol: 'arrow.down.to.line' as const,
+    iconStyle: 'neutral' as const,
+    group: 'today' as const,
+  }));
+  const today = [
+    ...completedWithdrawals,
+    ...walletTransactions.filter((item) => item.group === 'today'),
+  ];
   const yesterday = walletTransactions.filter((item) => item.group === 'yesterday');
 
   return (
@@ -51,11 +119,11 @@ export function WalletScreen() {
       <VStack modifiers={[padding({ top: wallet.headerToBalance })]}>
         <BalanceSummary
           totalLabel="Total Balance"
-          totalValue={walletSummary.totalBalance}
+          totalValue={formatBalance(walletTotal)}
           leftLabel="Available"
-          leftValue={walletSummary.available}
+          leftValue={formatBalance(withdrawalState.available)}
           rightLabel="Earning"
-          rightValue={walletSummary.earning}
+          rightValue={formatBalance(withdrawalState.earning)}
         />
       </VStack>
 
@@ -107,7 +175,7 @@ export function WalletScreen() {
                       <CardLimitGauge
                         width={GAUGE_WIDTH}
                         height={GAUGE_HEIGHT}
-                        progress={walletSummary.allocationProgress}
+                        progress={allocationProgress}
                       />
                     </RNHostView>
                   </Group>
@@ -128,44 +196,23 @@ export function WalletScreen() {
                         foregroundStyle(colors.textPrimary),
                       ]}
                     >
-                      {walletSummary.earningAllocation}
+                      {`$${formatBalance(withdrawalState.earning)}/$${formatBalance(walletTotal)}`}
                     </Text>
                   </HStack>
                 </VStack>
 
-                <Button
+                <WalletActionRow
+                  label="Manage allocation"
+                  symbol="arrow.right"
                   onPress={() =>
                     router.push({ pathname: '/put-to-work', params: { origin: 'wallet' } })
                   }
-                  modifiers={[
-                    buttonStyle('plain'),
-                    padding({ horizontal: 14 }),
-                    frame({ maxWidth: Infinity, height: 44 }),
-                    background(
-                      colors.surface,
-                      shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-                    ),
-                    strokeBorder({
-                      content: colors.borderStrong,
-                      style: { lineWidth: componentTokens.surface.borderWidth },
-                      shape: 'roundedRectangle',
-                      cornerRadius: componentTokens.surface.cardRadius,
-                    }),
-                  ]}
-                >
-                  <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
-                    <Text
-                      modifiers={[
-                        font({ size: typography.body, weight: 'medium' }),
-                        foregroundStyle(colors.textPrimary),
-                      ]}
-                    >
-                      Manage allocation
-                    </Text>
-                    <Spacer />
-                    <Image systemName="arrow.right" size={14} color={colors.textPrimary} />
-                  </HStack>
-                </Button>
+                />
+                <WalletActionRow
+                  label="Withdraw"
+                  symbol="arrow.down.to.line"
+                  onPress={() => router.push('/withdraw')}
+                />
               </InsetLayer>
             </Group>
 

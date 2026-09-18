@@ -1,5 +1,6 @@
-import { Button, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, HStack, Image, Menu, Text, VStack } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -72,7 +73,13 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
   );
 }
 
-export function ShortcutRow({ onPay }: { onPay: () => void }) {
+export function ShortcutRow({
+  onPay,
+  onWithdraw,
+}: {
+  onPay: () => void;
+  onWithdraw: () => void;
+}) {
   return (
     <HStack
       spacing={homeTokens.shortcuts.gap}
@@ -82,7 +89,15 @@ export function ShortcutRow({ onPay }: { onPay: () => void }) {
         anchor={<ShortcutButton label="Add Money" symbol="plus.circle" isSheetAnchor />}
       />
       <ShortcutButton label="Pay" symbol="arrow.up.circle" onPress={onPay} />
-      <ShortcutButton label="More" symbol="ellipsis.circle" onPress={() => undefined} />
+      <Menu
+        label={<ShortcutButton label="More" symbol="ellipsis.circle" isSheetAnchor />}
+        modifiers={[buttonStyle('plain'), accessibilityLabel('More')]}
+      >
+        <Button label="Withdraw" systemImage="arrow.down.to.line" onPress={onWithdraw} />
+        <Button label="Receive" systemImage="arrow.down.circle" onPress={() => undefined} />
+        <Button label="Account Details" systemImage="doc.text" onPress={() => undefined} />
+        <Button label="Settings" systemImage="gearshape" onPress={() => undefined} />
+      </Menu>
     </HStack>
   );
 }

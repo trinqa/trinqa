@@ -14,14 +14,25 @@ import { useWindowDimensions } from 'react-native';
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { homeRecentActivity } from '@/data/mocks/home';
 import { useCompletedPayments } from '@/data/mocks/paymentActivity';
+import { useWithdrawalState } from '@/data/mocks/withdrawalState';
 import { colors, componentTokens, homeTokens, spacing } from '@/theme';
 
 /** Recent grouped card follows the reference's narrow outer inset and compact rows. */
 export function HomeRecentGroup() {
   const { width: windowWidth } = useWindowDimensions();
   const completedPayments = useCompletedPayments();
+  const withdrawalState = useWithdrawalState();
   const shellWidth = windowWidth - spacing.screenHorizontal * 2;
   const recentActivity = [
+    ...withdrawalState.withdrawals.map((withdrawal) => ({
+      id: withdrawal.id,
+      title: withdrawal.destination.kind === 'bank' ? 'Bank withdrawal' : 'Wallet withdrawal',
+      subtitle: 'Completed',
+      amount: `-${withdrawal.displayAmount}`,
+      amountDirection: 'out' as const,
+      date: withdrawal.timestamp,
+      symbol: 'arrow.down.to.line' as const,
+    })),
     ...completedPayments.map((payment) => ({
       id: payment.id,
       title: payment.recipient.name,

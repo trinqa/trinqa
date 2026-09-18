@@ -84,4 +84,13 @@ export const screenTokens = {
     cardPadding: 16,
     cardGap: 12,
   },
+  withdrawalFlow: {
+    contentWidth: 366,
+    summaryHeight: 158,
+    destinationTopGap: 28,
+    destinationRowGap: 8,
+    destinationSectionGap: 20,
+    sheetHeight: 340,
+    fieldHeight: 48,
+  },
 } as const;

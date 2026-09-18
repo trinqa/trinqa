@@ -10,6 +10,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { activityItems } from '@/data/mocks/activity';
 import { useCompletedPayments } from '@/data/mocks/paymentActivity';
+import { useWithdrawalState } from '@/data/mocks/withdrawalState';
 import { colors, screenTokens, typography } from '@/theme';
 import type { ActivitySegment } from '@/types';
 
@@ -22,6 +23,7 @@ const GROUPS = [
 export function ActivityScreen() {
   const params = useLocalSearchParams<{ segment?: string }>();
   const completedPayments = useCompletedPayments();
+  const withdrawalState = useWithdrawalState();
   const [segment, setSegment] = useState<ActivitySegment>('all');
   const activity = screenTokens.activity;
   const paymentActivity = completedPayments.map((payment) => ({
@@ -34,7 +36,17 @@ export function ActivityScreen() {
     group: 'today' as const,
     symbol: payment.recipient.symbol,
   }));
-  const filteredItems = [...paymentActivity, ...activityItems].filter(
+  const withdrawalActivity = withdrawalState.withdrawals.map((withdrawal) => ({
+    id: withdrawal.id,
+    title: withdrawal.destination.kind === 'bank' ? 'Bank withdrawal' : 'Wallet withdrawal',
+    subtitle: 'Completed',
+    amount: `-${withdrawal.displayAmount}`,
+    timestamp: withdrawal.timestamp,
+    category: 'payments' as const,
+    group: 'today' as const,
+    symbol: 'arrow.down.to.line' as const,
+  }));
+  const filteredItems = [...withdrawalActivity, ...paymentActivity, ...activityItems].filter(
     (item) => segment === 'all' || item.category === segment,
   );
   const sections = GROUPS.map((group) => ({
