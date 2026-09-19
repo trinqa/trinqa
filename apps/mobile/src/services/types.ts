@@ -43,6 +43,14 @@ export interface BackendCapabilities {
   };
 }
 
+/** A seeded demo contact resolved to its own funded testnet account. */
+export interface DemoContact {
+  id: string;
+  account: string;
+  created: boolean;
+  trustlineAdded: boolean;
+}
+
 export interface BalanceLine {
   assetType: string;
   assetCode: string;

@@ -1,4 +1,3 @@
-import { getPayRecipient } from '@/config/env';
 import { api } from '@/services/api';
 import { BackendApiError } from '@/services/apiErrors';
 import { currentSigner } from '@/services/signer';
@@ -15,10 +14,6 @@ export function stellarAmount(value: number, decimals = 7): string {
 export function parseAmount(value: string | undefined): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
-}
-
-export function payRecipientOrSelf(accountId: string): string {
-  return getPayRecipient() ?? accountId;
 }
 
 export async function ensureAnchorSession(): Promise<string> {
