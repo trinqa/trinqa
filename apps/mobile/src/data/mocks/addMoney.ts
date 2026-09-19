@@ -1,5 +1,4 @@
-import type { AddMoneyQuote, AddMoneySourceOption } from '@/types';
-import type { CurrencyCode } from '@/types';
+import type { AddMoneySourceOption } from '@/types';
 import { currenciesFor } from '@/data/capabilities';
 
 export const addMoneySources: AddMoneySourceOption[] = [
@@ -31,26 +30,3 @@ export const addMoneySources: AddMoneySourceOption[] = [
 
 export const quickAddMoneyAmounts = [1000, 5000, 10000] as const;
 export const addMoneyCurrencies = currenciesFor('deposit');
-
-const MOCK_FEE: Record<CurrencyCode, number> = {
-  TRY: 12.5,
-  USD: 0.5,
-  EUR: 0.5,
-  BRL: 2.5,
-};
-
-export function createAddMoneyQuote(
-  amount: number,
-  currency: CurrencyCode,
-): AddMoneyQuote {
-  const fee = MOCK_FEE[currency];
-  return {
-    amount,
-    currency,
-    receivedAmount: Math.max(0, amount - fee),
-    receivedCurrency: currency,
-    exchangeRate: 1,
-    fee,
-    estimatedTime: '~1–2 min',
-  };
-}

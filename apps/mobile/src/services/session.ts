@@ -39,6 +39,8 @@ export async function ensureAnchorSession(): Promise<string> {
     return cachedAnchor.sessionId;
   }
   const session = await api.demoSep10();
+  // SEP-12: register the customer with the anchor before quoting or moving money.
+  await api.anchorCustomerPut(session.sessionId);
   cachedAnchor = {
     sessionId: session.sessionId,
     expiresAt: Date.parse(session.expiresAt) || Date.now() + 50 * 60 * 1000,

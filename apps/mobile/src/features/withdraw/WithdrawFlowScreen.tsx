@@ -49,14 +49,14 @@ import { FlowInlineState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
-  createWithdrawalQuote,
   quickWithdrawalAmounts,
   withdrawalCurrencies,
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
 import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
 import { errorMessage } from '@/services/apiErrors';
-import { executeWithdrawTry } from '@/services/flows';
+import { executeWithdrawTry, quoteWithdrawTry, type WithdrawLiveQuote } from '@/services/flows';
+import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
@@ -91,18 +91,62 @@ function formatPayoutAmount(
   })}`;
 }
 
+// Balances, debits and fees are USDC, presented as USD across the app.
 function formatUsd(value: number) {
-  return `₺${value.toLocaleString('en-US', {
+  return `$${value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 4,
   })}`;
 }
 
 function formatUsdRate(value: number) {
-  return `₺${value.toLocaleString('en-US', {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+  return `$${value.toLocaleString('en-US', {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
   })}`;
+}
+
+/** Maps the BFF cash-out quote onto the review model. Without a live quote nothing is claimable. */
+function toWithdrawalQuote(
+  intent: WithdrawalIntent,
+  available: number,
+  live: WithdrawLiveQuote | null,
+): WithdrawalQuote {
+  if (!live) {
+    return {
+      receiveAmount: intent.amount,
+      receiveCurrency: intent.payoutCurrency,
+      debitAmount: 0,
+      debitCurrency: 'USD',
+      fee: 0,
+      exchangeRate: 0,
+      estimatedArrival: '—',
+      availableAmount: available,
+      availableDebitAmount: 0,
+      requiresEarnUnwind: false,
+      earnUnwindAmount: 0,
+      routeId: 'tr-mock-anchor',
+      hasSufficientTotal: false,
+    };
+  }
+  const { quote } = live;
+  const receiveAmount = Number(quote.receiveAmount);
+  const debitAmount = Number(quote.debitAmount);
+  return {
+    receiveAmount,
+    receiveCurrency: intent.payoutCurrency,
+    debitAmount,
+    debitCurrency: 'USD',
+    fee: Number(quote.fee.amount),
+    exchangeRate: receiveAmount > 0 ? debitAmount / receiveAmount : 0,
+    estimatedArrival: `~${quote.estimatedArrivalMinutes} min`,
+    availableAmount: available,
+    availableDebitAmount: Number(quote.funding?.availableContribution ?? debitAmount),
+    requiresEarnUnwind: Boolean(quote.funding?.requiresEarnUnwind),
+    earnUnwindAmount: Number(quote.funding?.earnContribution ?? 0),
+    routeId: quote.routeType,
+    hasSufficientTotal: true,
+  };
 }
 
 function processingRowState(
@@ -356,10 +400,13 @@ function DestinationStep({
 function WithdrawalAmountSummary({
   intent,
   quote,
+  quoteState,
 }: {
   intent: WithdrawalIntent;
   quote: WithdrawalQuote;
+  quoteState: LiveQuoteState<WithdrawLiveQuote>;
 }) {
+  const ready = Boolean(quoteState.data);
   return (
     <VStack spacing={8}>
       <FlowCard height={screenTokens.withdrawalFlow.summaryHeight}>
@@ -383,14 +430,17 @@ function WithdrawalAmountSummary({
             {formatPayoutAmount(intent.amount, intent.payoutCurrency)}
           </Text>
           <Divider />
-          <FlowInfoRow label="Estimated debit" value={formatUsd(quote.debitAmount)} />
+          <FlowInfoRow
+            label="Estimated debit"
+            value={ready ? formatUsd(quote.debitAmount) : quoteState.loading ? 'Getting a live quote…' : '—'}
+          />
           <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
-            <FlowInfoRow label="Fee" value={formatUsd(quote.fee)} />
+            <FlowInfoRow label="Fee" value={ready ? formatUsd(quote.fee) : '—'} />
             <FlowInfoRow label="Arrival" value={quote.estimatedArrival} />
           </HStack>
           <FlowInfoRow
             label="Exchange rate"
-            value={`${CURRENCY_SYMBOLS[intent.payoutCurrency]}1 ≈ ${formatUsdRate(quote.exchangeRate)}`}
+            value={ready ? `${CURRENCY_SYMBOLS[intent.payoutCurrency]}1 ≈ ${formatUsdRate(quote.exchangeRate)}` : '—'}
           />
         </VStack>
       </FlowCard>
@@ -402,12 +452,8 @@ function WithdrawalAmountSummary({
           subtitle={`Needed from Earn ${formatUsd(quote.earnUnwindAmount)}`}
         />
       ) : null}
-      {!quote.hasSufficientTotal ? (
-        <FlowInlineState
-          symbol="exclamationmark.circle"
-          title="Not enough balance"
-          subtitle="Add money or change the amount to continue."
-        />
+      {quoteState.error ? (
+        <FlowInlineState symbol="exclamationmark.circle" title="Can’t withdraw this amount" subtitle={quoteState.error} />
       ) : null}
     </VStack>
   );
@@ -431,7 +477,13 @@ function ReviewStep({
   const receiveAmount = formatPayoutAmount(intent.amount, intent.payoutCurrency);
 
   return (
-    <FlowStepLayout title="Review" onBack={onBack} primaryLabel="Confirm" onPrimaryPress={onConfirm}>
+    <FlowStepLayout
+      title="Review"
+      onBack={onBack}
+      primaryLabel="Confirm"
+      onPrimaryPress={onConfirm}
+      isPrimaryDisabled={!quote.hasSufficientTotal}
+    >
       <VStack alignment="leading" spacing={screenTokens.paymentFlow.cardGap} modifiers={[padding({ top: 24 })]}>
         <FlowCard>
           <VStack alignment="leading" spacing={11} modifiers={[padding({ all: screenTokens.paymentFlow.cardPadding })]}>
@@ -518,14 +570,16 @@ export function WithdrawFlowScreen() {
     () => ({ amount, payoutCurrency: currency, destinationId: destination.id }),
     [amount, currency, destination.id],
   );
-  const quote = useMemo(() => {
-    const next = createWithdrawalQuote(intent, balances);
-    const blocked = payoutBlockedReason(currency, capabilities);
-    if (blocked) {
-      return { ...next, hasSufficientTotal: false };
-    }
-    return next;
-  }, [balances, capabilities, currency, intent]);
+  const blocked = payoutBlockedReason(currency, capabilities);
+  const liveQuote = useLiveQuote(
+    `${account.id}:${currency}:${amount}`,
+    amount > 0 && !blocked,
+    () => quoteWithdrawTry({ accountId: account.id, tryAmount: amount, currency }),
+  );
+  const quote = useMemo(
+    () => toWithdrawalQuote(intent, balances.available, liveQuote.data),
+    [balances.available, intent, liveQuote.data],
+  );
   const receiveAmount = formatPayoutAmount(amount, currency);
   const withdrawalId = useMemo(
     () => `withdrawal-${destination.id}-${currency.toLowerCase()}-${amount}`,
@@ -628,7 +682,7 @@ export function WithdrawFlowScreen() {
           quickAmounts={quickWithdrawalAmounts}
           selectionSymbol="wallet.bifold.fill"
           selectionTitle={`Available ${formatUsd(balances.available)}`}
-          summary={<WithdrawalAmountSummary intent={intent} quote={quote} />}
+          summary={<WithdrawalAmountSummary intent={intent} quote={quote} quoteState={liveQuote} />}
           title="Withdraw"
         />
       ) : null}
@@ -654,6 +708,8 @@ export function WithdrawFlowScreen() {
               setSubmitError('Wallet withdrawals are not available. Use a TRY bank destination.');
               return;
             }
+            const live = liveQuote.data;
+            if (!live) return;
             setSubmitError(null);
             setWithdrawalStatus('sending');
             setStep('processing');
@@ -661,7 +717,8 @@ export function WithdrawFlowScreen() {
               try {
                 await executeWithdrawTry({
                   accountId: account.id,
-                  usdcAmount: amount,
+                  live,
+                  tryAmount: amount,
                   currency,
                   approveEarnUnwind: quote.requiresEarnUnwind,
                 });
