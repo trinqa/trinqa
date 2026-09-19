@@ -11,11 +11,11 @@ export const typeRole = {
   sectionTitle: { size: 17, weight: 'semibold' as const },
   kicker: { size: 16, weight: 'medium' as const },
   label: { size: 15, weight: 'semibold' as const },
-  body: { size: 14, weight: 'regular' as const },
-  caption: { size: 13, weight: 'regular' as const },
+  body: { size: 14, weight: 'medium' as const },
+  caption: { size: 13, weight: 'medium' as const },
   footnote: { size: 12, weight: 'medium' as const },
-  fine: { size: 11, weight: 'regular' as const },
-  micro: { size: 10, weight: 'regular' as const },
+  fine: { size: 11, weight: 'medium' as const },
+  micro: { size: 10, weight: 'medium' as const },
 } as const;
 
 export const typeWeight = {

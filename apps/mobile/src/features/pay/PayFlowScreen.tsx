@@ -155,7 +155,7 @@ function RecipientRow({
           >
             {recipient.name}
           </Text>
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.caption, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             {recipient.detail}
           </Text>
         </VStack>
@@ -227,7 +227,7 @@ function RecipientStep({
         spacing={0}
         modifiers={[padding({ top: payment.headerToContent }), frame({ width: payment.contentWidth })]}
       >
-        <Text modifiers={[font({ size: typography.body }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.body, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           Who are you paying?
         </Text>
         <Text
@@ -301,7 +301,7 @@ function PaymentAmountSummary({
             frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
           ]}
         >
-          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             {intent.recipient.name} receives
           </Text>
           <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
@@ -374,7 +374,7 @@ function EarnLiquidityApprovalSheet({
             <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
               Use money from Earn?
             </Text>
-            <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+            <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
               Trinqa needs to move part of this payment back to available.
             </Text>
           </VStack>
@@ -424,7 +424,7 @@ function ReviewStep({
           >
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   You’re sending
                 </Text>
                 <Text

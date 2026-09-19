@@ -4,6 +4,7 @@ import { padding } from '@expo/ui/swift-ui/modifiers';
 import { EarnSegmentPicker } from '@/components/EarnSegmentPicker';
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { SurfacePanel } from '@/components/SurfacePanel';
+import { transactionStatusColor, transactionStatusSymbol } from '@/domain/transactionPresentation';
 import { colors, componentTokens, screenTokens } from '@/theme';
 import type { EarnListItem, EarnSegment } from '@/types';
 
@@ -56,7 +57,12 @@ export function EarnDetailsPanel({
                 footerSymbol={
                   item.action === 'manage-strategy'
                     ? 'chart.line.uptrend.xyaxis'
-                    : 'checkmark.circle.fill'
+                    : item.status
+                      ? transactionStatusSymbol(item.status)
+                      : 'checkmark.circle.fill'
+                }
+                footerLeadingColor={
+                  item.status ? transactionStatusColor(item.status) : undefined
                 }
                 footerTrailingColor={colors.action}
                 onFooterPress={

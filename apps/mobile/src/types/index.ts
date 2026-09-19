@@ -240,6 +240,7 @@ export interface EarnListItem {
   iconStyle: 'earning' | 'strategy';
   segment: EarnSegment;
   action?: 'manage-strategy' | 'details';
+  status?: TransactionStatus;
 }
 export type CurrencyCode = 'TRY' | 'USD' | 'EUR' | 'BRL';
 export type CapabilityStatus = 'mock' | 'unavailable' | 'live' | 'unsupported';

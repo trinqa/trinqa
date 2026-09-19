@@ -36,6 +36,7 @@ interface LayeredTransactionRowProps {
   iconLetterColor?: string;
   iconAccentText?: string;
   iconAccentColor?: string;
+  footerLeadingColor?: string;
   footerTrailingColor?: string;
 }
 
@@ -57,6 +58,7 @@ export function LayeredTransactionRow({
   iconLetterColor = colors.textSecondary,
   iconAccentText,
   iconAccentColor = colors.textSecondary,
+  footerLeadingColor,
   footerTrailingColor,
 }: LayeredTransactionRowProps) {
   const initial = iconLetter ?? title.charAt(0).toUpperCase();
@@ -109,7 +111,7 @@ export function LayeredTransactionRow({
         <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       </VStack>
@@ -119,7 +121,7 @@ export function LayeredTransactionRow({
           {amount}
         </Text>
         {meta ? (
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             {meta}
           </Text>
         ) : null}
@@ -163,7 +165,7 @@ export function LayeredTransactionRow({
         onTrailingPress={onFooterPress}
         height={row.footerHeight}
         horizontalPadding={row.horizontalPadding}
-        textSize={typography.footnote}
+        leadingColor={footerLeadingColor}
         trailingColor={footerTrailingColor}
       />
     </VStack>

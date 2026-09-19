@@ -138,7 +138,7 @@ export const homeTokens = {
     stitchWidth: 1.15,
     stitchDash: 2.4,
     stitchGap: 4.1,
-    balanceTypeSize: 25.5,
+    balanceTypeSize: 22,
     idTracking: 0.3,
     balanceTracking: -0.5,
     labelToBalance: 5,

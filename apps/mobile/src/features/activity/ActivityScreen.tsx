@@ -69,7 +69,7 @@ export function ActivityScreen() {
           </Text>
           <Text
             modifiers={[
-              font({ size: typography.body }),
+              font({ size: typography.body, weight: 'medium' }),
               foregroundStyle(colors.textSecondary),
               frame({ maxWidth: Infinity, alignment: 'leading' }),
             ]}

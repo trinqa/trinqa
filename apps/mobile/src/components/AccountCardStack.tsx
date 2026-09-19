@@ -172,7 +172,7 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
       >
         <Text style={[styles.cardLabel, { fontSize: typography.footnote * scale }]}>{account.cardLabel}</Text>
         <View style={styles.balanceRow}>
-          <Text style={[styles.currency, { fontSize: typography.sectionTitle * scale }]}>{account.displayCurrency}</Text>
+          <Text style={[styles.currency, { fontSize: typography.label * scale }]}>{account.displayCurrency}</Text>
           <Text style={[styles.balance, { fontSize: homeTokens.wallet.balanceTypeSize * scale }]}>{account.balance}</Text>
         </View>
       </View>

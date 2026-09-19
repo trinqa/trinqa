@@ -84,7 +84,7 @@ export function EarnScreen() {
           <Text modifiers={[font({ size: typography.kicker, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>
             +
           </Text>
-          <Text modifiers={[font({ size: typography.amountDisplay, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
+          <Text modifiers={[font({ size: typography.amountCurrency, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
             {headline}
           </Text>
         </HStack>

@@ -43,7 +43,7 @@ export function FlowInlineState({
         <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       </VStack>
@@ -68,7 +68,7 @@ export function FlowErrorState({
       <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
         {title}
       </Text>
-      <Text modifiers={[font({ size: typography.body }), foregroundStyle(colors.textSecondary)]}>
+      <Text modifiers={[font({ size: typography.body, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
         {subtitle}
       </Text>
       <PrimaryActionButton label="Try again" onPress={onRetry} />
@@ -90,7 +90,7 @@ export function FlowEmptyState({
         {title}
       </Text>
       {subtitle ? (
-        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       ) : null}

@@ -49,7 +49,7 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
         </Text>
         <Text
           modifiers={[
-            font({ size: typography.caption }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
@@ -68,7 +68,7 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
         </Text>
         <Text
           modifiers={[
-            font({ size: typography.caption }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >

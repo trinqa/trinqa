@@ -162,7 +162,7 @@ function DestinationRow({
           >
             {destination.name}
           </Text>
-          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             {destination.detail}
           </Text>
         </VStack>
@@ -267,7 +267,7 @@ function NewBankAccountSheet({
             >
               Add bank account
             </Text>
-            <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+            <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
               Add the destination for this withdrawal.
             </Text>
           </VStack>
@@ -368,7 +368,7 @@ function WithdrawalAmountSummary({
             frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
           ]}
         >
-          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             You’ll receive
           </Text>
           <Text
@@ -434,7 +434,7 @@ function ReviewStep({
           <VStack alignment="leading" spacing={11} modifiers={[padding({ all: screenTokens.paymentFlow.cardPadding })]}>
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   You’re withdrawing
                 </Text>
                 <Text
@@ -454,13 +454,13 @@ function ReviewStep({
 
             <Divider />
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
-              <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>To</Text>
+              <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>To</Text>
               <Spacer />
               <VStack alignment="trailing" spacing={2}>
                 <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
                   {destination.name}
                 </Text>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   {destination.detail}
                 </Text>
               </VStack>

@@ -1,7 +1,11 @@
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { colors } from '@/theme';
 import type { ActivityListItem } from '@/types';
-import { transactionStatusLabel } from '@/domain/transactionPresentation';
+import {
+  transactionStatusColor,
+  transactionStatusLabel,
+  transactionStatusSymbol,
+} from '@/domain/transactionPresentation';
 
 interface ActivityTransactionRowProps {
   item: ActivityListItem;
@@ -29,7 +33,8 @@ export function ActivityTransactionRow({ item, onPress }: ActivityTransactionRow
       iconAccentText={isAmazon ? '⌣' : undefined}
       iconAccentColor={isAmazon ? colors.merchantLogoAccent : undefined}
       footerLeadingText={transactionStatusLabel(item.status)}
-      footerSymbol={item.status === 'pending' ? 'clock.fill' : item.status === 'failed' ? 'xmark.circle.fill' : 'checkmark.circle.fill'}
+      footerSymbol={transactionStatusSymbol(item.status)}
+      footerLeadingColor={transactionStatusColor(item.status)}
       footerTrailingText="Details"
       onFooterPress={onPress}
       onPress={onPress}

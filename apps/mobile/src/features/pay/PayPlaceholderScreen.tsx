@@ -144,7 +144,7 @@ export function WalletScreen() {
           >
             <Text
               modifiers={[
-                font({ size: typography.sectionTitle, weight: 'semibold' }),
+                font({ size: typography.kicker, weight: 'semibold' }),
                 foregroundStyle(colors.textPrimary),
               ]}
             >
@@ -184,7 +184,7 @@ export function WalletScreen() {
                   <HStack spacing={8} modifiers={[padding({ top: 8 }), frame({ maxWidth: Infinity })]}>
                     <Text
                       modifiers={[
-                        font({ size: typography.caption, weight: 'medium' }),
+                        font({ size: typography.footnote, weight: 'medium' }),
                         foregroundStyle(colors.textSecondary),
                       ]}
                     >
@@ -193,7 +193,7 @@ export function WalletScreen() {
                     <Spacer />
                     <Text
                       modifiers={[
-                        font({ size: typography.caption, weight: 'semibold' }),
+                        font({ size: typography.footnote, weight: 'semibold' }),
                         foregroundStyle(colors.textPrimary),
                       ]}
                     >
@@ -220,7 +220,7 @@ export function WalletScreen() {
             <Text
               modifiers={[
                 padding({ top: wallet.transactionTopGap }),
-                font({ size: typography.sectionTitle, weight: 'semibold' }),
+                font({ size: typography.kicker, weight: 'semibold' }),
                 foregroundStyle(colors.textPrimary),
               ]}
             >

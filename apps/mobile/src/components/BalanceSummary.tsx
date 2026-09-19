@@ -50,7 +50,7 @@ function MetricTile({
         ),
       ]}
     >
-      <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
+      <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
       <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
         {currencySymbol}{value}
       </Text>
@@ -115,7 +115,7 @@ export function BalanceSummary({
             </Text>
             <Text
               modifiers={[
-                font({ size: typography.amountHero, weight: 'bold' }),
+                font({ size: typography.amountCurrency, weight: 'bold' }),
                 foregroundStyle(colors.textPrimary),
               ]}
             >

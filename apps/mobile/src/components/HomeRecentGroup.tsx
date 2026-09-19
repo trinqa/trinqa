@@ -15,7 +15,12 @@ import { useWindowDimensions } from 'react-native';
 
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
-import { toActivityListItem, transactionStatusLabel } from '@/domain/transactionPresentation';
+import {
+  toActivityListItem,
+  transactionStatusColor,
+  transactionStatusLabel,
+  transactionStatusSymbol,
+} from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, homeTokens, spacing, typography } from '@/theme';
 import type { Transaction } from '@/types';
@@ -64,7 +69,7 @@ export function HomeRecentGroup() {
               frame({ width: homeTokens.recent.width, alignment: 'leading' }),
             ]}
           >
-            <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+            <Text modifiers={[font({ size: typography.kicker, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
               Recent
             </Text>
 
@@ -78,6 +83,8 @@ export function HomeRecentGroup() {
                   meta={item.timestamp}
                   symbol={item.symbol}
                   footerLeadingText={transactionStatusLabel(transaction.status)}
+                  footerSymbol={transactionStatusSymbol(transaction.status)}
+                  footerLeadingColor={transactionStatusColor(transaction.status)}
                   footerTrailingText="Details"
                   onFooterPress={() => setSelectedTransaction(transaction)}
                   onPress={() => setSelectedTransaction(transaction)}

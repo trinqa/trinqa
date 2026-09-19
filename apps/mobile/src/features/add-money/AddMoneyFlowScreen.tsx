@@ -119,7 +119,7 @@ function AmountStep({
           >
             <Text
               modifiers={[
-                font({ size: typography.footnote }),
+                font({ size: typography.footnote, weight: 'medium' }),
                 foregroundStyle(colors.textSecondary),
               ]}
             >
@@ -182,7 +182,7 @@ function ReviewStep({
           >
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   You’re adding
                 </Text>
                 <Text
@@ -211,7 +211,7 @@ function ReviewStep({
 
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   You’ll receive
                 </Text>
                 <Text
@@ -314,7 +314,7 @@ function NetworkStep({
         <ScreenHeader showBack title="Source network" onBackPress={onBack} />
       </Group>
       <VStack alignment="leading" spacing={spacing.row} modifiers={[padding({ top: spacing.flowBlock })]}>
-        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           Stellar is the live deposit network. Other networks are unavailable.
         </Text>
         {networks.map((network) => (

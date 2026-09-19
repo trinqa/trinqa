@@ -243,7 +243,7 @@ function FlowProcessingTimelineRow({
         >
           {item.title}
         </Text>
-        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           {item.subtitle}
         </Text>
       </VStack>
@@ -322,7 +322,7 @@ export function FlowProcessingState({
           {supportingLines.map((line) => (
             <Text
               key={line}
-              modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}
+              modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}
             >
               {line}
             </Text>
@@ -522,7 +522,7 @@ interface FlowInfoRowProps {
 export function FlowInfoRow({ label, value, emphasized = false }: FlowInfoRowProps) {
   return (
     <HStack alignment="firstTextBaseline" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
-      <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+      <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
         {label}
       </Text>
       <Spacer />
@@ -566,7 +566,7 @@ export function FlowNotice({ symbol, title, subtitle }: FlowNoticeProps) {
         <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       </VStack>

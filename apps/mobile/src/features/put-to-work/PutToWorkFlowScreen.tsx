@@ -131,13 +131,13 @@ function StrategyOption({
               <Image systemName="checkmark.circle.fill" size={14} color={colors.action} />
             ) : null}
           </HStack>
-          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             {profile.riskLabel}
           </Text>
         </VStack>
         <Spacer />
         <VStack alignment="trailing" spacing={3}>
-          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             Estimated APY
           </Text>
           <Text
@@ -189,7 +189,7 @@ function StrategyStep({
         spacing={0}
         modifiers={[padding({ top: flow.headerToContent }), frame({ width: flow.contentWidth })]}
       >
-        <Text modifiers={[font({ size: typography.body }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.body, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           Choose how your available money should earn.
         </Text>
 
@@ -204,7 +204,7 @@ function StrategyStep({
               ]}
             >
               <VStack alignment="leading" spacing={3}>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   Available to allocate
                 </Text>
                 <Text
@@ -264,7 +264,7 @@ function StrategyStep({
         <Text
           modifiers={[
             padding({ top: 7, horizontal: 2 }),
-            font({ size: typography.footnote }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
             frame({ width: flow.contentWidth, height: flow.explanationHeight, alignment: 'topLeading' }),
           ]}
@@ -303,7 +303,7 @@ function AmountSummary({
           frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
         ]}
       >
-        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           You’ll add to earning
         </Text>
         <Text
@@ -368,7 +368,7 @@ function ReviewStep({
               modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
             >
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   You’re allocating
                 </Text>
                 <Text
@@ -399,7 +399,7 @@ function ReviewStep({
               modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
             >
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                   To earning
                 </Text>
                 <Text

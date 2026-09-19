@@ -19,6 +19,7 @@ interface LayeredInfoBarProps {
   height?: number;
   horizontalPadding?: number;
   textSize?: number;
+  leadingColor?: string;
   trailingColor?: string;
 }
 
@@ -30,9 +31,11 @@ export function LayeredInfoBar({
   onTrailingPress,
   height = componentTokens.transactionRow.footerHeight,
   horizontalPadding = componentTokens.transactionRow.horizontalPadding,
-  textSize = typography.footnote,
+  textSize = typography.fine,
+  leadingColor,
   trailingColor,
 }: LayeredInfoBarProps) {
+  const resolvedLeadingColor = leadingColor ?? colors.textSecondary;
   const resolvedTrailingColor = trailingColor ?? (onTrailingPress ? colors.action : colors.textSecondary);
 
   const content = (
@@ -44,11 +47,11 @@ export function LayeredInfoBar({
         frame({ maxWidth: Infinity, height }),
       ]}
     >
-      <Image systemName={leadingSymbol} size={11} color={colors.textSecondary} />
+      <Image systemName={leadingSymbol} size={11} color={resolvedLeadingColor} />
       <Text
         modifiers={[
           font({ size: textSize, weight: 'medium' }),
-          foregroundStyle(colors.textSecondary),
+          foregroundStyle(resolvedLeadingColor),
         ]}
       >
         {leadingText}

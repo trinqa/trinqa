@@ -13,7 +13,7 @@ import {
 import { colors, componentTokens, radius, spacing, typography } from '@/theme';
 
 export function bodyTextModifiers(
-  weight: 'regular' | 'medium' | 'semibold' | 'bold' = 'regular',
+  weight: 'medium' | 'semibold' | 'bold' = 'medium',
 ): ViewModifier[] {
   return [
     font({ size: typography.body, weight }),
@@ -22,14 +22,14 @@ export function bodyTextModifiers(
 }
 
 export function captionTextModifiers(
-  weight: 'regular' | 'medium' | 'semibold' = 'regular',
+  weight: 'medium' | 'semibold' = 'medium',
   color: string = colors.textSecondary,
 ): ViewModifier[] {
   return [font({ size: typography.caption, weight }), foregroundStyle(color)];
 }
 
 export function microTextModifiers(
-  weight: 'regular' | 'medium' | 'semibold' | 'bold' = 'regular',
+  weight: 'medium' | 'semibold' | 'bold' = 'medium',
   color: string = colors.textSecondary,
 ): ViewModifier[] {
   return [font({ size: typography.micro, weight }), foregroundStyle(color)];

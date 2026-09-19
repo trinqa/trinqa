@@ -171,7 +171,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
           </Text>
           <Text
             modifiers={[
-              font({ size: typography.micro, weight: 'regular' }),
+              font({ size: typography.micro, weight: 'medium' }),
               foregroundStyle(colors.textSecondary),
             ]}
           >
@@ -212,7 +212,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
       >
         <Text
           modifiers={[
-            font({ size: typography.micro, weight: 'regular' }),
+            font({ size: typography.micro, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
@@ -221,7 +221,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
         <Spacer />
         <Text
           modifiers={[
-            font({ size: typography.micro, weight: 'regular' }),
+            font({ size: typography.micro, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >

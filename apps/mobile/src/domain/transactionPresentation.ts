@@ -1,5 +1,6 @@
 import type { SFSymbol } from 'sf-symbols-typescript';
 
+import { colors } from '@trinqa/tokens';
 import { formatMoney, formatSignedMoney } from '@/domain/money';
 import type {
   ActivityListItem,
@@ -70,9 +71,7 @@ export function transactionCategory(transaction: Transaction): Exclude<ActivityS
 }
 
 export function transactionStatusLabel(status: TransactionStatus) {
-  if (status === 'pending') return 'Pending';
-  if (status === 'failed') return 'Failed';
-  return 'Completed';
+  return status === 'completed' ? 'Completed' : 'Uncompleted';
 }
 
 export function transactionTypeLabel(transaction: Transaction) {
@@ -90,9 +89,11 @@ export function transactionTypeLabel(transaction: Transaction) {
 }
 
 export function transactionStatusSymbol(status: TransactionStatus): SFSymbol {
-  if (status === 'pending') return 'clock';
-  if (status === 'failed') return 'xmark.circle';
-  return 'checkmark.circle.fill';
+  return status === 'completed' ? 'checkmark.circle.fill' : 'xmark.circle.fill';
+}
+
+export function transactionStatusColor(status: TransactionStatus) {
+  return status === 'completed' ? colors.success : colors.danger;
 }
 
 export function compactTransactionHash(hash: string) {
@@ -231,6 +232,7 @@ export function toEarnListItem(transaction: Transaction): EarnListItem {
     iconStyle: isYield ? 'earning' : 'strategy',
     segment: isYield ? 'earnings' : 'strategies',
     action: 'details',
+    status: transaction.status,
   };
 }
 

@@ -16,8 +16,8 @@ export const outliers = [
   },
   {
     id: 'type-off-scale',
-    values: ['25.5'],
-    note: 'Wallet balance uses 25.5 on the illustration; nearest role is amountDisplay 25.',
+    values: ['17'],
+    note: 'Home wallet balance number uses 22 (SF Title 2 / amountCurrency).',
   },
   {
     id: 'shadows',

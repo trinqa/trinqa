@@ -106,7 +106,7 @@ export function ReceiveFlowScreen() {
               <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
                 Request a specific amount
               </Text>
-              <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
+              <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
                 Optional — you can continue without an amount.
               </Text>
             </VStack>

@@ -73,7 +73,7 @@ export const mockInitialTransactions: Transaction[] = [
     amount: 250,
     currency: 'EUR',
     direction: 'in',
-    status: 'completed',
+    status: 'failed',
     occurredAt: '2026-09-17T18:21:00+03:00',
     symbol: 'person.fill',
     source: 'Maria',

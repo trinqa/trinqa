@@ -26,26 +26,24 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 
 import { getTransactionDetails } from '@/domain/transactionPresentation';
-import { colors, typography } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
 import type { Transaction, TransactionStatus } from '@/types';
 
 function statusColor(status: TransactionStatus) {
-  if (status === 'failed') return colors.danger;
-  if (status === 'pending') return colors.pending;
-  return colors.success;
+  return status === 'completed' ? colors.success : colors.danger;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <HStack alignment="firstTextBaseline" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
-      <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+      <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
         {label}
       </Text>
       <Spacer />
       <Text
         modifiers={[
           layoutPriority(1),
-          font({ size: typography.caption, weight: 'medium' }),
+          font({ size: typography.footnote, weight: 'medium' }),
           foregroundStyle(colors.textPrimary),
           lineLimit(1),
         ]}
@@ -64,7 +62,7 @@ function AdvancedDetails({ rows }: { rows: { label: string; value: string }[] })
       <DisclosureGroup.Label>
         <Text
           modifiers={[
-            font({ size: typography.caption, weight: 'medium' }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(colors.action),
           ]}
         >
@@ -89,7 +87,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
       alignment="leading"
       spacing={0}
       modifiers={[
-        padding({ top: 16, bottom: 18, horizontal: 22 }),
+        padding({ top: spacing.xxxl, bottom: spacing.xxxl, horizontal: 22 }),
         frame({ maxWidth: Infinity, alignment: 'leading' }),
         accessibilityLabel(`${details.title}, ${details.amount}, ${details.statusLabel}`),
       ]}
@@ -113,7 +111,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
         <VStack alignment="leading" spacing={2} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
           <Text
             modifiers={[
-              font({ size: typography.sectionTitle, weight: 'semibold' }),
+              font({ size: typography.label, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
               lineLimit(1),
             ]}
@@ -123,7 +121,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
           {details.subtitle ? (
             <Text
               modifiers={[
-                font({ size: typography.caption }),
+                font({ size: typography.footnote, weight: 'medium' }),
                 foregroundStyle(colors.textSecondary),
                 lineLimit(1),
               ]}
@@ -136,7 +134,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
         <VStack alignment="trailing" spacing={2} modifiers={[layoutPriority(1)]}>
           <Text
             modifiers={[
-              font({ size: typography.amountCurrency, weight: 'semibold' }),
+              font({ size: typography.label, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
               lineLimit(1),
             ]}
@@ -145,7 +143,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
           </Text>
           <HStack alignment="center" spacing={4}>
             <Image systemName={details.statusSymbol} size={12} color={color} />
-            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(color)]}>
+            <Text modifiers={[font({ size: typography.fine, weight: 'medium' }), foregroundStyle(color)]}>
               {details.statusLabel}
             </Text>
           </HStack>

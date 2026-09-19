@@ -44,7 +44,7 @@ export function MetricCard({ label, labelFontSize, value, width }: MetricCardPro
     >
       <Text
         modifiers={[
-          font({ size: labelFontSize ?? typography.caption, weight: 'regular' }),
+          font({ size: labelFontSize ?? typography.footnote, weight: 'medium' }),
           foregroundStyle(colors.textSecondary),
         ]}
       >

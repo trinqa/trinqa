@@ -59,7 +59,7 @@ export function OnboardingScreen() {
         <Text
           modifiers={[
             padding({ top: spacing.row }),
-            font({ size: typography.body }),
+            font({ size: typography.body, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
