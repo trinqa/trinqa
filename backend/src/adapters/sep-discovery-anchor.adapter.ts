@@ -278,12 +278,14 @@ export class SepDiscoveryAnchorAdapter implements AnchorAdapter {
     if (!toml.anchorQuoteServer) {
       statusReason = 'No SEP-38 endpoint; indicative pricing unavailable';
     } else {
-      const probeRail = rails.find((r) => r.fiat.length > 0) ?? rails[0];
-      const usdcIssuer = toml.currencies.find((c) => c.code === 'USDC')?.issuer;
+      // Probe with the USDC rail: it is what Trinqa settles, and pairing another asset code
+      // with the USDC issuer names an asset that does not exist (testanchor lists SRT first).
+      const probeRail = rails.find((r) => r.assetCode === 'USDC' && r.fiat.length > 0);
+      const usdcIssuer = probeRail?.assetIssuer ?? toml.currencies.find((c) => c.code === 'USDC')?.issuer;
       if (probeRail && probeRail.fiat[0] && usdcIssuer) {
         const qs = new URLSearchParams({
           sell_asset: `iso4217:${probeRail.fiat[0]}`,
-          buy_asset: `stellar:${probeRail.assetCode}:${usdcIssuer}`,
+          buy_asset: `stellar:USDC:${usdcIssuer}`,
           sell_amount: '100',
           context: 'sep6',
         });

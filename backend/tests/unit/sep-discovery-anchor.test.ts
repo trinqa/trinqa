@@ -184,6 +184,30 @@ describe('SepDiscoveryAnchorAdapter', () => {
     expect(snapshot.seps).toEqual([]);
   });
 
+  it('probes SEP-38 /price with the USDC rail even when another asset is listed first', async () => {
+    const priceUrls: string[] = [];
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.endsWith('/.well-known/stellar.toml')) return textResponse(SEP6_SEP38_TOML);
+      if (url.endsWith('/sep6/info')) {
+        return jsonResponse({
+          deposit: { SRT: { enabled: true, funding_methods: ['bank_account'] }, ...SEP6_INFO.deposit },
+          withdraw: SEP6_INFO.withdraw,
+        });
+      }
+      if (url.endsWith('/sep38/info')) return jsonResponse(SEP38_INFO);
+      if (url.includes('/sep38/price')) {
+        priceUrls.push(url);
+        // Like testanchor: an SRT asset paired with the USDC issuer does not exist.
+        return url.includes('stellar%3AUSDC%3A') ? jsonResponse({ price: '1.02', buy_amount: '98' }) : jsonResponse({}, 404);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const adapter = new SepDiscoveryAnchorAdapter('good-anchor.test', { fetchFn: fetchFn as unknown as typeof fetch });
+    const snapshot = await adapter.snapshot();
+    expect(snapshot.status).toBe('QUOTE_ONLY');
+    expect(priceUrls[0]).toContain('stellar%3AUSDC%3A');
+  });
+
   it('retries a failed stellar.toml fetch once before declaring the anchor unreachable', async () => {
     let tomlCalls = 0;
     const fetchFn = vi.fn(async (url: string) => {
