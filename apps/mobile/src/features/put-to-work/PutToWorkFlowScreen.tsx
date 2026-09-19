@@ -47,7 +47,7 @@ import {
   putToWorkRiskProfiles,
   quickPutToWorkAmounts,
 } from '@/data/mocks/putToWork';
-import { errorMessage } from '@/services/apiErrors';
+import { BackendApiError, errorMessage } from '@/services/apiErrors';
 import { executePutToWork } from '@/services/flows';
 import { earnUnavailable, earnUnavailableReason } from '@/services/session';
 import { useMockAppState } from '@/state/mockAppState';
@@ -66,6 +66,26 @@ const HORIZON_OPTIONS = putToWorkHorizons.map((horizon) => ({
   label: horizon.title,
   value: horizon.id,
 }));
+
+interface FlowFailure {
+  title: string;
+  subtitle: string;
+}
+
+/**
+ * The title separates the three outcomes the user can act on differently: their own plan
+ * refused the move, the check could not run at all, or something else broke.
+ */
+function toFlowFailure(err: unknown): FlowFailure {
+  const subtitle = errorMessage(err);
+  if (err instanceof BackendApiError && err.code === 'POLICY_DENIED') {
+    return { title: 'Your plan did not allow this', subtitle };
+  }
+  if (err instanceof BackendApiError && err.code === 'ADAPTER_UNAVAILABLE') {
+    return { title: 'Not available right now', subtitle };
+  }
+  return { title: 'Could not complete', subtitle };
+}
 
 function formatWholeAmount(value: number) {
   return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -330,7 +350,7 @@ function ReviewStep({
   onConfirm: () => void;
   profile: PutToWorkRiskProfile;
   quote: PutToWorkQuote;
-  error?: string | null;
+  error?: FlowFailure | null;
   earnBlockedReason?: string | null;
 }) {
   return (
@@ -419,7 +439,7 @@ function ReviewStep({
           }
         />
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Could not complete" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" title={error.title} subtitle={error.subtitle} />
         ) : null}
         <StrategyDetailsSheet profile={profile} />
       </VStack>
@@ -440,7 +460,7 @@ export function PutToWorkFlowScreen() {
   const [horizonId, setHorizonId] = useState<PutToWorkHorizonId>('anytime');
   const [amount, setAmount] = useState(1);
   const [targetDate, setTargetDate] = useState(new Date(2026, 9, 25));
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<FlowFailure | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deposited, setDeposited] = useState(true);
   const amountText = useNativeState(formatWholeAmount(1));
@@ -538,7 +558,7 @@ export function PutToWorkFlowScreen() {
                 setDeposited(result.deposited);
                 setStep('success');
               } catch (err) {
-                setSubmitError(errorMessage(err));
+                setSubmitError(toFlowFailure(err));
               } finally {
                 setIsSubmitting(false);
               }
