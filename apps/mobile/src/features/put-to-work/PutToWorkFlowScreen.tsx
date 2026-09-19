@@ -47,7 +47,10 @@ import {
   putToWorkRiskProfiles,
   quickPutToWorkAmounts,
 } from '@/data/mocks/putToWork';
-import { recordAllocation, useMockAppState } from '@/state/mockAppState';
+import { errorMessage } from '@/services/apiErrors';
+import { executePutToWork } from '@/services/flows';
+import { earnUnavailable, earnUnavailableReason } from '@/services/session';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
 import type {
   PutToWorkHorizon,
@@ -426,7 +429,7 @@ function ReviewStep({
 
 export function PutToWorkFlowScreen() {
   const router = useRouter();
-  const { balances } = useMockAppState();
+  const { account, balances, capabilities } = useMockAppState();
   const params = useLocalSearchParams<{ origin?: string }>();
   const originParam = Array.isArray(params.origin) ? params.origin[0] : params.origin;
   const origin: PutToWorkOrigin =
@@ -438,7 +441,10 @@ export function PutToWorkFlowScreen() {
   const [amount, setAmount] = useState(1);
   const [targetDate, setTargetDate] = useState(new Date(2026, 9, 25));
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deposited, setDeposited] = useState(true);
   const amountText = useNativeState(formatWholeAmount(1));
+  const blockedReason = earnUnavailable(capabilities) ? earnUnavailableReason(capabilities) : null;
 
   const profile =
     putToWorkRiskProfiles.find((option) => option.id === profileId) ?? putToWorkRiskProfiles[1];
@@ -511,22 +517,32 @@ export function PutToWorkFlowScreen() {
 
       {step === 'review' ? (
         <ReviewStep
-          earnBlockedReason={null}
+          earnBlockedReason={blockedReason}
           error={submitError}
           horizon={horizon}
           onBack={goBack}
           onConfirm={() => {
+            if (isSubmitting) return;
             setSubmitError(null);
-            recordAllocation({
-              id: `earn-${Date.now()}`,
-              amountTry: quote.amount,
-              risk: profile.id,
-              timeHorizon: {
-                kind: horizon.id,
-                targetDate: horizon.id === 'date' ? targetDate.toISOString() : undefined,
-              },
-            });
-            setStep('success');
+            setIsSubmitting(true);
+            void (async () => {
+              try {
+                const result = await executePutToWork({
+                  accountId: account.id,
+                  amount,
+                  risk: profile.id,
+                  horizon: horizon.id,
+                  targetDate,
+                  capabilities,
+                });
+                setDeposited(result.deposited);
+                setStep('success');
+              } catch (err) {
+                setSubmitError(errorMessage(err));
+              } finally {
+                setIsSubmitting(false);
+              }
+            })();
           }}
           profile={profile}
           quote={quote}
@@ -536,9 +552,13 @@ export function PutToWorkFlowScreen() {
       {step === 'success' ? (
         <FlowSuccessState
           amount={formatUsd(quote.amount)}
-          noticeSubtitle="That money is now set aside to grow."
+          noticeSubtitle={
+            deposited
+              ? 'That money is now set aside to grow.'
+              : 'Your plan was saved. Growing money is unavailable until the yield provider is configured.'
+          }
           noticeSymbol="chart.line.uptrend.xyaxis"
-          noticeTitle="Growing money updated"
+          noticeTitle={deposited ? 'Growing money updated' : 'Plan saved'}
           onClose={finish}
           onDone={finish}
           onSecondaryPress={viewEarn}
