@@ -298,3 +298,5 @@ impl TrinqaAllocationPolicy {
         Ok(())
     }
 }
+
+mod test;

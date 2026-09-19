@@ -12,7 +12,17 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "verify": "npm run build && vitest run",
+    "e2e:anchor": "tsx ../scripts/e2e-anchor.ts",
+    "e2e:policy": "tsx ../scripts/e2e-policy.ts",
+    "e2e:defindex": "tsx ../scripts/e2e-defindex.ts",
+    "e2e:soroswap": "tsx ../scripts/e2e-soroswap.ts",
+    "e2e:trinqa": "tsx ../scripts/e2e-trinqa.ts",
+    "e2e:core": "tsx ../scripts/e2e-core.ts"
   },
   "dependencies": {
     "@defindex/sdk": "^0.3.0",
