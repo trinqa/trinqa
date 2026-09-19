@@ -8,19 +8,19 @@ import {
   shapes,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, screenTokens, typography } from '@/theme';
+import { colors, screenTokens, spacing, typography } from '@/theme';
 import type { WalletTransactionItem } from '@/types';
 
 const ICON_BACKGROUNDS = {
-  neutral: '#050505',
-  accent: '#FF6A00',
+  neutral: colors.merchantLogo,
+  accent: colors.merchantLogoWarm,
 } as const;
 
 export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) {
   return (
     <HStack
       alignment="center"
-      spacing={12}
+      spacing={spacing.control}
       modifiers={[
         frame({
           maxWidth: Infinity,
@@ -31,17 +31,17 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
     >
       <ZStack
         modifiers={[
-          frame({ width: 42, height: 42 }),
+          frame({ width: screenTokens.wallet.transactionIconSize, height: screenTokens.wallet.transactionIconSize }),
           background(ICON_BACKGROUNDS[item.iconStyle], shapes.circle()),
         ]}
       >
-        <Image systemName={item.symbol} size={18} color={colors.surface} />
+        <Image systemName={item.symbol} size={screenTokens.wallet.transactionSymbolSize} color={colors.surface} />
       </ZStack>
 
       <VStack alignment="leading" spacing={2} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
         <Text
           modifiers={[
-            font({ size: typography.transactionTitle, weight: 'semibold' }),
+            font({ size: typography.label, weight: 'semibold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -49,7 +49,7 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
         </Text>
         <Text
           modifiers={[
-            font({ size: typography.transactionMeta }),
+            font({ size: typography.caption }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
@@ -60,7 +60,7 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
       <VStack alignment="trailing" spacing={2} modifiers={[layoutPriority(1), frame({ alignment: 'trailing' })]}>
         <Text
           modifiers={[
-            font({ size: typography.transactionTitle, weight: 'semibold' }),
+            font({ size: typography.label, weight: 'semibold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -68,7 +68,7 @@ export function WalletTransactionRow({ item }: { item: WalletTransactionItem }) 
         </Text>
         <Text
           modifiers={[
-            font({ size: typography.transactionMeta }),
+            font({ size: typography.caption }),
             foregroundStyle(colors.textSecondary),
           ]}
         >

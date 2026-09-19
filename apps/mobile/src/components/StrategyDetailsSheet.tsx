@@ -44,7 +44,7 @@ export function StrategyDetailsSheet({ profile }: { profile: PutToWorkRiskProfil
             <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
               Why this strategy?
             </Text>
-            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+            <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
               {profile.recommendationReason}
             </Text>
           </VStack>
@@ -54,8 +54,8 @@ export function StrategyDetailsSheet({ profile }: { profile: PutToWorkRiskProfil
           <FlowInfoRow label="Estimated APY" value={`~${profile.estimatedApy.toFixed(1)}%`} />
           <FlowInfoRow label="Access" value={profile.accessDescription} />
           <VStack alignment="leading" spacing={4}>
-            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>Main risk</Text>
-            <Text modifiers={[font({ size: typography.caption, weight: 'medium' }), foregroundStyle(colors.textPrimary)]}>
+            <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>Main risk</Text>
+            <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textPrimary)]}>
               {profile.mainRisk}
             </Text>
           </VStack>

@@ -1,0 +1,17 @@
+---
+description: Use canonical Trinqa tokens from Home/Wallet/Earn/Activity. Do not invent sizes or colors.
+globs: apps/mobile/**/*.{ts,tsx},apps/web/**/*.{ts,tsx},packages/tokens/**/*.ts
+alwaysApply: false
+---
+
+# Trinqa tokens
+
+Source of truth: Home, Wallet, Earn, Activity.
+
+- Import `typography`, `spacing`, `radius`, `colors`, `motion` from `@/theme` or `@trinqa/tokens`.
+- Type roles: `pageTitle 30`, `amountHero 32`, `amountDisplay 25`, `amountCurrency 22`, `sectionTitle 17`, `kicker 16`, `label 15`, `body 14`, `caption 13`, `footnote 12`, `fine 11`, `micro 10`.
+- Weights: regular / medium / semibold / bold. RN StyleSheet uses `typeWeightRn` (`400/500/600/700`).
+- Status: `colors.success` `#20AD2B`, `colors.danger` `#FF3B30`, `colors.pending` `#787878`. Never use named `'red'`/`'green'`.
+- CTA cyan (`colors.action*`) is excluded from palette work. Do not replace it with a new brand color.
+- Do not add new font sizes, hex values, or radii in screens. Wallet illustration colors stay in `walletColors`.
+- Native navigation, BottomSheet, and tab motion stay system-owned. Use `motion.press|selection|contentChange|processing` only for micro-motion.

@@ -30,22 +30,22 @@ import { colors, typography } from '@/theme';
 import type { Transaction, TransactionStatus } from '@/types';
 
 function statusColor(status: TransactionStatus) {
-  if (status === 'failed') return 'red';
-  if (status === 'pending') return colors.textSecondary;
-  return 'green';
+  if (status === 'failed') return colors.danger;
+  if (status === 'pending') return colors.pending;
+  return colors.success;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <HStack alignment="firstTextBaseline" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
-      <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(colors.textSecondary)]}>
+      <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
         {label}
       </Text>
       <Spacer />
       <Text
         modifiers={[
           layoutPriority(1),
-          font({ size: typography.transactionMeta, weight: 'medium' }),
+          font({ size: typography.caption, weight: 'medium' }),
           foregroundStyle(colors.textPrimary),
           lineLimit(1),
         ]}
@@ -64,7 +64,7 @@ function AdvancedDetails({ rows }: { rows: { label: string; value: string }[] })
       <DisclosureGroup.Label>
         <Text
           modifiers={[
-            font({ size: typography.transactionMeta, weight: 'medium' }),
+            font({ size: typography.caption, weight: 'medium' }),
             foregroundStyle(colors.action),
           ]}
         >
@@ -104,7 +104,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
           {details.symbol ? (
             <Image systemName={details.symbol} size={14} color={colors.textSecondary} />
           ) : (
-            <Text modifiers={[font({ size: 13, weight: 'semibold' }), foregroundStyle(colors.textSecondary)]}>
+            <Text modifiers={[font({ size: typography.caption, weight: 'semibold' }), foregroundStyle(colors.textSecondary)]}>
               {details.title.charAt(0).toUpperCase()}
             </Text>
           )}
@@ -123,7 +123,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
           {details.subtitle ? (
             <Text
               modifiers={[
-                font({ size: typography.transactionMeta }),
+                font({ size: typography.caption }),
                 foregroundStyle(colors.textSecondary),
                 lineLimit(1),
               ]}
@@ -136,7 +136,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
         <VStack alignment="trailing" spacing={2} modifiers={[layoutPriority(1)]}>
           <Text
             modifiers={[
-              font({ size: 21, weight: 'semibold' }),
+              font({ size: typography.amountCurrency, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
               lineLimit(1),
             ]}
@@ -145,7 +145,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
           </Text>
           <HStack alignment="center" spacing={4}>
             <Image systemName={details.statusSymbol} size={12} color={color} />
-            <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(color)]}>
+            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(color)]}>
               {details.statusLabel}
             </Text>
           </HStack>

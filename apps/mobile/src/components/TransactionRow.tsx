@@ -52,7 +52,7 @@ export function TransactionRow({
         <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       </VStack>

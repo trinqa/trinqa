@@ -49,10 +49,8 @@ import {
   quickAddMoneyAmounts,
 } from '@/data/mocks/addMoney';
 import { formatMoney } from '@/domain/money';
-import { errorMessage } from '@/services/apiErrors';
-import { executeAddMoney } from '@/services/flows';
-import { useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens, typography } from '@/theme';
+import { recordDeposit } from '@/state/mockAppState';
+import { colors, motion, screenTokens, spacing, typography } from '@/theme';
 import type { AddMoneyQuote, AddMoneySourceId, AddMoneyStep, CurrencyCode, NetworkCapability } from '@/types';
 
 function formatWholeAmount(value: number) {
@@ -121,7 +119,7 @@ function AmountStep({
           >
             <Text
               modifiers={[
-                font({ size: typography.caption }),
+                font({ size: typography.footnote }),
                 foregroundStyle(colors.textSecondary),
               ]}
             >
@@ -174,7 +172,7 @@ function ReviewStep({
       <VStack
         alignment="leading"
         spacing={screenTokens.addMoney.cardGap}
-        modifiers={[padding({ top: 24 })]}
+        modifiers={[padding({ top: spacing.xxxl })]}
       >
         <FlowCard>
           <VStack
@@ -184,7 +182,7 @@ function ReviewStep({
           >
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   You’re adding
                 </Text>
                 <Text
@@ -203,7 +201,7 @@ function ReviewStep({
                   background(colors.notificationBadge, shapes.circle()),
                 ]}
               >
-                <Text modifiers={[font({ size: 13, weight: 'bold' }), foregroundStyle(colors.surface)]}>
+                <Text modifiers={[font({ size: typography.caption, weight: 'bold' }), foregroundStyle(colors.surface)]}>
                   ₺
                 </Text>
               </ZStack>
@@ -213,7 +211,7 @@ function ReviewStep({
 
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   You’ll receive
                 </Text>
                 <Text
@@ -312,11 +310,11 @@ function NetworkStep({
   const networks = depositNetworks();
   return (
     <VStack alignment="leading" spacing={0} modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}>
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader showBack title="Source network" onBackPress={onBack} />
       </Group>
-      <VStack alignment="leading" spacing={8} modifiers={[padding({ top: 28 })]}>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+      <VStack alignment="leading" spacing={spacing.row} modifiers={[padding({ top: spacing.flowBlock })]}>
+        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
           Stellar is the live deposit network. Other networks are unavailable.
         </Text>
         {networks.map((network) => (
@@ -350,7 +348,6 @@ function NetworkStep({
 
 export function AddMoneyFlowScreen() {
   const router = useRouter();
-  const { account } = useMockAppState();
   const params = useLocalSearchParams<{ source?: string }>();
   const sourceParam = Array.isArray(params.source) ? params.source[0] : params.source;
   const sourceId: AddMoneySourceId =
@@ -429,20 +426,16 @@ export function AddMoneyFlowScreen() {
           onConfirm={() => {
             setSubmitError(null);
             setStep('processing');
-            void (async () => {
-              try {
-                await executeAddMoney({
-                  accountId: account.id,
-                  amount,
-                  currency,
-                  sourceId,
-                });
-                setStep('success');
-              } catch (err) {
-                setSubmitError(errorMessage(err));
-                setStep('review');
-              }
-            })();
+            setTimeout(() => {
+              recordDeposit({
+                id: `deposit-${Date.now()}`,
+                amount,
+                creditedAmount: quote.receivedAmount,
+                currency,
+                source: source.title,
+              });
+              setStep('success');
+            }, motion.duration.flowProcessing);
           }}
           quote={quote}
         />

@@ -50,7 +50,7 @@ export function EarnTransactionRow({
         <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: 11 }), foregroundStyle(colors.textSecondary)]}>{subtitle}</Text>
+        <Text modifiers={[font({ size: typography.fine }), foregroundStyle(colors.textSecondary)]}>{subtitle}</Text>
       </VStack>
 
       <Text

@@ -54,11 +54,8 @@ import {
   withdrawalCurrencies,
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
-import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
-import { errorMessage } from '@/services/apiErrors';
-import { executeWithdrawTry } from '@/services/flows';
-import { useMockAppState } from '@/state/mockAppState';
-import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { recordWithdrawal, useMockAppState } from '@/state/mockAppState';
+import { colors, componentTokens, motion, screenTokens, spacing, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
   WithdrawalCurrency,
@@ -165,7 +162,7 @@ function DestinationRow({
           >
             {destination.name}
           </Text>
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
             {destination.detail}
           </Text>
         </VStack>
@@ -270,7 +267,7 @@ function NewBankAccountSheet({
             >
               Add bank account
             </Text>
-            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+            <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
               Add the destination for this withdrawal.
             </Text>
           </VStack>
@@ -314,7 +311,7 @@ function DestinationStep({
       spacing={0}
       modifiers={[frame({ width: flow.contentWidth, maxHeight: Infinity })]}
     >
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader showBack title="Where should we send it?" onBackPress={onBack} />
       </Group>
 
@@ -371,7 +368,7 @@ function WithdrawalAmountSummary({
             frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
           ]}
         >
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
             You’ll receive
           </Text>
           <Text
@@ -432,12 +429,12 @@ function ReviewStep({
 
   return (
     <FlowStepLayout title="Review" onBack={onBack} primaryLabel="Confirm" onPrimaryPress={onConfirm}>
-      <VStack alignment="leading" spacing={screenTokens.paymentFlow.cardGap} modifiers={[padding({ top: 24 })]}>
+      <VStack alignment="leading" spacing={screenTokens.paymentFlow.cardGap} modifiers={[padding({ top: spacing.xxxl })]}>
         <FlowCard>
           <VStack alignment="leading" spacing={11} modifiers={[padding({ all: screenTokens.paymentFlow.cardPadding })]}>
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   You’re withdrawing
                 </Text>
                 <Text
@@ -450,20 +447,20 @@ function ReviewStep({
                 </Text>
               </VStack>
               <Spacer />
-              <ZStack modifiers={[frame({ width: 36, height: 36 }), background(colors.accentMuted, shapes.circle())]}>
+              <ZStack modifiers={[frame({ width: 36, height: 36 }), background(colors.selection, shapes.circle())]}>
                 <Image systemName="arrow.down.to.line" size={16} color={colors.action} />
               </ZStack>
             </HStack>
 
             <Divider />
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
-              <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>To</Text>
+              <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>To</Text>
               <Spacer />
               <VStack alignment="trailing" spacing={2}>
                 <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
                   {destination.name}
                 </Text>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   {destination.detail}
                 </Text>
               </VStack>
@@ -503,7 +500,7 @@ function ReviewStep({
 
 export function WithdrawFlowScreen() {
   const router = useRouter();
-  const { account, balances, capabilities } = useMockAppState();
+  const { balances } = useMockAppState();
   const [step, setStep] = useState<WithdrawalStep>('amount');
   const [currency, setCurrency] = useState<WithdrawalCurrency>('TRY');
   const [amount, setAmount] = useState(1);
@@ -511,21 +508,13 @@ export function WithdrawFlowScreen() {
   const [withdrawalStatus, setWithdrawalStatus] = useState<WithdrawalStatus>('initiated');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const amountText = useNativeState(formatWholeAmount(1));
-  const currencies = liveCurrenciesFor('withdraw', capabilities);
-  const withdrawOptions = currencies.length ? currencies : withdrawalCurrencies;
+  const withdrawOptions = withdrawalCurrencies;
 
   const intent = useMemo<WithdrawalIntent>(
     () => ({ amount, payoutCurrency: currency, destinationId: destination.id }),
     [amount, currency, destination.id],
   );
-  const quote = useMemo(() => {
-    const next = createWithdrawalQuote(intent, balances);
-    const blocked = payoutBlockedReason(currency, capabilities);
-    if (blocked) {
-      return { ...next, hasSufficientTotal: false };
-    }
-    return next;
-  }, [balances, capabilities, currency, intent]);
+  const quote = useMemo(() => createWithdrawalQuote(intent, balances), [balances, intent]);
   const receiveAmount = formatPayoutAmount(amount, currency);
   const withdrawalId = useMemo(
     () => `withdrawal-${destination.id}-${currency.toLowerCase()}-${amount}`,
@@ -650,29 +639,14 @@ export function WithdrawFlowScreen() {
           intent={intent}
           onBack={goBack}
           onConfirm={() => {
-            if (destination.kind !== 'bank') {
-              setSubmitError('Wallet withdrawals are not available. Use a TRY bank destination.');
-              return;
-            }
             setSubmitError(null);
             setWithdrawalStatus('sending');
             setStep('processing');
-            void (async () => {
-              try {
-                await executeWithdrawTry({
-                  accountId: account.id,
-                  usdcAmount: amount,
-                  currency,
-                  approveEarnUnwind: quote.requiresEarnUnwind,
-                });
-                setWithdrawalStatus('completed');
-                setStep('success');
-              } catch (err) {
-                setSubmitError(errorMessage(err));
-                setWithdrawalStatus('failed');
-                setStep('review');
-              }
-            })();
+            setTimeout(() => {
+              recordWithdrawal(withdrawalId, intent, quote, destination);
+              setWithdrawalStatus('completed');
+              setStep('success');
+            }, motion.duration.flowProcessing);
           }}
           quote={quote}
         />

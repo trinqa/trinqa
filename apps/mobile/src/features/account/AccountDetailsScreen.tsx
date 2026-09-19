@@ -9,7 +9,7 @@ import { FlowCard, FlowInfoRow } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens, typography } from '@/theme';
+import { colors, screenTokens, typography, spacing } from '@/theme';
 
 export function AccountDetailsScreen() {
   const router = useRouter();
@@ -20,12 +20,12 @@ export function AccountDetailsScreen() {
   return (
     <FlowScreenShell>
       <VStack alignment="leading" spacing={0} modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}>
-        <Group modifiers={[padding({ horizontal: 8 })]}>
+        <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
           <ScreenHeader showBack title="Account Details" onBackPress={() => router.back()} />
         </Group>
-        <VStack alignment="leading" spacing={12} modifiers={[padding({ top: 24 })]}>
+        <VStack alignment="leading" spacing={spacing.control} modifiers={[padding({ top: spacing.xxxl })]}>
           <FlowCard>
-            <VStack alignment="leading" spacing={12} modifiers={[padding({ all: 16 })]}>
+            <VStack alignment="leading" spacing={spacing.control} modifiers={[padding({ all: spacing.section })]}>
               <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
                 Trinqa account
               </Text>

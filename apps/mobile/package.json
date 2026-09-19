@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@trinqa/tokens": "file:../../packages/tokens",
     "@expo/ui": "~57.0.19",
     "expo": "~57.0.24",
     "expo-clipboard": "~57.0.2",

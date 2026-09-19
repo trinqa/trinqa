@@ -52,7 +52,7 @@ export function FlowCurrencyMenu<Option extends string>({
         >
           <Text
             modifiers={[
-              font({ size: typography.caption, weight: 'semibold' }),
+              font({ size: typography.footnote, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >

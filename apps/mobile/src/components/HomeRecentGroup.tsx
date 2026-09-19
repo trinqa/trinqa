@@ -17,7 +17,7 @@ import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
 import { toActivityListItem, transactionStatusLabel } from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
-import { colors, componentTokens, homeTokens, spacing } from '@/theme';
+import { colors, componentTokens, homeTokens, spacing, typography } from '@/theme';
 import type { Transaction } from '@/types';
 
 /** Recent grouped card follows the reference's narrow outer inset and compact rows. */
@@ -64,7 +64,7 @@ export function HomeRecentGroup() {
               frame({ width: homeTokens.recent.width, alignment: 'leading' }),
             ]}
           >
-            <Text modifiers={[font({ size: 17, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+            <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
               Recent
             </Text>
 

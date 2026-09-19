@@ -44,7 +44,7 @@ export function MetricCard({ label, labelFontSize, value, width }: MetricCardPro
     >
       <Text
         modifiers={[
-          font({ size: labelFontSize ?? typography.transactionMeta, weight: 'regular' }),
+          font({ size: labelFontSize ?? typography.caption, weight: 'regular' }),
           foregroundStyle(colors.textSecondary),
         ]}
       >
@@ -52,7 +52,7 @@ export function MetricCard({ label, labelFontSize, value, width }: MetricCardPro
       </Text>
       <Text
         modifiers={[
-          font({ size: typography.transactionTitle, weight: 'semibold' }),
+          font({ size: typography.label, weight: 'semibold' }),
           foregroundStyle(colors.textPrimary),
         ]}
       >

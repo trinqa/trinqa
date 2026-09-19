@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
-import { colors } from '@/theme';
+import { colors, motion } from '@/theme';
 
 export default function RootLayout() {
   return (
@@ -14,35 +14,35 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-        <Stack.Screen name="receive" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
-        <Stack.Screen name="account-details" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
-        <Stack.Screen name="settings" options={{ animation: 'slide_from_right', gestureEnabled: true }} />
+        <Stack.Screen name="onboarding" options={{ animation: motion.navigation.onboarding }} />
+        <Stack.Screen name="receive" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
+        <Stack.Screen name="account-details" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
+        <Stack.Screen name="settings" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
         <Stack.Screen
           name="add-money"
           options={{
-            animation: 'slide_from_right',
+            animation: motion.navigation.flowPush,
             gestureEnabled: true,
           }}
         />
         <Stack.Screen
           name="put-to-work"
           options={{
-            animation: 'slide_from_right',
+            animation: motion.navigation.flowPush,
             gestureEnabled: true,
           }}
         />
         <Stack.Screen
           name="send-money"
           options={{
-            animation: 'slide_from_right',
+            animation: motion.navigation.flowPush,
             gestureEnabled: true,
           }}
         />
         <Stack.Screen
           name="withdraw"
           options={{
-            animation: 'slide_from_right',
+            animation: motion.navigation.flowPush,
             gestureEnabled: true,
           }}
         />

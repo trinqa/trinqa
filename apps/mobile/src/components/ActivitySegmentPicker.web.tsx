@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, typography } from '@/theme';
+import { colors, radius, spacing, typeWeightRn, typography } from '@/theme';
 import type { ActivitySegment } from '@/types';
 
 interface ActivitySegmentPickerProps {
@@ -43,25 +43,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.lg,
-    padding: 4,
+    padding: spacing.xs,
     width: '100%',
   },
   segment: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.row,
     borderRadius: radius.md,
   },
   segmentActive: {
     backgroundColor: colors.surface,
   },
   label: {
-    fontSize: typography.caption,
+    fontSize: typography.footnote,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: typeWeightRn.medium,
   },
   labelActive: {
     color: colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: typeWeightRn.semibold,
   },
 });

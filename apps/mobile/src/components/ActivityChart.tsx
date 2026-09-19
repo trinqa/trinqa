@@ -14,21 +14,21 @@ import {
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, componentTokens } from '@/theme';
+import { chartTokens, colors, componentTokens, typography } from '@/theme';
 import type { ChartPoint } from '@/types';
 
-const CHART_BLUE = colors.action;
-const AREA_FILL = '#08AFD31F';
-const OUTER_WIDTH = 350;
-const OUTER_PLOT_HEIGHT = 181;
+const CHART_BLUE = chartTokens.line;
+const AREA_FILL = chartTokens.areaFill;
+const OUTER_WIDTH = chartTokens.width;
+const OUTER_PLOT_HEIGHT = chartTokens.plotHeight;
 const LABEL_TOP_PADDING = 8;
 const SELECTED_INDEX = 6;
 
 /** Tunable visual transform — iterate from screenshots. */
-const SCALE_X = 1.13;
-const SCALE_Y = 0.8;
-const CHART_X_OFFSET = 10.5;
-const CHART_Y_OFFSET = 30;
+const SCALE_X = chartTokens.scaleX;
+const SCALE_Y = chartTokens.scaleY;
+const CHART_X_OFFSET = chartTokens.offsetX;
+const CHART_Y_OFFSET = chartTokens.offsetY;
 
 const CHART_STYLE = { width: OUTER_WIDTH, height: OUTER_PLOT_HEIGHT } as const;
 
@@ -99,7 +99,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
             key={gridX}
             modifiers={[
               frame({ width: 1, height: OUTER_PLOT_HEIGHT }),
-              background('#00000010'),
+              background(chartTokens.gridLine),
               offset({ x: gridX, y: 0 }),
             ]}
           >
@@ -146,24 +146,24 @@ export function ActivityChart({ points }: ActivityChartProps) {
           modifiers={[
             padding({ horizontal: 10, vertical: 7 }),
             frame({ width: 94, height: 38 }),
-            background(colors.surface, shapes.roundedRectangle({ cornerRadius: 8 })),
+            background(colors.surface, shapes.roundedRectangle({ cornerRadius: chartTokens.tooltipRadius })),
             strokeBorder({
               content: colors.borderStrong,
               style: { lineWidth: componentTokens.surface.borderWidth },
               shape: 'roundedRectangle',
-              cornerRadius: 8,
+              cornerRadius: chartTokens.tooltipRadius,
             }),
             shadow({
               radius: componentTokens.surface.shadowRadius,
               y: componentTokens.surface.shadowY,
-              color: '#00000014',
+              color: chartTokens.tooltipShadow,
             }),
             offset({ x: TOOLTIP_X, y: TOOLTIP_Y }),
           ]}
         >
           <Text
             modifiers={[
-              font({ size: 13, weight: 'semibold' }),
+              font({ size: typography.caption, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
@@ -171,7 +171,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
           </Text>
           <Text
             modifiers={[
-              font({ size: 10, weight: 'regular' }),
+              font({ size: typography.micro, weight: 'regular' }),
               foregroundStyle(colors.textSecondary),
             ]}
           >
@@ -212,7 +212,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
       >
         <Text
           modifiers={[
-            font({ size: 10, weight: 'regular' }),
+            font({ size: typography.micro, weight: 'regular' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
@@ -221,7 +221,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
         <Spacer />
         <Text
           modifiers={[
-            font({ size: 10, weight: 'regular' }),
+            font({ size: typography.micro, weight: 'regular' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >

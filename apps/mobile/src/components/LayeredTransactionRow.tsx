@@ -93,7 +93,7 @@ export function LayeredTransactionRow({
           <Image systemName={symbol} size={row.symbolSize} color={iconColor} />
         ) : (
           <ZStack>
-            <Text modifiers={[font({ size: 14, weight: 'semibold' }), foregroundStyle(iconLetterColor)]}>
+            <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(iconLetterColor)]}>
               {initial}
             </Text>
             {iconAccentText ? (
@@ -106,20 +106,20 @@ export function LayeredTransactionRow({
       </ZStack>
 
       <VStack alignment="leading" spacing={row.textGap} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-        <Text modifiers={[font({ size: typography.transactionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       </VStack>
 
       <VStack alignment="trailing" spacing={row.textGap} modifiers={[layoutPriority(1), frame({ alignment: 'trailing' })]}>
-        <Text modifiers={[font({ size: typography.transactionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {amount}
         </Text>
         {meta ? (
-          <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
             {meta}
           </Text>
         ) : null}
@@ -141,9 +141,9 @@ export function LayeredTransactionRow({
           cornerRadius: surface.cardRadius,
         }),
         shadow({
-          radius: surface.shadowRadius / 2,
-          y: 1,
-          color: '#00000008',
+          radius: surface.rowLiftRadius,
+          y: surface.rowLiftY,
+          color: surface.rowLiftColor,
         }),
       ]}
     >
@@ -163,7 +163,7 @@ export function LayeredTransactionRow({
         onTrailingPress={onFooterPress}
         height={row.footerHeight}
         horizontalPadding={row.horizontalPadding}
-        textSize={typography.transactionAction}
+        textSize={typography.footnote}
         trailingColor={footerTrailingColor}
       />
     </VStack>

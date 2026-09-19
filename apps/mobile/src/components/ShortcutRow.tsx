@@ -13,7 +13,7 @@ import {
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { AddMoneySourceSheet } from '@/features/add-money/AddMoneySourceSheet';
-import { colors, componentTokens, homeTokens } from '@/theme';
+import { colors, componentTokens, homeTokens, shortcutShadow, typography } from '@/theme';
 
 interface ShortcutButtonProps {
   label: string;
@@ -33,7 +33,11 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
       shape: 'roundedRectangle' as const,
       cornerRadius: componentTokens.surface.controlRadius,
     }),
-    shadow({ radius: 4, y: 1, color: componentTokens.surface.shadowColor }),
+    shadow({
+      radius: shortcutShadow.radius,
+      y: shortcutShadow.y,
+      color: shortcutShadow.color,
+    }),
   ];
 
   const content = (
@@ -49,7 +53,7 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
       <Image systemName={symbol} size={homeTokens.shortcuts.iconSize} color={colors.textPrimary} />
       <Text
         modifiers={[
-          font({ size: 12, weight: 'medium' }),
+          font({ size: typography.footnote, weight: 'medium' }),
           foregroundStyle(colors.textPrimary),
         ]}
       >

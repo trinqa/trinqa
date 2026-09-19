@@ -34,7 +34,7 @@ import { MockQrCode } from '@/components/MockQrCode';
 import { currenciesFor } from '@/data/capabilities';
 import { formatMoney } from '@/domain/money';
 import { useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens, typography } from '@/theme';
+import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
 import type { CurrencyCode, ReceiveIntent, ReceivePresentation } from '@/types';
 
 type ReceiveStep = 'request' | 'code';
@@ -101,12 +101,12 @@ export function ReceiveFlowScreen() {
           primaryLabel="Show QR"
           onPrimaryPress={() => setStep('code')}
         >
-          <VStack alignment="leading" spacing={16} modifiers={[padding({ top: 28 })]}>
+          <VStack alignment="leading" spacing={spacing.section} modifiers={[padding({ top: spacing.flowBlock })]}>
             <VStack alignment="leading" spacing={5}>
               <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
                 Request a specific amount
               </Text>
-              <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+              <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                 Optional — you can continue without an amount.
               </Text>
             </VStack>
@@ -118,7 +118,7 @@ export function ReceiveFlowScreen() {
                 modifiers={[
                   textFieldStyle('roundedBorder'),
                   keyboardType('numeric'),
-                  frame({ maxWidth: Infinity, height: 48 }),
+                  frame({ maxWidth: Infinity, height: componentTokens.actionButton.height }),
                 ]}
               />
               <FlowCurrencyMenu
@@ -153,7 +153,7 @@ export function ReceiveFlowScreen() {
                     <MockQrCode payload={presentation.qrPayload} />
                   </RNHostView>
                 </Group>
-                <Text modifiers={[font({ size: typography.caption, weight: 'medium' }), foregroundStyle(colors.textPrimary)]}>
+                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textPrimary)]}>
                   {presentation.receiveIdentifier}
                 </Text>
               </VStack>

@@ -1,15 +1,1 @@
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 18,
-  xxl: 22,
-  xxxl: 24,
-  screenHorizontal: 18,
-  cardGap: 12,
-  sectionGap: 20,
-  cardPadding: 18,
-  headerTop: 8,
-  scrollBottom: 32,
-} as const;
+export { spacing } from './tokens';

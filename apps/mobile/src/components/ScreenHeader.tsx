@@ -1,8 +1,6 @@
 import {
   Button,
-  Group,
   HStack,
-  RNHostView,
   Spacer,
   Text,
   ZStack,
@@ -17,10 +15,9 @@ import {
   shapes,
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
-import { Image as RNImage, StyleSheet } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { colors, componentTokens } from '@/theme';
+import { colors, componentTokens, typography } from '@/theme';
 
 interface ScreenHeaderProps {
   showBack?: boolean;
@@ -63,24 +60,7 @@ function HeaderIconButton({
 }
 
 function ProfileAvatar() {
-  return (
-    <Group
-      modifiers={[
-        frame({
-          width: componentTokens.headerControl.size,
-          height: componentTokens.headerControl.size,
-        }),
-      ]}
-    >
-      <RNHostView matchContents={false}>
-        <RNImage
-          source={require('../../assets/images/trinqa-hand.jpeg')}
-          style={styles.avatarImage}
-          accessibilityLabel="Trinqa profile"
-        />
-      </RNHostView>
-    </Group>
-  );
+  return <HeaderIconButton label="Profile" symbol="person.fill" />;
 }
 
 export function ScreenHeader({
@@ -105,7 +85,7 @@ export function ScreenHeader({
       ) : null}
 
       {title ? (
-        <Text modifiers={[font({ size: 17, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
       ) : null}
@@ -119,7 +99,7 @@ export function ScreenHeader({
             <HeaderIconButton label="Notifications, 4 unread" symbol="bell" />
             <Text
               modifiers={[
-                font({ size: 10, weight: 'bold' }),
+                font({ size: typography.micro, weight: 'bold' }),
                 foregroundStyle(colors.surface),
                 frame({ width: 16, height: 16 }),
                 background(colors.notificationBadge, shapes.circle()),
@@ -135,11 +115,3 @@ export function ScreenHeader({
     </HStack>
   );
 }
-
-const styles = StyleSheet.create({
-  avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-});

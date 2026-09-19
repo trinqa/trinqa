@@ -7,7 +7,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { currenciesFor } from '@/data/capabilities';
 import { setDisplayCurrency, setSecurityEnabled, useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens } from '@/theme';
+import { colors, screenTokens, spacing } from '@/theme';
 import type { CurrencyCode } from '@/types';
 
 export function SettingsScreen() {
@@ -30,10 +30,10 @@ export function SettingsScreen() {
   return (
     <FlowScreenShell>
       <VStack alignment="leading" spacing={0} modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}>
-        <Group modifiers={[padding({ horizontal: 8 })]}>
+        <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
           <ScreenHeader showBack title="Settings" onBackPress={() => router.back()} />
         </Group>
-        <Form modifiers={[padding({ top: 12 }), frame({ maxWidth: Infinity, maxHeight: Infinity }), scrollContentBackground('hidden')]}>
+        <Form modifiers={[padding({ top: spacing.control }), frame({ maxWidth: Infinity, maxHeight: Infinity }), scrollContentBackground('hidden')]}>
           <Section title="Account">
             <Text>{account.displayName}</Text>
             <Picker

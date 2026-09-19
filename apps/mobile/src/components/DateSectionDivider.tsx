@@ -40,7 +40,7 @@ export function DateSectionDivider({
     >
       <Text
         modifiers={[
-          font({ size: typography.caption, weight: 'medium' }),
+          font({ size: typography.footnote, weight: 'medium' }),
           lineLimit(1),
           frame({ width: labelWidth, alignment: 'leading' }),
           foregroundStyle(colors.textSecondary),

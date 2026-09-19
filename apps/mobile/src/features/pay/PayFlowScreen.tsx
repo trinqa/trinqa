@@ -51,11 +51,8 @@ import {
   paymentRecipients,
   quickPaymentAmounts,
 } from '@/data/mocks/pay';
-import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
-import { errorMessage } from '@/services/apiErrors';
-import { executePay } from '@/services/flows';
-import { useMockAppState } from '@/state/mockAppState';
-import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { recordPayment, useMockAppState } from '@/state/mockAppState';
+import { colors, componentTokens, motion, screenTokens, spacing, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
   PaymentCurrency,
@@ -152,13 +149,13 @@ function RecipientRow({
         <VStack alignment="leading" spacing={3}>
           <Text
             modifiers={[
-              font({ size: typography.transactionTitle, weight: 'semibold' }),
+              font({ size: typography.label, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
             {recipient.name}
           </Text>
-          <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
             {recipient.detail}
           </Text>
         </VStack>
@@ -195,7 +192,7 @@ function PaymentMethodButton({
         <Image systemName={symbol} size={19} color={colors.textPrimary} />
         <Text
           modifiers={[
-            font({ size: typography.caption, weight: 'medium' }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -221,7 +218,7 @@ function RecipientStep({
       spacing={0}
       modifiers={[frame({ width: payment.contentWidth, maxHeight: Infinity })]}
     >
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader showBack title="Pay" onBackPress={onBack} />
       </Group>
 
@@ -304,7 +301,7 @@ function PaymentAmountSummary({
             frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
           ]}
         >
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
             {intent.recipient.name} receives
           </Text>
           <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
@@ -377,7 +374,7 @@ function EarnLiquidityApprovalSheet({
             <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
               Use money from Earn?
             </Text>
-            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+            <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
               Trinqa needs to move part of this payment back to available.
             </Text>
           </VStack>
@@ -417,7 +414,7 @@ function ReviewStep({
       <VStack
         alignment="leading"
         spacing={screenTokens.paymentFlow.cardGap}
-        modifiers={[padding({ top: 24 })]}
+        modifiers={[padding({ top: spacing.xxxl })]}
       >
         <FlowCard>
           <VStack
@@ -427,7 +424,7 @@ function ReviewStep({
           >
             <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   You’re sending
                 </Text>
                 <Text
@@ -443,7 +440,7 @@ function ReviewStep({
               <ZStack
                 modifiers={[
                   frame({ width: 36, height: 36 }),
-                  background(colors.accentMuted, shapes.circle()),
+                  background(colors.selection, shapes.circle()),
                 ]}
               >
                 <Image systemName="paperplane.fill" size={16} color={colors.action} />
@@ -486,7 +483,7 @@ function ReviewStep({
 
 export function PayFlowScreen() {
   const router = useRouter();
-  const { account, balances, capabilities } = useMockAppState();
+  const { balances } = useMockAppState();
   const [step, setStep] = useState<PaymentStep>('recipient');
   const [recipient, setRecipient] = useState(paymentRecipients[0]);
   const [currency, setCurrency] = useState<PaymentCurrency>('USD');
@@ -499,21 +496,13 @@ export function PayFlowScreen() {
     [amount, currency, recipient.id]
   );
   const amountText = useNativeState(formatWholeAmount(1));
-  const currencies = liveCurrenciesFor('pay', capabilities);
-  const payOptions = currencies.length ? currencies : paymentCurrencies;
+  const payOptions = paymentCurrencies;
 
   const intent = useMemo<PaymentIntent>(
     () => ({ recipientId: recipient.id, recipient, receiveAmount: amount, receiveCurrency: currency }),
     [amount, currency, recipient],
   );
-  const quote = useMemo(() => {
-    const next = createPaymentQuote(intent, balances);
-    const blocked = payoutBlockedReason(currency, capabilities);
-    if (blocked) {
-      return { ...next, status: 'unavailable' as const, hasSufficientTotal: false };
-    }
-    return next;
-  }, [balances, capabilities, currency, intent]);
+  const quote = useMemo(() => createPaymentQuote(intent, balances), [balances, intent]);
   const receiveAmount = formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
 
   const updateAmount = (value: string) => {
@@ -592,8 +581,7 @@ export function PayFlowScreen() {
           onSelectRecipient={(nextRecipient) => {
             setRecipient(nextRecipient);
             const preferred = nextRecipient.preferredCurrency;
-            if (preferred && !payoutBlockedReason(preferred, capabilities)) setCurrency(preferred);
-            else setCurrency('USD');
+            if (preferred) setCurrency(preferred);
             setStep('amount');
           }}
         />
@@ -647,22 +635,11 @@ export function PayFlowScreen() {
             setSubmitError(null);
             setPaymentStatus('sending');
             setStep('processing');
-            void (async () => {
-              try {
-                await executePay({
-                  accountId: account.id,
-                  amount,
-                  currency,
-                  approveEarnUnwind: quote.earnContribution > 0,
-                });
-                setPaymentStatus('completed');
-                setStep('success');
-              } catch (err) {
-                setSubmitError(errorMessage(err));
-                setPaymentStatus('failed');
-                setStep('review');
-              }
-            })();
+            setTimeout(() => {
+              recordPayment(paymentId, intent, quote);
+              setPaymentStatus('completed');
+              setStep('success');
+            }, motion.duration.flowProcessing);
           }}
           quote={quote}
         />

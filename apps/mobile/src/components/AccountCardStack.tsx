@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { homeTokens } from '@/theme';
+import { homeTokens, typeWeightRn, typography, walletColors, walletShadow } from '@/theme';
 import type { AccountSummary } from '@/types';
 
-const STITCH = 'rgba(255,255,255,0.18)';
+const STITCH = walletColors.stitch;
 const BASE_WIDTH = homeTokens.layout.walletBaseWidth;
 const BASE_HEIGHT = homeTokens.layout.walletBaseHeight;
 
@@ -78,17 +78,17 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         <Defs>
           <LinearGradient id="walletBody" x1="0%" y1="0%" x2="15%" y2="100%">
-            <Stop offset="0%" stopColor="#2B2D33" />
-            <Stop offset="100%" stopColor="#1F2125" />
+            <Stop offset="0%" stopColor={walletColors.bodyStart} />
+            <Stop offset="100%" stopColor={walletColors.bodyEnd} />
           </LinearGradient>
           <LinearGradient id="silverCard" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#BBC0C1" />
-            <Stop offset="55%" stopColor="#ABB1B2" />
-            <Stop offset="100%" stopColor="#969C9E" />
+            <Stop offset="0%" stopColor={walletColors.silver0} />
+            <Stop offset="55%" stopColor={walletColors.silver55} />
+            <Stop offset="100%" stopColor={walletColors.silver100} />
           </LinearGradient>
           <LinearGradient id="pocketSurface" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#373C40" />
-            <Stop offset="100%" stopColor="#34393D" />
+            <Stop offset="0%" stopColor={walletColors.pocket0} />
+            <Stop offset="100%" stopColor={walletColors.pocket100} />
           </LinearGradient>
         </Defs>
 
@@ -100,7 +100,7 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
           rx={outerR - bodyStrokeInset}
           ry={outerR - bodyStrokeInset}
           fill="url(#walletBody)"
-          stroke="#2A2D31"
+          stroke={walletColors.bodyStroke}
           strokeWidth={bodyStrokeWidth}
         />
 
@@ -117,7 +117,7 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
         <Path
           d={pocketEdgePath}
           fill="none"
-          stroke="#111316"
+          stroke={walletColors.pocketEdge}
           strokeLinecap="butt"
           strokeWidth={5.5 * scale}
         />
@@ -125,7 +125,7 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
         <Path
           d={pocketEdgePath}
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke={walletColors.pocketHighlight}
           strokeLinecap="round"
           strokeWidth={1.25 * scale}
         />
@@ -140,10 +140,10 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
           strokeLinejoin="round"
         />
 
-        <Circle cx={rivetLeft} cy={rivetY} r={rivetR} fill="#4A4F53" />
-        <Circle cx={rivetLeft} cy={rivetY} r={rivetR * 0.45} fill="#2A2D30" />
-        <Circle cx={rivetRight} cy={rivetY} r={rivetR} fill="#4A4F53" />
-        <Circle cx={rivetRight} cy={rivetY} r={rivetR * 0.45} fill="#2A2D30" />
+        <Circle cx={rivetLeft} cy={rivetY} r={rivetR} fill={walletColors.rivet} />
+        <Circle cx={rivetLeft} cy={rivetY} r={rivetR * 0.45} fill={walletColors.rivetCore} />
+        <Circle cx={rivetRight} cy={rivetY} r={rivetR} fill={walletColors.rivet} />
+        <Circle cx={rivetRight} cy={rivetY} r={rivetR * 0.45} fill={walletColors.rivetCore} />
       </Svg>
 
       <View
@@ -156,8 +156,8 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
           },
         ]}
       >
-        <Text style={[styles.backLabel, { fontSize: 15 * scale }]}>{account.accountName}</Text>
-        <Text style={[styles.backId, { fontSize: 13 * scale }]}>•••• 2847</Text>
+        <Text style={[styles.backLabel, { fontSize: typography.label * scale }]}>{account.accountName}</Text>
+        <Text style={[styles.backId, { fontSize: typography.caption * scale }]}>•••• 2847</Text>
       </View>
 
       <View
@@ -170,10 +170,10 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
           },
         ]}
       >
-        <Text style={[styles.cardLabel, { fontSize: 12 * scale }]}>{account.cardLabel}</Text>
+        <Text style={[styles.cardLabel, { fontSize: typography.footnote * scale }]}>{account.cardLabel}</Text>
         <View style={styles.balanceRow}>
-          <Text style={[styles.currency, { fontSize: 17 * scale }]}>{account.displayCurrency}</Text>
-          <Text style={[styles.balance, { fontSize: 25.5 * scale }]}>{account.balance}</Text>
+          <Text style={[styles.currency, { fontSize: typography.sectionTitle * scale }]}>{account.displayCurrency}</Text>
+          <Text style={[styles.balance, { fontSize: homeTokens.wallet.balanceTypeSize * scale }]}>{account.balance}</Text>
         </View>
       </View>
     </View>
@@ -183,10 +183,10 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
 const styles = StyleSheet.create({
   root: {
     position: 'relative',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 7,
+    shadowColor: walletShadow.color,
+    shadowOffset: { width: walletShadow.offsetX, height: walletShadow.offsetY },
+    shadowOpacity: walletShadow.opacity,
+    shadowRadius: walletShadow.radius,
   },
   backContent: {
     position: 'absolute',
@@ -195,33 +195,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backLabel: {
-    fontWeight: '500',
-    color: '#F6F6F6',
+    fontWeight: typeWeightRn.medium,
+    color: walletColors.textPrimary,
   },
   backId: {
-    fontWeight: '500',
-    color: '#F2F3F3',
-    letterSpacing: 0.3,
+    fontWeight: typeWeightRn.medium,
+    color: walletColors.textSecondary,
+    letterSpacing: homeTokens.wallet.idTracking,
   },
   pocketContent: {
     position: 'absolute',
   },
   cardLabel: {
-    color: '#D4D6D7',
-    marginBottom: 5,
+    color: walletColors.textTertiary,
+    marginBottom: homeTokens.wallet.labelToBalance,
   },
   balanceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   currency: {
-    color: '#FFFFFF',
-    fontWeight: '500',
-    marginRight: 4,
+    color: walletColors.textInverse,
+    fontWeight: typeWeightRn.medium,
+    marginRight: homeTokens.wallet.currencyGap,
   },
   balance: {
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
+    fontWeight: typeWeightRn.bold,
+    color: walletColors.textInverse,
+    letterSpacing: homeTokens.wallet.balanceTracking,
   },
 });

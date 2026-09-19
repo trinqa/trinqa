@@ -40,10 +40,10 @@ export function FlowInlineState({
     >
       <Image systemName={symbol} size={18} color={colors.textPrimary} />
       <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-        <Text modifiers={[font({ size: typography.caption, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       </VStack>
@@ -90,7 +90,7 @@ export function FlowEmptyState({
         {title}
       </Text>
       {subtitle ? (
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       ) : null}

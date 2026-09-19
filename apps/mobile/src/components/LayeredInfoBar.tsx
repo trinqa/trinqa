@@ -30,7 +30,7 @@ export function LayeredInfoBar({
   onTrailingPress,
   height = componentTokens.transactionRow.footerHeight,
   horizontalPadding = componentTokens.transactionRow.horizontalPadding,
-  textSize = typography.transactionAction,
+  textSize = typography.footnote,
   trailingColor,
 }: LayeredInfoBarProps) {
   const resolvedTrailingColor = trailingColor ?? (onTrailingPress ? colors.action : colors.textSecondary);

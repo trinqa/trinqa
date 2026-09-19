@@ -25,7 +25,7 @@ import {
   PrimaryActionButton,
 } from '@/components/FlowControls';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { colors, screenTokens, typography } from '@/theme';
+import { colors, screenTokens, typography, spacing } from '@/theme';
 
 interface FlowAmountEntryProps {
   amount: number;
@@ -71,7 +71,7 @@ export function FlowAmountEntry({
       spacing={0}
       modifiers={[frame({ width: flow.contentWidth, maxHeight: Infinity })]}
     >
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader showBack title={title} onBackPress={onBack} />
       </Group>
 
@@ -92,7 +92,7 @@ export function FlowAmountEntry({
         >
           <Text
             modifiers={[
-              font({ size: typography.balanceMedium, weight: 'bold' }),
+              font({ size: typography.amountCurrency, weight: 'bold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
@@ -108,7 +108,7 @@ export function FlowAmountEntry({
               keyboardType('numeric'),
               multilineTextAlignment('center'),
               monospacedDigit(),
-              font({ size: typography.balanceLarge, weight: 'bold' }),
+              font({ size: typography.amountHero, weight: 'bold' }),
               foregroundStyle(colors.textPrimary),
               frame({ width: 270, height: flow.amountFieldHeight }),
             ]}

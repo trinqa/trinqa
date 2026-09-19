@@ -1,5 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
+import { colors } from '@/theme';
+
 const GRID = 21;
 
 function seededCells(seed: string) {
@@ -66,11 +68,11 @@ export function MockQrCode({ payload, size = 190 }: { payload: string; size?: nu
 
 const styles = StyleSheet.create({
   root: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     position: 'relative',
   },
   cell: {
-    backgroundColor: '#111111',
+    backgroundColor: colors.textPrimary,
     position: 'absolute',
   },
 });

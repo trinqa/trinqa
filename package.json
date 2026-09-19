@@ -1,0 +1,13 @@
+{
+  "name": "trinqa",
+  "private": true,
+  "scripts": {
+    "dev:web": "npm --prefix apps/web dev",
+    "build:web": "npm --prefix apps/web run build",
+    "dev:mobile": "npm --prefix apps/mobile start",
+    "dev:backend": "pnpm --dir backend dev",
+    "dev": "sh -c 'pnpm --dir backend dev & npm --prefix apps/mobile start; wait'",
+    "build:mobile": "npm --prefix apps/mobile run typecheck",
+    "build:backend": "pnpm --dir backend build"
+  }
+}

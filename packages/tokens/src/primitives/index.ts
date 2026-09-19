@@ -1,0 +1,10 @@
+export { primitiveColor } from './color';
+export { primitiveSpace } from './space';
+export { primitiveRadius } from './radius';
+export { primitiveBorder } from './border';
+export { primitiveOpacity } from './opacity';
+export { primitiveType } from './typography';
+export { primitiveIcon } from './icon';
+export { primitiveMotion } from './motion';
+export { primitiveShadow } from './shadow';
+export { primitiveLayout } from './layout';

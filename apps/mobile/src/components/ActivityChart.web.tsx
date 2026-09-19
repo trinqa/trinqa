@@ -52,14 +52,14 @@ export function ActivityChart({ points }: ActivityChartProps) {
         <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
           <Defs>
             <LinearGradient id="activityChartFill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor={colors.accent} stopOpacity={0.22} />
-              <Stop offset="100%" stopColor={colors.accent} stopOpacity={0.02} />
+              <Stop offset="0%" stopColor={colors.action} stopOpacity={0.22} />
+              <Stop offset="100%" stopColor={colors.action} stopOpacity={0.02} />
             </LinearGradient>
           </Defs>
           <Path d={areaPath} fill="url(#activityChartFill)" />
           <Path
             d={linePath}
-            stroke={colors.accent}
+            stroke={colors.action}
             strokeWidth={2}
             fill="none"
           />
@@ -68,7 +68,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
             cy={selected.y}
             r={5}
             fill={colors.surface}
-            stroke={colors.accent}
+            stroke={colors.action}
             strokeWidth={2}
           />
         </Svg>

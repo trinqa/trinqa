@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Pattern, Rect, Stop } from 'react-native-svg';
 
-import { colors, componentTokens } from '@/theme';
+import { colors, componentTokens, screenTokens, walletColors } from '@/theme';
 
 interface CardLimitGaugeProps {
   width: number;
@@ -11,8 +11,8 @@ interface CardLimitGaugeProps {
 
 /** Reference-matched limit gauge with an SVG stripe pattern and native layout sizing. */
 export function CardLimitGauge({ width, height, progress }: CardLimitGaugeProps) {
-  const inset = 6;
-  const trackHeight = 12;
+  const inset = screenTokens.wallet.gaugeInset;
+  const trackHeight = screenTokens.wallet.gaugeTrackHeight;
   const trackY = (height - trackHeight) / 2;
   const trackWidth = width - inset * 2;
   const clampedProgress = Math.min(1, Math.max(0, progress));
@@ -24,8 +24,8 @@ export function CardLimitGauge({ width, height, progress }: CardLimitGaugeProps)
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         <Defs>
           <LinearGradient id="limitProgress" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#62C0DF" />
-            <Stop offset="1" stopColor="#00A8E8" />
+            <Stop offset="0" stopColor={walletColors.gaugeStart} />
+            <Stop offset="1" stopColor={walletColors.gaugeEnd} />
           </LinearGradient>
           <Pattern id="limitStripes" width="8" height="8" patternUnits="userSpaceOnUse">
             <Path
@@ -63,8 +63,8 @@ export function CardLimitGauge({ width, height, progress }: CardLimitGaugeProps)
           rx={trackHeight / 2}
           fill="url(#limitProgress)"
         />
-        <Circle cx={thumbX} cy={height / 2} r={8} fill={colors.surface} opacity={0.92} />
-        <Circle cx={thumbX} cy={height / 2} r={6} fill={colors.action} />
+        <Circle cx={thumbX} cy={height / 2} r={screenTokens.wallet.gaugeThumbOuter} fill={colors.surface} opacity={0.92} />
+        <Circle cx={thumbX} cy={height / 2} r={screenTokens.wallet.gaugeThumbInner} fill={colors.action} />
       </Svg>
     </View>
   );

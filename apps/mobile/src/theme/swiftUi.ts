@@ -42,7 +42,7 @@ export function sectionTitleModifiers(): ViewModifier[] {
   ];
 }
 
-export function cardChromeModifiers(cornerRadius: number = radius.xl): ViewModifier[] {
+export function cardChromeModifiers(cornerRadius: number = radius.panel): ViewModifier[] {
   return [
     background(colors.surface, shapes.roundedRectangle({ cornerRadius })),
     clipShape('roundedRectangle', cornerRadius),
@@ -60,6 +60,6 @@ export function cardChromeModifiers(cornerRadius: number = radius.xl): ViewModif
   ];
 }
 
-export function cardSurfaceModifiers(cornerRadius: number = radius.xl): ViewModifier[] {
+export function cardSurfaceModifiers(cornerRadius: number = radius.panel): ViewModifier[] {
   return [...cardChromeModifiers(cornerRadius), padding({ all: spacing.cardPadding })];
 }

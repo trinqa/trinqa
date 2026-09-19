@@ -12,7 +12,7 @@ import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
 import { toActivityListItem, transactionSection } from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens, typography } from '@/theme';
+import { colors, screenTokens, spacing, typography } from '@/theme';
 import type { ActivitySegment, Transaction } from '@/types';
 
 export function ActivityScreen() {
@@ -46,7 +46,7 @@ export function ActivityScreen() {
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
       <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
-        <Group modifiers={[padding({ horizontal: 8 })]}>
+        <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
           <ScreenHeader />
         </Group>
 
@@ -60,7 +60,7 @@ export function ActivityScreen() {
         >
           <Text
             modifiers={[
-              font({ size: typography.activityTitle, weight: 'bold' }),
+              font({ size: typography.pageTitle, weight: 'bold' }),
               foregroundStyle(colors.textPrimary),
               frame({ maxWidth: Infinity, alignment: 'leading' }),
             ]}

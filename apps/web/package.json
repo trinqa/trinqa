@@ -1,0 +1,25 @@
+{
+  "name": "web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@trinqa/tokens": "file:../../packages/tokens",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-router-dom": "^7.9.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "@types/react-dom": "~19.2.2",
+    "@vitejs/plugin-react": "^5.0.2",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.5"
+  }
+}

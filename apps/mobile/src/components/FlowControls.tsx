@@ -32,7 +32,7 @@ import {
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { colors, componentTokens, screenTokens, typography, spacing } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 
 interface FlowButtonProps {
@@ -67,7 +67,7 @@ export function PrimaryActionButton({ label, onPress, isDisabled = false }: Flow
       modifiers={[
         buttonStyle('plain'),
         disabled(isDisabled),
-        opacity(isDisabled ? 0.45 : 1),
+        opacity(isDisabled ? action.disabledOpacity : 1),
         accessibilityLabel(label),
       ]}
     >
@@ -106,7 +106,7 @@ export function FlowSelectionBadge({ title, symbol }: { title: string; symbol: S
       alignment="center"
       spacing={8}
       modifiers={[
-        padding({ horizontal: 12 }),
+        padding({ horizontal: spacing.control }),
         frame({ height: screenTokens.addMoney.methodHeight }),
         background(
           colors.surface,
@@ -123,7 +123,7 @@ export function FlowSelectionBadge({ title, symbol }: { title: string; symbol: S
       <Image systemName={symbol} size={14} color={colors.textPrimary} />
       <Text
         modifiers={[
-          font({ size: typography.caption, weight: 'semibold' }),
+          font({ size: typography.footnote, weight: 'semibold' }),
           foregroundStyle(colors.textPrimary),
         ]}
       >
@@ -153,7 +153,7 @@ export function FlowQuickAmountButton({
         accessibilityLabel(`Set amount to ${label}`),
         frame({ width: buttonWidth, height: flow.quickAmountHeight }),
         background(
-          selected ? colors.accentMuted : colors.surface,
+          selected ? colors.selection : colors.surface,
           shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius }),
         ),
         clipShape('roundedRectangle', componentTokens.surface.controlRadius),
@@ -167,7 +167,7 @@ export function FlowQuickAmountButton({
     >
       <Text
         modifiers={[
-          font({ size: typography.caption, weight: selected ? 'semibold' : 'medium' }),
+          font({ size: typography.footnote, weight: selected ? 'semibold' : 'medium' }),
           foregroundStyle(selected ? colors.action : colors.textPrimary),
         ]}
       >
@@ -200,7 +200,7 @@ export function FlowStepLayout({
       spacing={0}
       modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}
     >
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader showBack title={title} onBackPress={onBack} />
       </Group>
       {children}
@@ -229,7 +229,7 @@ function FlowProcessingTimelineRow({
   item: FlowProcessingTimelineItem;
 }) {
   const symbol = item.state === 'complete' ? 'checkmark.circle.fill' : 'circle';
-  const color = item.state === 'pending' ? colors.borderStrong : colors.action;
+  const color = item.state === 'pending' ? colors.pending : colors.success;
 
   return (
     <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity, minHeight: 52 })]}>
@@ -237,13 +237,13 @@ function FlowProcessingTimelineRow({
       <VStack alignment="leading" spacing={3}>
         <Text
           modifiers={[
-            font({ size: typography.caption, weight: 'medium' }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(item.state === 'pending' ? colors.textSecondary : colors.textPrimary),
           ]}
         >
           {item.title}
         </Text>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
           {item.subtitle}
         </Text>
       </VStack>
@@ -278,11 +278,11 @@ export function FlowProcessingState({
       spacing={0}
       modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}
     >
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader showBack title={headerTitle} onBackPress={onBack} />
       </Group>
 
-      <VStack alignment="center" spacing={0} modifiers={[padding({ top: 34 }), frame({ maxWidth: Infinity })]}>
+      <VStack alignment="center" spacing={0} modifiers={[padding({ top: screenTokens.flowChrome.processingTop }), frame({ maxWidth: Infinity })]}>
         <ZStack
           modifiers={[
             frame({
@@ -303,33 +303,33 @@ export function FlowProcessingState({
               progressViewStyle('circular'),
               controlSize('extraLarge'),
               tint(colors.action),
-              scaleEffect(1.65),
+              scaleEffect(screenTokens.flowChrome.progressScale),
             ]}
           />
-          <Image systemName={symbol} size={19} color={colors.textPrimary} />
+          <Image systemName={symbol} size={screenTokens.flowChrome.progressSymbolSize} color={colors.textPrimary} />
         </ZStack>
 
         <Text
           modifiers={[
-            padding({ top: 28 }),
+            padding({ top: screenTokens.flowChrome.iconTitleGap }),
             font({ size: typography.sectionTitle, weight: 'semibold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
           {stateTitle}
         </Text>
-        <VStack alignment="center" spacing={2} modifiers={[padding({ top: 8 })]}>
+        <VStack alignment="center" spacing={2} modifiers={[padding({ top: spacing.row })]}>
           {supportingLines.map((line) => (
             <Text
               key={line}
-              modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}
+              modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}
             >
               {line}
             </Text>
           ))}
         </VStack>
 
-        <VStack alignment="leading" spacing={2} modifiers={[padding({ top: 24 }), frame({ width: 300 })]}>
+        <VStack alignment="leading" spacing={2} modifiers={[padding({ top: spacing.xxxl }), frame({ width: screenTokens.flowChrome.timelineWidth })]}>
           {steps.map((item) => (
             <FlowProcessingTimelineRow key={item.id} item={item} />
           ))}
@@ -375,7 +375,8 @@ export function FlowSuccessState({
 }: FlowSuccessStateProps) {
   const outcomeSymbol =
     outcomeStatus === 'pending' ? 'clock' : outcomeStatus === 'failed' ? 'xmark' : 'checkmark';
-  const outcomeColor = outcomeStatus === 'failed' ? colors.notificationBadge : colors.action;
+  const outcomeColor =
+    outcomeStatus === 'failed' ? colors.danger : outcomeStatus === 'pending' ? colors.pending : colors.success;
   return (
     <VStack
       alignment="center"
@@ -402,7 +403,7 @@ export function FlowSuccessState({
         />
       </HStack>
 
-      <VStack alignment="center" spacing={0} modifiers={[padding({ top: 36 }), frame({ maxWidth: Infinity })]}>
+      <VStack alignment="center" spacing={0} modifiers={[padding({ top: screenTokens.flowChrome.successTop }), frame({ maxWidth: Infinity })]}>
         <ZStack
           modifiers={[
             frame({ width: screenTokens.addMoney.successIconSize, height: screenTokens.addMoney.successIconSize }),
@@ -410,13 +411,13 @@ export function FlowSuccessState({
             strokeBorder({ content: outcomeColor, style: { lineWidth: 1 }, shape: 'circle' }),
           ]}
         >
-          <Image systemName={outcomeSymbol} size={34} color={outcomeColor} />
+          <Image systemName={outcomeSymbol} size={screenTokens.flowChrome.successSymbolSize} color={outcomeColor} />
         </ZStack>
 
         <Text
           modifiers={[
-            padding({ top: 24 }),
-            font({ size: 22, weight: 'bold' }),
+            padding({ top: screenTokens.flowChrome.titleAmountGap }),
+            font({ size: typography.amountCurrency, weight: 'bold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -424,8 +425,8 @@ export function FlowSuccessState({
         </Text>
         <Text
           modifiers={[
-            padding({ top: 14 }),
-            font({ size: typography.balanceMedium, weight: 'bold' }),
+            padding({ top: screenTokens.flowChrome.amountGap }),
+            font({ size: typography.amountHero, weight: 'bold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -433,7 +434,7 @@ export function FlowSuccessState({
         </Text>
         <Text
           modifiers={[
-            padding({ top: 4 }),
+            padding({ top: screenTokens.flowChrome.captionGap }),
             font({ size: typography.body, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
@@ -441,7 +442,7 @@ export function FlowSuccessState({
           {supportingText}
         </Text>
 
-        <Group modifiers={[padding({ top: 28 })]}>
+        <Group modifiers={[padding({ top: screenTokens.flowChrome.noticeGap })]}>
           <FlowNotice symbol={noticeSymbol} title={noticeTitle} subtitle={noticeSubtitle} />
         </Group>
       </VStack>
@@ -466,7 +467,7 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
       modifiers={[
         buttonStyle('plain'),
         disabled(isDisabled),
-        opacity(isDisabled ? 0.45 : 1),
+        opacity(isDisabled ? action.disabledOpacity : 1),
         accessibilityLabel(label),
         frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
         background(colors.surfaceLayer, shapes.roundedRectangle({ cornerRadius: action.radius })),
@@ -521,13 +522,13 @@ interface FlowInfoRowProps {
 export function FlowInfoRow({ label, value, emphasized = false }: FlowInfoRowProps) {
   return (
     <HStack alignment="firstTextBaseline" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
-      <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+      <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
         {label}
       </Text>
       <Spacer />
       <Text
         modifiers={[
-          font({ size: emphasized ? typography.body : typography.caption, weight: emphasized ? 'semibold' : 'medium' }),
+          font({ size: emphasized ? typography.body : typography.footnote, weight: emphasized ? 'semibold' : 'medium' }),
           foregroundStyle(colors.textPrimary),
         ]}
       >
@@ -549,7 +550,7 @@ export function FlowNotice({ symbol, title, subtitle }: FlowNoticeProps) {
       alignment="center"
       spacing={12}
       modifiers={[
-        padding({ horizontal: 14, vertical: 12 }),
+        padding({ horizontal: screenTokens.flowChrome.chipPaddingX, vertical: screenTokens.flowChrome.chipPaddingY }),
         frame({ width: screenTokens.addMoney.contentWidth, height: screenTokens.addMoney.noticeHeight }),
         background(colors.surfaceSecondary, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius })),
         strokeBorder({
@@ -562,10 +563,10 @@ export function FlowNotice({ symbol, title, subtitle }: FlowNoticeProps) {
     >
       <Image systemName={symbol} size={17} color={colors.textPrimary} />
       <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-        <Text modifiers={[font({ size: typography.caption, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
         </Text>
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
           {subtitle}
         </Text>
       </VStack>

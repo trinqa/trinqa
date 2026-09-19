@@ -32,10 +32,10 @@ import { currencyCapability } from '@/data/capabilities';
 import { formatLedgerMoney, toDisplayAmount } from '@/domain/money';
 import { toWalletTransactionItem, transactionSection, walletTransactions } from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
-import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
 
-const GAUGE_WIDTH = 298;
-const GAUGE_HEIGHT = 28;
+const GAUGE_WIDTH = screenTokens.wallet.gaugeWidth;
+const GAUGE_HEIGHT = screenTokens.wallet.gaugeHeight;
 
 function formatBalance(value: number) {
   return value.toLocaleString('en-US', {
@@ -58,8 +58,8 @@ function WalletActionRow({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        padding({ horizontal: 14 }),
-        frame({ maxWidth: Infinity, height: 44 }),
+        padding({ horizontal: screenTokens.wallet.filterChipPaddingX }),
+        frame({ maxWidth: Infinity, height: screenTokens.wallet.filterChipHeight }),
         background(
           colors.surface,
           shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
@@ -112,7 +112,7 @@ export function WalletScreen() {
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader />
       </Group>
 
@@ -137,14 +137,14 @@ export function WalletScreen() {
               padding({
                 top: wallet.detailsTopPadding,
                 horizontal: wallet.detailsHorizontalPadding,
-                bottom: 28,
+                bottom: wallet.detailsBottomPadding,
               }),
               frame({ maxWidth: Infinity, alignment: 'leading' }),
             ]}
           >
             <Text
               modifiers={[
-                font({ size: 17, weight: 'semibold' }),
+                font({ size: typography.sectionTitle, weight: 'semibold' }),
                 foregroundStyle(colors.textPrimary),
               ]}
             >
@@ -184,7 +184,7 @@ export function WalletScreen() {
                   <HStack spacing={8} modifiers={[padding({ top: 8 }), frame({ maxWidth: Infinity })]}>
                     <Text
                       modifiers={[
-                        font({ size: 13, weight: 'medium' }),
+                        font({ size: typography.caption, weight: 'medium' }),
                         foregroundStyle(colors.textSecondary),
                       ]}
                     >
@@ -193,7 +193,7 @@ export function WalletScreen() {
                     <Spacer />
                     <Text
                       modifiers={[
-                        font({ size: 13, weight: 'semibold' }),
+                        font({ size: typography.caption, weight: 'semibold' }),
                         foregroundStyle(colors.textPrimary),
                       ]}
                     >
@@ -220,7 +220,7 @@ export function WalletScreen() {
             <Text
               modifiers={[
                 padding({ top: wallet.transactionTopGap }),
-                font({ size: 17, weight: 'semibold' }),
+                font({ size: typography.sectionTitle, weight: 'semibold' }),
                 foregroundStyle(colors.textPrimary),
               ]}
             >

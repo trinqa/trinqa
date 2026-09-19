@@ -50,8 +50,8 @@ function MetricTile({
         ),
       ]}
     >
-      <Text modifiers={[font({ size: 13 }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
-      <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+      <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
+      <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
         {currencySymbol}{value}
       </Text>
     </VStack>
@@ -88,7 +88,7 @@ export function BalanceSummary({
           frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'topLeading' }),
         ]}
       >
-        <Text modifiers={[font({ size: 15, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.label, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           {totalLabel}
         </Text>
 
@@ -107,7 +107,7 @@ export function BalanceSummary({
           >
             <Text
               modifiers={[
-                font({ size: 22, weight: 'bold' }),
+                font({ size: typography.amountCurrency, weight: 'bold' }),
                 foregroundStyle(colors.textSecondary),
               ]}
             >
@@ -115,7 +115,7 @@ export function BalanceSummary({
             </Text>
             <Text
               modifiers={[
-                font({ size: typography.balanceLarge, weight: 'bold' }),
+                font({ size: typography.amountHero, weight: 'bold' }),
                 foregroundStyle(colors.textPrimary),
               ]}
             >

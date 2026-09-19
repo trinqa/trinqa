@@ -15,10 +15,9 @@ import {
 import { useRouter } from 'expo-router';
 
 import { PrimaryActionButton, SecondaryActionButton } from '@/components/FlowControls';
-import { FlowErrorState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { bootstrapAccount, setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens, typography } from '@/theme';
+import { setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
+import { colors, motion, screenTokens, spacing, typography } from '@/theme';
 
 export function OnboardingScreen() {
   const router = useRouter();
@@ -26,35 +25,12 @@ export function OnboardingScreen() {
 
   useEffect(() => {
     if (accountBootstrap !== 'creating') return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        await bootstrapAccount();
-        if (!cancelled) {
-          setAccountBootstrap('ready');
-          router.replace('/');
-        }
-      } catch {
-        if (!cancelled) setAccountBootstrap('error');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const timer = setTimeout(() => {
+      setAccountBootstrap('ready');
+      router.replace('/');
+    }, motion.duration.onboardingReady);
+    return () => clearTimeout(timer);
   }, [accountBootstrap, router]);
-
-  if (accountBootstrap === 'error') {
-    return (
-      <FlowScreenShell>
-        <FlowErrorState
-          title="Account couldn't be prepared"
-          subtitle="Could not reach the Trinqa backend or resolve a Stellar account."
-          onRetry={() => setAccountBootstrap('creating')}
-          onCancel={() => setAccountBootstrap('new')}
-        />
-      </FlowScreenShell>
-    );
-  }
 
   return (
     <FlowScreenShell>
@@ -64,7 +40,7 @@ export function OnboardingScreen() {
         modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}
       >
         <Spacer />
-        <ZStack modifiers={[frame({ width: 92, height: 92 }), background(colors.cardSleeve, shapes.circle())]}>
+        <ZStack modifiers={[frame({ width: 92, height: 92 }), background(colors.textPrimary, shapes.circle())]}>
           {accountBootstrap === 'creating' ? (
             <ProgressView modifiers={[progressViewStyle('circular'), controlSize('large'), tint(colors.action)]} />
           ) : (
@@ -73,8 +49,8 @@ export function OnboardingScreen() {
         </ZStack>
         <Text
           modifiers={[
-            padding({ top: 28 }),
-            font({ size: 28, weight: 'bold' }),
+            padding({ top: spacing.flowBlock }),
+            font({ size: typography.pageTitle, weight: 'bold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -82,7 +58,7 @@ export function OnboardingScreen() {
         </Text>
         <Text
           modifiers={[
-            padding({ top: 8 }),
+            padding({ top: spacing.row }),
             font({ size: typography.body }),
             foregroundStyle(colors.textSecondary),
           ]}

@@ -49,7 +49,7 @@ export function HomeScreen() {
 
   return (
     <SwiftUIScreenShell sectionGap={0}>
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader />
       </Group>
 

@@ -9,24 +9,21 @@ import { EarnDetailsPanel } from '@/components/EarnDetailsPanel';
 import { MetricCard } from '@/components/MetricCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
-import { FlowInlineState } from '@/components/FlowStates';
 import {
   earnChartPoints,
 } from '@/data/mocks/earnAnalytics';
 import { putToWorkRiskProfiles } from '@/data/mocks/putToWork';
 import { formatLedgerMoney } from '@/domain/money';
 import { earnTransactions, toEarnListItem } from '@/domain/transactionPresentation';
-import { earnUnavailable, earnUnavailableReason } from '@/services/session';
 import { useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens } from '@/theme';
-import { captionTextModifiers } from '@/theme/swiftUi';
+import { colors, screenTokens, spacing, typography } from '@/theme';
 import type { EarnSegment } from '@/types';
 
 const METRIC_WIDTHS = [112, 112, 112] as const;
 
 export function EarnScreen() {
   const router = useRouter();
-  const { account, balances, strategy, transactions, capabilities } = useMockAppState();
+  const { account, balances, strategy, transactions } = useMockAppState();
   const [segment, setSegment] = useState<EarnSegment>('earnings');
   const profile = putToWorkRiskProfiles.find((item) => item.id === strategy.risk) ?? putToWorkRiskProfiles[1];
   const dynamicItems = earnTransactions(transactions).map(toEarnListItem);
@@ -58,11 +55,10 @@ export function EarnScreen() {
     { id: 'risk', label: 'Risk', value: profile.title },
   ];
   const earn = screenTokens.earn;
-  const providerBlocked = earnUnavailable(capabilities);
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
-      <Group modifiers={[padding({ horizontal: 8 })]}>
+      <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
         <ScreenHeader showProfile={false} title="Earn" showMenu />
       </Group>
 
@@ -77,18 +73,18 @@ export function EarnScreen() {
       >
         <Text
           modifiers={[
-            ...captionTextModifiers('medium'),
-            font({ size: 16, weight: 'medium' }),
+            font({ size: typography.kicker, weight: 'medium' }),
+            foregroundStyle(colors.textSecondary),
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
           Total Earned
         </Text>
         <HStack alignment="firstTextBaseline" spacing={0}>
-          <Text modifiers={[font({ size: 16, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.kicker, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>
             +
           </Text>
-          <Text modifiers={[font({ size: 25, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
+          <Text modifiers={[font({ size: typography.amountDisplay, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
             {headline}
           </Text>
         </HStack>
@@ -114,22 +110,12 @@ export function EarnScreen() {
           <MetricCard
             key={metric.id}
             label={metric.label}
-            labelFontSize={metric.id === 'balance' ? 12 : undefined}
+            labelFontSize={metric.id === 'balance' ? typography.footnote : undefined}
             value={metric.value}
             width={METRIC_WIDTHS[index] ?? 117}
           />
         ))}
       </HStack>
-
-      {providerBlocked ? (
-        <Group modifiers={[padding({ top: 12, leading: earn.contentHorizontalOffset })]}>
-          <FlowInlineState
-            symbol="exclamationmark.triangle"
-            title="Earn unavailable"
-            subtitle={earnUnavailableReason(capabilities)}
-          />
-        </Group>
-      ) : null}
 
       <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
         <EarnDetailsPanel

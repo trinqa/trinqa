@@ -74,7 +74,7 @@ function SourceSelectionRow({
           <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
             {option.title}
           </Text>
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
             {option.subtitle}
           </Text>
         </VStack>
@@ -134,7 +134,7 @@ export function AddMoneySourceSheet({ anchor }: AddMoneySourceSheetProps) {
             <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
               Add Money
             </Text>
-            <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+            <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
               Choose where your money is coming from.
             </Text>
           </VStack>

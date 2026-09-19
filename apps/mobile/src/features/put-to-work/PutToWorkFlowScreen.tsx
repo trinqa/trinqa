@@ -47,11 +47,8 @@ import {
   putToWorkRiskProfiles,
   quickPutToWorkAmounts,
 } from '@/data/mocks/putToWork';
-import { errorMessage } from '@/services/apiErrors';
-import { executePutToWork } from '@/services/flows';
-import { earnUnavailable, earnUnavailableReason } from '@/services/session';
-import { useMockAppState } from '@/state/mockAppState';
-import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { recordAllocation, useMockAppState } from '@/state/mockAppState';
+import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
 import type {
   PutToWorkHorizon,
   PutToWorkHorizonId,
@@ -100,7 +97,7 @@ function StrategyOption({
         ...(selected ? [accessibilityAddTraits(['isSelected'])] : []),
         frame({ width: flow.contentWidth, height: flow.strategyRowHeight }),
         background(
-          selected ? colors.accentMuted : colors.surface,
+          selected ? colors.selection : colors.surface,
           shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
         ),
         clipShape('roundedRectangle', componentTokens.surface.cardRadius),
@@ -134,13 +131,13 @@ function StrategyOption({
               <Image systemName="checkmark.circle.fill" size={14} color={colors.action} />
             ) : null}
           </HStack>
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
             {profile.riskLabel}
           </Text>
         </VStack>
         <Spacer />
         <VStack alignment="trailing" spacing={3}>
-          <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
             Estimated APY
           </Text>
           <Text
@@ -207,7 +204,7 @@ function StrategyStep({
               ]}
             >
               <VStack alignment="leading" spacing={3}>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   Available to allocate
                 </Text>
                 <Text
@@ -267,7 +264,7 @@ function StrategyStep({
         <Text
           modifiers={[
             padding({ top: 7, horizontal: 2 }),
-            font({ size: typography.caption }),
+            font({ size: typography.footnote }),
             foregroundStyle(colors.textSecondary),
             frame({ width: flow.contentWidth, height: flow.explanationHeight, alignment: 'topLeading' }),
           ]}
@@ -281,7 +278,7 @@ function StrategyStep({
             displayedComponents={['date']}
             range={{ start: new Date(), end: new Date(2028, 11, 31) }}
             onDateChange={onTargetDateChange}
-            modifiers={[datePickerStyle('compact'), frame({ width: flow.contentWidth, height: 44 })]}
+            modifiers={[datePickerStyle('compact'), frame({ width: flow.contentWidth, height: componentTokens.headerControl.size })]}
           />
         ) : null}
       </VStack>
@@ -306,7 +303,7 @@ function AmountSummary({
           frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
         ]}
       >
-        <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+        <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
           You’ll add to earning
         </Text>
         <Text
@@ -357,7 +354,7 @@ function ReviewStep({
       <VStack
         alignment="leading"
         spacing={screenTokens.putToWork.cardGap}
-        modifiers={[padding({ top: 24 })]}
+        modifiers={[padding({ top: spacing.xxxl })]}
       >
         <FlowCard>
           <VStack
@@ -371,7 +368,7 @@ function ReviewStep({
               modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
             >
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   You’re allocating
                 </Text>
                 <Text
@@ -402,7 +399,7 @@ function ReviewStep({
               modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
             >
               <VStack alignment="leading" spacing={4}>
-                <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
+                <Text modifiers={[font({ size: typography.footnote }), foregroundStyle(colors.textSecondary)]}>
                   To earning
                 </Text>
                 <Text
@@ -443,7 +440,7 @@ function ReviewStep({
 
 export function PutToWorkFlowScreen() {
   const router = useRouter();
-  const { account, balances, capabilities } = useMockAppState();
+  const { balances } = useMockAppState();
   const params = useLocalSearchParams<{ origin?: string }>();
   const originParam = Array.isArray(params.origin) ? params.origin[0] : params.origin;
   const origin: PutToWorkOrigin =
@@ -455,9 +452,7 @@ export function PutToWorkFlowScreen() {
   const [amount, setAmount] = useState(1);
   const [targetDate, setTargetDate] = useState(new Date(2026, 9, 25));
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [deposited, setDeposited] = useState(false);
   const amountText = useNativeState(formatWholeAmount(1));
-  const blockedReason = earnUnavailable(capabilities) ? earnUnavailableReason(capabilities) : null;
 
   const profile =
     putToWorkRiskProfiles.find((option) => option.id === profileId) ?? putToWorkRiskProfiles[1];
@@ -530,28 +525,22 @@ export function PutToWorkFlowScreen() {
 
       {step === 'review' ? (
         <ReviewStep
-          earnBlockedReason={blockedReason}
+          earnBlockedReason={null}
           error={submitError}
           horizon={horizon}
           onBack={goBack}
           onConfirm={() => {
             setSubmitError(null);
-            void (async () => {
-              try {
-                const result = await executePutToWork({
-                  accountId: account.id,
-                  amount,
-                  risk: profile.id,
-                  horizon: horizon.id,
-                  targetDate,
-                  capabilities,
-                });
-                setDeposited(result.deposited);
-                setStep('success');
-              } catch (err) {
-                setSubmitError(errorMessage(err));
-              }
-            })();
+            recordAllocation({
+              id: `earn-${Date.now()}`,
+              amountTry: quote.amount,
+              risk: profile.id,
+              timeHorizon: {
+                kind: horizon.id,
+                targetDate: horizon.id === 'date' ? targetDate.toISOString() : undefined,
+              },
+            });
+            setStep('success');
           }}
           profile={profile}
           quote={quote}
@@ -561,19 +550,15 @@ export function PutToWorkFlowScreen() {
       {step === 'success' ? (
         <FlowSuccessState
           amount={formatUsd(quote.amount)}
-          noticeSubtitle={
-            deposited
-              ? 'Your funds are now working in your Trinqa Earn balance.'
-              : 'Allocation policy was saved. Yield deposit is unavailable until DeFindex is configured.'
-          }
+          noticeSubtitle="Your funds are now working in your Trinqa Earn balance."
           noticeSymbol="chart.line.uptrend.xyaxis"
-          noticeTitle={deposited ? 'Earning balance updated' : 'Policy saved'}
+          noticeTitle="Earning balance updated"
           onClose={finish}
           onDone={finish}
           onSecondaryPress={viewEarn}
           secondaryLabel="View Earn"
           supportingText={`${profile.title} · ${profile.estimatedApy.toFixed(1)}% estimated APY`}
-          title={deposited ? 'Money put to work' : 'Policy updated'}
+          title="Money put to work"
         />
       ) : null}
     </FlowScreenShell>
