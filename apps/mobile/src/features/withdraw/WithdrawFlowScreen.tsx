@@ -54,7 +54,7 @@ import {
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
 import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
-import { errorMessage } from '@/services/apiErrors';
+import { describeCode, errorMessage } from '@/services/apiErrors';
 import { executeWithdrawTry, quoteWithdrawTry, type WithdrawLiveQuote } from '@/services/flows';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
@@ -401,10 +401,12 @@ function WithdrawalAmountSummary({
   intent,
   quote,
   quoteState,
+  blockedReason,
 }: {
   intent: WithdrawalIntent;
   quote: WithdrawalQuote;
   quoteState: LiveQuoteState<WithdrawLiveQuote>;
+  blockedReason: string | null;
 }) {
   const ready = Boolean(quoteState.data);
   return (
@@ -432,7 +434,15 @@ function WithdrawalAmountSummary({
           <Divider />
           <FlowInfoRow
             label="Estimated debit"
-            value={ready ? formatUsd(quote.debitAmount) : quoteState.loading ? 'Getting a live quote…' : '—'}
+            value={
+              ready
+                ? formatUsd(quote.debitAmount)
+                : blockedReason
+                  ? 'Unavailable'
+                  : quoteState.loading
+                    ? 'Getting a live quote…'
+                    : '—'
+            }
           />
           <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
             <FlowInfoRow label="Fee" value={ready ? formatUsd(quote.fee) : '—'} />
@@ -452,8 +462,20 @@ function WithdrawalAmountSummary({
           subtitle={`Needed from Earn ${formatUsd(quote.earnUnwindAmount)}`}
         />
       ) : null}
-      {quoteState.error ? (
-        <FlowInlineState symbol="exclamationmark.circle" title="Can’t withdraw this amount" subtitle={quoteState.error} />
+      {blockedReason ? (
+        <FlowInlineState
+          symbol="exclamationmark.circle"
+          title={`${intent.payoutCurrency} payouts aren’t live yet`}
+          subtitle={describeCode(blockedReason)}
+        />
+      ) : quoteState.error ? (
+        <FlowInlineState
+          symbol="exclamationmark.circle"
+          tone="danger"
+          title="Can’t withdraw this amount"
+          subtitle={quoteState.error}
+          onRetry={quoteState.retry}
+        />
       ) : null}
     </VStack>
   );
@@ -466,11 +488,13 @@ function ReviewStep({
   onConfirm,
   quote,
   error,
+  isSubmitting,
 }: {
   destination: WithdrawalDestination;
   intent: WithdrawalIntent;
   onBack: () => void;
   onConfirm: () => void;
+  isSubmitting: boolean;
   quote: WithdrawalQuote;
   error?: string | null;
 }) {
@@ -483,6 +507,7 @@ function ReviewStep({
       primaryLabel="Confirm"
       onPrimaryPress={onConfirm}
       isPrimaryDisabled={!quote.hasSufficientTotal}
+      isPrimaryBusy={isSubmitting}
     >
       <VStack alignment="leading" spacing={screenTokens.paymentFlow.cardGap} modifiers={[padding({ top: spacing.xxxl })]}>
         <FlowCard>
@@ -546,7 +571,7 @@ function ReviewStep({
           subtitle="Withdrawals use the TR mock anchor. Other payout currencies are unavailable."
         />
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Withdrawal failed" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Withdrawal failed" subtitle={error} />
         ) : null}
       </VStack>
     </FlowStepLayout>
@@ -562,6 +587,7 @@ export function WithdrawFlowScreen() {
   const [destination, setDestination] = useState<WithdrawalDestination>(withdrawalDestinations[0]);
   const [withdrawalStatus, setWithdrawalStatus] = useState<WithdrawalStatus>('initiated');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const amountText = useNativeState(formatWholeAmount(1));
   const currencies = liveCurrenciesFor('withdraw', capabilities);
   const withdrawOptions = currencies.length ? currencies : withdrawalCurrencies;
@@ -613,7 +639,7 @@ export function WithdrawFlowScreen() {
     }
     if (step === 'destination') setStep('amount');
     if (step === 'review') setStep('destination');
-    if (step === 'processing') setStep('review');
+    // 'processing' has no back: the withdrawal is already in flight.
   };
 
   const finishAtWallet = () => router.replace('/pay');
@@ -682,7 +708,14 @@ export function WithdrawFlowScreen() {
           quickAmounts={quickWithdrawalAmounts}
           selectionSymbol="wallet.bifold.fill"
           selectionTitle={`Available ${formatUsd(balances.available)}`}
-          summary={<WithdrawalAmountSummary intent={intent} quote={quote} quoteState={liveQuote} />}
+          summary={(
+            <WithdrawalAmountSummary
+              intent={intent}
+              quote={quote}
+              quoteState={liveQuote}
+              blockedReason={blocked}
+            />
+          )}
           title="Withdraw"
         />
       ) : null}
@@ -703,15 +736,17 @@ export function WithdrawFlowScreen() {
           error={submitError}
           intent={intent}
           onBack={goBack}
+          isSubmitting={isSubmitting}
           onConfirm={() => {
             if (destination.kind !== 'bank') {
               setSubmitError('Wallet withdrawals are not available. Use a TRY bank destination.');
               return;
             }
             const live = liveQuote.data;
-            if (!live) return;
+            if (!live || isSubmitting) return;
             setSubmitError(null);
-            setWithdrawalStatus('sending');
+            setIsSubmitting(true);
+            setWithdrawalStatus('initiated');
             setStep('processing');
             void (async () => {
               try {
@@ -721,6 +756,7 @@ export function WithdrawFlowScreen() {
                   tryAmount: amount,
                   currency,
                   approveEarnUnwind: quote.requiresEarnUnwind,
+                  onStage: setWithdrawalStatus,
                 });
                 setWithdrawalStatus('completed');
                 setStep('success');
@@ -728,6 +764,8 @@ export function WithdrawFlowScreen() {
                 setSubmitError(errorMessage(err));
                 setWithdrawalStatus('failed');
                 setStep('review');
+              } finally {
+                setIsSubmitting(false);
               }
             })();
           }}
@@ -742,9 +780,8 @@ export function WithdrawFlowScreen() {
           supportingLines={['This usually takes a moment.']}
           symbol="arrow.down.to.line"
           steps={processingSteps}
-          noticeTitle="You can close this screen"
-          noticeSubtitle="We’ll notify you when it’s complete."
-          onBack={goBack}
+          noticeTitle="Keep this screen open"
+          noticeSubtitle="We’ll move you on as soon as the anchor confirms."
         />
       ) : null}
 

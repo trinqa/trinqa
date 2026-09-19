@@ -43,7 +43,7 @@ import {
   type FlowProcessingRowState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { FlowInlineState } from '@/components/FlowStates';
+import { FlowEmptyState, FlowInlineState } from '@/components/FlowStates';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   paymentCurrencies,
@@ -51,7 +51,7 @@ import {
   quickPaymentAmounts,
 } from '@/data/mocks/pay';
 import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
-import { errorMessage } from '@/services/apiErrors';
+import { describeCode, errorMessage } from '@/services/apiErrors';
 import { executePay, quotePay, type PayLiveQuote } from '@/services/flows';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
@@ -283,6 +283,9 @@ function RecipientStep({
           Recent
         </Text>
         <VStack spacing={payment.recipientRowGap} modifiers={[padding({ top: 8 })]}>
+          {paymentRecipients.length === 0 ? (
+            <FlowEmptyState title="No recent recipients" subtitle="People you pay will show up here." />
+          ) : null}
           {paymentRecipients.map((recipient) => (
             <RecipientRow
               key={recipient.id}
@@ -329,11 +332,13 @@ function PaymentAmountSummary({
   quote,
   quoteState,
   onAddMoney,
+  blockedReason,
 }: {
   intent: PaymentIntent;
   quote: PaymentQuote;
   quoteState: LiveQuoteState<PayLiveQuote>;
   onAddMoney: () => void;
+  blockedReason: string | null;
 }) {
   const ready = Boolean(quoteState.data);
   return (
@@ -356,7 +361,15 @@ function PaymentAmountSummary({
           <Divider />
           <FlowInfoRow
             label="Total deducted"
-            value={ready ? formatTry(quote.debitAmount) : quoteState.loading ? 'Getting a live quote…' : '—'}
+            value={
+              ready
+                ? formatTry(quote.debitAmount)
+                : blockedReason
+                  ? 'Unavailable'
+                  : quoteState.loading
+                    ? 'Getting a live quote…'
+                    : '—'
+            }
           />
           <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
             <FlowInfoRow label="Fee" value={ready ? formatTry(quote.fee) : '—'} />
@@ -364,10 +377,22 @@ function PaymentAmountSummary({
           </HStack>
         </VStack>
       </FlowCard>
-      {quoteState.error ? (
+      {blockedReason ? (
+        <FlowInlineState
+          symbol="exclamationmark.circle"
+          title={`${intent.receiveCurrency} payouts aren’t live yet`}
+          subtitle={describeCode(blockedReason)}
+        />
+      ) : quoteState.error ? (
         <VStack spacing={8}>
-          <FlowInlineState symbol="exclamationmark.circle" title="Quote unavailable" subtitle={quoteState.error} />
-          {/insufficient/i.test(quoteState.error) ? (
+          <FlowInlineState
+            symbol="exclamationmark.circle"
+            tone="danger"
+            title="Quote unavailable"
+            subtitle={quoteState.error}
+            onRetry={quoteState.retry}
+          />
+          {quoteState.code === 'INSUFFICIENT_BALANCE' ? (
             <SecondaryActionButton label="Add Money" onPress={onAddMoney} />
           ) : null}
         </VStack>
@@ -441,12 +466,14 @@ function ReviewStep({
   onConfirm,
   quote,
   error,
+  isSubmitting,
 }: {
   intent: PaymentIntent;
   onBack: () => void;
   onConfirm: () => void;
   quote: PaymentQuote;
   error?: string | null;
+  isSubmitting: boolean;
 }) {
   const receiveAmount = formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
 
@@ -457,6 +484,7 @@ function ReviewStep({
       primaryLabel="Confirm"
       onPrimaryPress={onConfirm}
       isPrimaryDisabled={quote.status !== 'ready'}
+      isPrimaryBusy={isSubmitting}
     >
       <VStack
         alignment="leading"
@@ -521,7 +549,7 @@ function ReviewStep({
           subtitle="Trinqa uses the live Stellar USDC rail when it is available."
         />
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Payment failed" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Payment failed" subtitle={error} />
         ) : null}
       </VStack>
     </FlowStepLayout>
@@ -538,6 +566,7 @@ export function PayFlowScreen() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('initiated');
   const [earnApprovalPresented, setEarnApprovalPresented] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const paymentId = useMemo(
     () => `payment-${recipient.id}-${currency.toLowerCase()}-${amount}`,
     [amount, currency, recipient.id]
@@ -590,7 +619,7 @@ export function PayFlowScreen() {
     }
     if (step === 'amount') setStep('recipient');
     if (step === 'review') setStep('amount');
-    if (step === 'processing') setStep('review');
+    // 'processing' has no back: the payment is already in flight.
   };
 
   const finishAtHome = () => router.replace('/');
@@ -681,6 +710,7 @@ export function PayFlowScreen() {
               quote={quote}
               quoteState={liveQuote}
               onAddMoney={() => router.push('/add-money')}
+              blockedReason={blocked}
             />
           )}
           title="Pay"
@@ -693,11 +723,13 @@ export function PayFlowScreen() {
           error={submitError}
           intent={intent}
           onBack={goBack}
+          isSubmitting={isSubmitting}
           onConfirm={() => {
             const live = liveQuote.data;
-            if (!live) return;
+            if (!live || isSubmitting) return;
             setSubmitError(null);
-            setPaymentStatus('sending');
+            setIsSubmitting(true);
+            setPaymentStatus('initiated');
             setStep('processing');
             void (async () => {
               try {
@@ -707,6 +739,7 @@ export function PayFlowScreen() {
                   amount,
                   currency,
                   approveEarnUnwind: quote.earnContribution > 0,
+                  onStage: setPaymentStatus,
                 });
                 setPaymentStatus('completed');
                 setStep('success');
@@ -714,6 +747,8 @@ export function PayFlowScreen() {
                 setSubmitError(errorMessage(err));
                 setPaymentStatus('failed');
                 setStep('review');
+              } finally {
+                setIsSubmitting(false);
               }
             })();
           }}
@@ -728,9 +763,8 @@ export function PayFlowScreen() {
           supportingLines={['This usually takes a moment.']}
           symbol="paperplane.fill"
           steps={processingSteps}
-          noticeTitle="You can close this screen"
-          noticeSubtitle="We’ll notify you when it’s complete."
-          onBack={goBack}
+          noticeTitle="Keep this screen open"
+          noticeSubtitle="We’ll move you on as soon as the recipient is credited."
         />
       ) : null}
 

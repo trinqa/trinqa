@@ -34,8 +34,10 @@ import {
   FlowCard,
   FlowInfoRow,
   FlowNotice,
+  FlowProcessingState,
   FlowStepLayout,
   FlowSuccessState,
+  type FlowProcessingRowState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { FlowInlineState } from '@/components/FlowStates';
@@ -48,7 +50,7 @@ import {
   quickPutToWorkAmounts,
 } from '@/data/mocks/putToWork';
 import { errorMessage } from '@/services/apiErrors';
-import { executePutToWork } from '@/services/flows';
+import { executePutToWork, type PutToWorkStage } from '@/services/flows';
 import { earnUnavailable, earnUnavailableReason } from '@/services/session';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
@@ -324,6 +326,7 @@ function ReviewStep({
   quote,
   error,
   earnBlockedReason,
+  isSubmitting,
 }: {
   horizon: PutToWorkHorizon;
   onBack: () => void;
@@ -332,6 +335,7 @@ function ReviewStep({
   quote: PutToWorkQuote;
   error?: string | null;
   earnBlockedReason?: string | null;
+  isSubmitting: boolean;
 }) {
   return (
     <FlowStepLayout
@@ -339,6 +343,7 @@ function ReviewStep({
       onBack={onBack}
       primaryLabel="Confirm"
       onPrimaryPress={onConfirm}
+      isPrimaryBusy={isSubmitting}
     >
       <VStack
         alignment="leading"
@@ -419,12 +424,22 @@ function ReviewStep({
           }
         />
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Could not complete" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Could not complete" subtitle={error} />
         ) : null}
         <StrategyDetailsSheet profile={profile} />
       </VStack>
     </FlowStepLayout>
   );
+}
+
+const PUT_TO_WORK_STAGE_ORDER: PutToWorkStage[] = ['policy', 'depositing', 'completed'];
+
+function putToWorkRowState(current: PutToWorkStage, row: PutToWorkStage): FlowProcessingRowState {
+  const currentIndex = PUT_TO_WORK_STAGE_ORDER.indexOf(current);
+  const rowIndex = PUT_TO_WORK_STAGE_ORDER.indexOf(row);
+  if (rowIndex < currentIndex) return 'complete';
+  if (rowIndex === currentIndex) return 'current';
+  return 'pending';
 }
 
 export function PutToWorkFlowScreen() {
@@ -442,6 +457,7 @@ export function PutToWorkFlowScreen() {
   const [targetDate, setTargetDate] = useState(new Date(2026, 9, 25));
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stage, setStage] = useState<PutToWorkStage>('policy');
   const [deposited, setDeposited] = useState(true);
   const amountText = useNativeState(formatWholeAmount(1));
   const blockedReason = earnUnavailable(capabilities) ? earnUnavailableReason(capabilities) : null;
@@ -520,11 +536,14 @@ export function PutToWorkFlowScreen() {
           earnBlockedReason={blockedReason}
           error={submitError}
           horizon={horizon}
+          isSubmitting={isSubmitting}
           onBack={goBack}
           onConfirm={() => {
             if (isSubmitting) return;
             setSubmitError(null);
             setIsSubmitting(true);
+            setStage('policy');
+            setStep('processing');
             void (async () => {
               try {
                 const result = await executePutToWork({
@@ -534,11 +553,13 @@ export function PutToWorkFlowScreen() {
                   horizon: horizon.id,
                   targetDate,
                   capabilities,
+                  onStage: setStage,
                 });
                 setDeposited(result.deposited);
                 setStep('success');
               } catch (err) {
                 setSubmitError(errorMessage(err));
+                setStep('review');
               } finally {
                 setIsSubmitting(false);
               }
@@ -546,6 +567,37 @@ export function PutToWorkFlowScreen() {
           }}
           profile={profile}
           quote={quote}
+        />
+      ) : null}
+
+      {step === 'processing' ? (
+        <FlowProcessingState
+          headerTitle="Grow money"
+          stateTitle="Setting your money to grow"
+          supportingLines={['Signing your plan and moving the funds.']}
+          symbol="chart.line.uptrend.xyaxis"
+          steps={[
+            {
+              id: 'policy',
+              title: 'Saving your plan',
+              subtitle: 'Signing the policy',
+              state: putToWorkRowState(stage, 'policy'),
+            },
+            {
+              id: 'depositing',
+              title: 'Moving money into the strategy',
+              subtitle: profile.title,
+              state: putToWorkRowState(stage, 'depositing'),
+            },
+            {
+              id: 'completed',
+              title: 'Updating your balance',
+              subtitle: 'Final step',
+              state: putToWorkRowState(stage, 'completed'),
+            },
+          ]}
+          noticeTitle="Keep this screen open"
+          noticeSubtitle="We’ll move you on as soon as it’s set."
         />
       ) : null}
 

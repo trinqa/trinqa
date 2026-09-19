@@ -37,9 +37,10 @@ import {
   FlowProcessingState,
   FlowStepLayout,
   FlowSuccessState,
+  type FlowProcessingRowState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { FlowInlineState } from '@/components/FlowStates';
+import { FlowEmptyState, FlowInlineState } from '@/components/FlowStates';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { depositNetworks } from '@/data/capabilities';
 import {
@@ -49,7 +50,12 @@ import {
 } from '@/data/mocks/addMoney';
 import { formatMoney } from '@/domain/money';
 import { errorMessage } from '@/services/apiErrors';
-import { executeAddMoney, quoteAddMoney, type AddMoneyLiveQuote } from '@/services/flows';
+import {
+  executeAddMoney,
+  quoteAddMoney,
+  type AddMoneyLiveQuote,
+  type AddMoneyStage,
+} from '@/services/flows';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, spacing, typography } from '@/theme';
@@ -149,7 +155,13 @@ function AmountStep({
           </VStack>
         </FlowCard>
         {quoteState.error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Can’t quote this amount" subtitle={quoteState.error} />
+          <FlowInlineState
+            symbol="exclamationmark.circle"
+            tone="danger"
+            title="Can’t quote this amount"
+            subtitle={quoteState.error}
+            onRetry={quoteState.retry}
+          />
         ) : null}
         </VStack>
       }
@@ -163,12 +175,14 @@ function ReviewStep({
   quote,
   error,
   isQuoteReady,
+  isSubmitting,
 }: {
   onBack: () => void;
   onConfirm: () => void;
   quote: AddMoneyQuote;
   error?: string | null;
   isQuoteReady: boolean;
+  isSubmitting: boolean;
 }) {
   return (
     <FlowStepLayout
@@ -177,6 +191,7 @@ function ReviewStep({
       primaryLabel="Confirm"
       onPrimaryPress={onConfirm}
       isPrimaryDisabled={!isQuoteReady}
+      isPrimaryBusy={isSubmitting}
     >
       <VStack
         alignment="leading"
@@ -252,14 +267,24 @@ function ReviewStep({
           subtitle="Your deposit is processed through the TR mock anchor on Stellar testnet."
         />
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Deposit failed" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Deposit failed" subtitle={error} />
         ) : null}
       </VStack>
     </FlowStepLayout>
   );
 }
 
-function ProcessingStep({ onBack }: { onBack: () => void }) {
+const ADD_MONEY_STAGE_ORDER: AddMoneyStage[] = ['initiated', 'transfer', 'convert', 'balance'];
+
+function stageRowState(current: AddMoneyStage, row: AddMoneyStage): FlowProcessingRowState {
+  const currentIndex = ADD_MONEY_STAGE_ORDER.indexOf(current);
+  const rowIndex = ADD_MONEY_STAGE_ORDER.indexOf(row);
+  if (rowIndex < currentIndex) return 'complete';
+  if (rowIndex === currentIndex) return 'current';
+  return 'pending';
+}
+
+function ProcessingStep({ stage }: { stage: AddMoneyStage }) {
   return (
     <FlowProcessingState
       headerTitle="Adding Money"
@@ -270,19 +295,33 @@ function ProcessingStep({ onBack }: { onBack: () => void }) {
       ]}
       symbol="building.columns.fill"
       steps={[
-        { id: 'initiated', title: 'Deposit initiated', subtitle: 'Just now', state: 'complete' },
+        {
+          id: 'initiated',
+          title: 'Deposit initiated',
+          subtitle: 'Just now',
+          state: stageRowState(stage, 'initiated'),
+        },
         {
           id: 'transfer',
           title: 'Processing transfer',
           subtitle: 'This won’t take long',
-          state: 'current',
+          state: stageRowState(stage, 'transfer'),
         },
-        { id: 'convert', title: 'Preparing available balance', subtitle: 'Next', state: 'pending' },
-        { id: 'balance', title: 'Updating your balance', subtitle: 'Final step', state: 'pending' },
+        {
+          id: 'convert',
+          title: 'Preparing available balance',
+          subtitle: 'Waiting on the anchor',
+          state: stageRowState(stage, 'convert'),
+        },
+        {
+          id: 'balance',
+          title: 'Updating your balance',
+          subtitle: 'Final step',
+          state: stageRowState(stage, 'balance'),
+        },
       ]}
-      noticeTitle="You can close this screen"
-      noticeSubtitle="We’ll send you a notification when it’s ready."
-      onBack={onBack}
+      noticeTitle="Keep this screen open"
+      noticeSubtitle="We’ll move you on as soon as the anchor confirms."
     />
   );
 }
@@ -329,6 +368,12 @@ function NetworkStep({
         <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
           Stellar is the live deposit network. Other networks are unavailable.
         </Text>
+        {networks.length === 0 ? (
+          <FlowEmptyState
+            title="No deposit networks"
+            subtitle="Crypto deposits are switched off for this account right now."
+          />
+        ) : null}
         {networks.map((network) => (
           <Button
             key={network.id}
@@ -371,6 +416,8 @@ export function AddMoneyFlowScreen() {
   const [amount, setAmount] = useState(10000);
   const [currency, setCurrency] = useState<CurrencyCode>('TRY');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stage, setStage] = useState<AddMoneyStage>('initiated');
   const amountText = useNativeState(formatWholeAmount(10000));
   const liveQuote = useLiveQuote(
     `${sourceId}:${currency}:${amount}`,
@@ -403,7 +450,7 @@ export function AddMoneyFlowScreen() {
     if (step === 'network') router.back();
 
     if (step === 'review') setStep('amount');
-    if (step === 'processing') setStep('review');
+    // 'processing' has no back: the deposit is already in flight.
   };
 
   const goToWallet = () => router.replace('/pay');
@@ -443,18 +490,30 @@ export function AddMoneyFlowScreen() {
           error={submitError}
           onBack={goBack}
           isQuoteReady={Boolean(liveQuote.data)}
+          isSubmitting={isSubmitting}
           onConfirm={() => {
             const live = liveQuote.data;
-            if (!live) return;
+            if (!live || isSubmitting) return;
             setSubmitError(null);
+            setIsSubmitting(true);
+            setStage('initiated');
             setStep('processing');
             void (async () => {
               try {
-                await executeAddMoney({ accountId: account.id, live, amount, currency, sourceId });
+                await executeAddMoney({
+                  accountId: account.id,
+                  live,
+                  amount,
+                  currency,
+                  sourceId,
+                  onStage: setStage,
+                });
                 setStep('success');
               } catch (err) {
                 setSubmitError(errorMessage(err));
                 setStep('review');
+              } finally {
+                setIsSubmitting(false);
               }
             })();
           }}
@@ -462,7 +521,7 @@ export function AddMoneyFlowScreen() {
         />
       ) : null}
 
-      {step === 'processing' ? <ProcessingStep onBack={goBack} /> : null}
+      {step === 'processing' ? <ProcessingStep stage={stage} /> : null}
 
       {step === 'success' ? (
         <SuccessStep onDone={goToWallet} onPutToWork={goToPutToWork} quote={quote} />
