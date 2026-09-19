@@ -7,7 +7,8 @@ import {
 import { convertToTry } from '@/domain/money';
 import { api } from '@/services/api';
 import { activityToTransaction } from '@/services/mapActivity';
-import { parseAmount, resolveAccountId } from '@/services/session';
+import { parseAmount } from '@/services/session';
+import { connectSigner, hasStoredWallet } from '@/services/signer';
 import type { BackendCapabilities, BackendHealth } from '@/services/types';
 import type {
   AccountBootstrapState,
@@ -42,7 +43,8 @@ export interface MockAppState {
 const emptyBalances: BalanceState = { available: 0, earning: 0, baseCurrency: 'USDC' };
 
 let state: MockAppState = {
-  accountBootstrap: 'new',
+  // A device that already has a wallet skips the welcome and reconnects straight away.
+  accountBootstrap: hasStoredWallet() ? 'creating' : 'new',
   account: mockAccountIdentity,
   balances: emptyBalances,
   strategy: mockInitialStrategy,
@@ -123,7 +125,7 @@ export async function refreshLedger() {
 export async function bootstrapAccount() {
   const health = await api.health();
   const capabilities = await api.capabilities();
-  const accountId = await resolveAccountId(capabilities);
+  const { accountId } = await connectSigner(capabilities);
   emit({
     ...state,
     health,
