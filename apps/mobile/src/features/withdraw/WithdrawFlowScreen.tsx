@@ -551,7 +551,7 @@ export function WithdrawFlowScreen() {
     if (step === 'processing') setStep('review');
   };
 
-  const finishAtWallet = () => router.replace('/pay');
+  const finishAtWallet = () => router.replace('/');
   const viewTransaction = () =>
     router.replace({
       pathname: '/activity',

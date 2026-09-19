@@ -59,7 +59,7 @@ export function EarnScreen() {
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
       <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
-        <ScreenHeader showProfile={false} title="Earn" showMenu />
+        <ScreenHeader title="Earn" />
       </Group>
 
       <VStack

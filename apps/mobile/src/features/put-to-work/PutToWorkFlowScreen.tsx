@@ -471,7 +471,7 @@ export function PutToWorkFlowScreen() {
     if (step === 'review') setStep('strategy');
   };
 
-  const finish = () => router.replace(origin === 'earn' ? '/earn' : '/pay');
+  const finish = () => router.replace(origin === 'earn' ? '/earn' : '/');
   const viewEarn = () => router.replace('/earn');
 
   return (

@@ -47,36 +47,19 @@ export function ActivityScreen() {
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
       <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
         <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
-          <ScreenHeader />
+          <ScreenHeader title="Activity" />
         </Group>
 
-        <VStack
-          alignment="leading"
-          spacing={activity.titleSubtitleGap}
+        <Text
           modifiers={[
             padding({ top: activity.headerToTitle }),
+            font({ size: typography.body, weight: 'medium' }),
+            foregroundStyle(colors.textSecondary),
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
-          <Text
-            modifiers={[
-              font({ size: typography.pageTitle, weight: 'bold' }),
-              foregroundStyle(colors.textPrimary),
-              frame({ maxWidth: Infinity, alignment: 'leading' }),
-            ]}
-          >
-            Activity
-          </Text>
-          <Text
-            modifiers={[
-              font({ size: typography.body, weight: 'medium' }),
-              foregroundStyle(colors.textSecondary),
-              frame({ maxWidth: Infinity, alignment: 'leading' }),
-            ]}
-          >
-            Everything that happened to your money.
-          </Text>
-        </VStack>
+          Everything that happened to your money.
+        </Text>
 
         <Group modifiers={[padding({ top: activity.subtitleToSegment })]}>
           <ActivitySegmentPicker segment={segment} onChange={setSegment} />

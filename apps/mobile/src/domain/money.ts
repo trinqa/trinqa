@@ -32,6 +32,13 @@ export function toDisplayAmount(
   return convertFromTry(ledgerValue, account.displayCurrency);
 }
 
+export function formatAmountNumber(value: number, fractionDigits = 2) {
+  return Math.abs(value).toLocaleString('en-US', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+}
+
 export function formatMoney(
   value: number,
   currency: CurrencyCode,
@@ -39,10 +46,7 @@ export function formatMoney(
 ) {
   const capability = currencyCapability(currency);
   const decimals = options.decimals ?? true;
-  const amount = Math.abs(value).toLocaleString('en-US', {
-    minimumFractionDigits: decimals ? capability.decimals : 0,
-    maximumFractionDigits: decimals ? capability.decimals : 0,
-  });
+  const amount = formatAmountNumber(value, decimals ? capability.decimals : 0);
   return `${amount} ${capability.symbol}${options.code ? ` ${currency}` : ''}`;
 }
 

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import { Image, ProgressView, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
 import {
+  aspectRatio,
   background,
   controlSize,
   font,
@@ -9,9 +10,11 @@ import {
   frame,
   padding,
   progressViewStyle,
+  resizable,
   shapes,
   tint,
 } from '@expo/ui/swift-ui/modifiers';
+import { useAssets } from 'expo-asset';
 import { useRouter } from 'expo-router';
 
 import { PrimaryActionButton, SecondaryActionButton } from '@/components/FlowControls';
@@ -19,9 +22,14 @@ import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
 import { colors, motion, screenTokens, spacing, typography } from '@/theme';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const logoAssetModule = require('../../../assets/images/logo.png') as number;
+
 export function OnboardingScreen() {
   const router = useRouter();
   const { accountBootstrap } = useMockAppState();
+  const [logoAssets] = useAssets([logoAssetModule]);
+  const logoUri = logoAssets?.[0]?.localUri ?? null;
 
   useEffect(() => {
     if (accountBootstrap !== 'creating') return;
@@ -40,13 +48,21 @@ export function OnboardingScreen() {
         modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}
       >
         <Spacer />
-        <ZStack modifiers={[frame({ width: 92, height: 92 }), background(colors.textPrimary, shapes.circle())]}>
-          {accountBootstrap === 'creating' ? (
+        {accountBootstrap === 'creating' ? (
+          <ZStack
+            modifiers={[frame({ width: 92, height: 92 }), background(colors.textPrimary, shapes.circle())]}
+          >
             <ProgressView modifiers={[progressViewStyle('circular'), controlSize('large'), tint(colors.action)]} />
-          ) : (
-            <Image systemName="hand.thumbsup.fill" size={38} color={colors.textInverse} />
-          )}
-        </ZStack>
+          </ZStack>
+        ) : logoUri ? (
+          <Image
+            uiImage={logoUri}
+            modifiers={[resizable(), aspectRatio({ contentMode: 'fit' }), frame({ width: 92, height: 92 })]}
+          />
+        ) : (
+          // Logo not yet resolved — reserve space so layout is stable
+          <ZStack modifiers={[frame({ width: 92, height: 92 })]}>{null}</ZStack>
+        )}
         <Text
           modifiers={[
             padding({ top: spacing.flowBlock }),

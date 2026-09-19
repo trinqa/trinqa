@@ -10,13 +10,6 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="pay">
-        <NativeTabs.Trigger.Label>Wallet</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'wallet.bifold', selected: 'wallet.bifold.fill' }}
-        />
-      </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="earn">
         <NativeTabs.Trigger.Label>Earn</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

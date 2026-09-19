@@ -1,30 +1,48 @@
 import {
   Button,
   HStack,
+  Image,
+  Menu,
   Spacer,
   Text,
   ZStack,
 } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   background,
   buttonStyle,
   font,
   foregroundStyle,
   frame,
   labelStyle,
+  lineLimit,
   shapes,
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
+import { useRouter } from 'expo-router';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { colors, componentTokens, typography } from '@/theme';
 
 interface ScreenHeaderProps {
   showBack?: boolean;
-  showProfile?: boolean;
   title?: string;
-  showMenu?: boolean;
   onBackPress?: () => void;
+}
+
+function headerIconModifiers() {
+  return [
+    frame({
+      width: componentTokens.headerControl.size,
+      height: componentTokens.headerControl.size,
+    }),
+    background(colors.surface, shapes.circle()),
+    strokeBorder({
+      content: colors.borderStrong,
+      style: { lineWidth: componentTokens.surface.borderWidth },
+      shape: 'circle' as const,
+    }),
+  ];
 }
 
 function HeaderIconButton({
@@ -44,32 +62,49 @@ function HeaderIconButton({
       modifiers={[
         buttonStyle('plain'),
         labelStyle('iconOnly'),
-        frame({
-          width: componentTokens.headerControl.size,
-          height: componentTokens.headerControl.size,
-        }),
-        background(colors.surface, shapes.circle()),
-        strokeBorder({
-          content: colors.borderStrong,
-          style: { lineWidth: componentTokens.surface.borderWidth },
-          shape: 'circle',
-        }),
+        ...headerIconModifiers(),
       ]}
     />
   );
 }
 
-function ProfileAvatar() {
-  return <HeaderIconButton label="Profile" symbol="person.fill" />;
+function ProfileMenu() {
+  const router = useRouter();
+
+  return (
+    <Menu
+      label={(
+        <ZStack modifiers={headerIconModifiers()}>
+          <Image
+            systemName="person.fill"
+            size={componentTokens.headerControl.symbolSize}
+            color={colors.textPrimary}
+          />
+        </ZStack>
+      )}
+      modifiers={[buttonStyle('plain'), accessibilityLabel('Profile')]}
+    >
+      <Button
+        label="Account details"
+        systemImage="doc.text"
+        onPress={() => router.push('/account-details')}
+      />
+      <Button
+        label="Settings"
+        systemImage="gearshape"
+        onPress={() => router.push('/settings')}
+      />
+    </Menu>
+  );
 }
 
 export function ScreenHeader({
   showBack = false,
-  showProfile = true,
   title,
-  showMenu = false,
   onBackPress,
 }: ScreenHeaderProps) {
+  const isPageHeader = !showBack;
+
   return (
     <HStack
       alignment="center"
@@ -80,38 +115,26 @@ export function ScreenHeader({
     >
       {showBack ? (
         <HeaderIconButton label="Back" symbol="arrow.left" onPress={onBackPress} />
-      ) : showProfile ? (
-        <ProfileAvatar />
       ) : null}
 
       {title ? (
-        <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        <Text
+          modifiers={[
+            font({
+              size: isPageHeader ? typography.pageTitle : typography.sectionTitle,
+              weight: isPageHeader ? 'bold' : 'semibold',
+            }),
+            foregroundStyle(colors.textPrimary),
+            lineLimit(1),
+          ]}
+        >
           {title}
         </Text>
       ) : null}
 
       <Spacer />
 
-      {!showBack && !showMenu ? (
-        <HStack spacing={componentTokens.headerControl.gap}>
-          <HeaderIconButton label="Support" symbol="headphones" />
-          <ZStack alignment="topTrailing">
-            <HeaderIconButton label="Notifications, 4 unread" symbol="bell" />
-            <Text
-              modifiers={[
-                font({ size: typography.micro, weight: 'bold' }),
-                foregroundStyle(colors.textInverse),
-                frame({ width: 16, height: 16 }),
-                background(colors.danger, shapes.circle()),
-              ]}
-            >
-              4
-            </Text>
-          </ZStack>
-        </HStack>
-      ) : null}
-
-      {showMenu ? <HeaderIconButton label="More options" symbol="ellipsis" /> : null}
+      {isPageHeader ? <ProfileMenu /> : null}
     </HStack>
   );
 }

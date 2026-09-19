@@ -363,7 +363,7 @@ export function AddMoneyFlowScreen() {
     if (step === 'processing') setStep('review');
   };
 
-  const goToWallet = () => router.replace('/pay');
+  const goToWallet = () => router.replace('/');
   const goToPutToWork = () =>
     router.push({ pathname: '/put-to-work', params: { origin: 'add-money' } });
 
