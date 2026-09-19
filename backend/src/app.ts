@@ -40,7 +40,7 @@ export async function buildApp() {
   const quotes = new QuoteStore();
   const operations = createOperationStore(resolveOperationsDataDir());
   const anchorSessions = new AnchorSessionStore();
-  const yieldSvc = new YieldService(defindex, policy, operations);
+  const yieldSvc = new YieldService(defindex, policy, operations, stellar);
   const paymentExecution = new PaymentExecutionService(
     env,
     stellar,
