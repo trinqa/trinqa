@@ -14,8 +14,16 @@ import type {
   YieldStrategy,
 } from '@/services/types';
 
+/** The device's custodial wallet key; demo routes act as that wallet when it is set. */
+let walletKey: string | null = null;
+
+export function setWalletKey(key: string | null) {
+  walletKey = key;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const demoToken = path.startsWith('/api/v1/demo/') ? getDemoAccessToken() : undefined;
+  const isDemo = path.startsWith('/api/v1/demo/');
+  const demoToken = isDemo ? getDemoAccessToken() : undefined;
   const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     headers: {
@@ -23,6 +31,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       // Fastify rejects an empty body declared as JSON, so only bodied requests carry it.
       ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(demoToken ? { 'x-demo-token': demoToken } : {}),
+      ...(isDemo && walletKey ? { 'x-wallet-key': walletKey } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -51,6 +60,11 @@ export const api = {
   capabilities: () => request<BackendCapabilities>('/api/v1/capabilities'),
 
   demoAccount: () => request<{ account: string; network: string }>('/api/v1/demo/account'),
+  demoWallet: (existingKey?: string) =>
+    request<{ walletKey: string; account: string; created: boolean; network: string }>(
+      '/api/v1/demo/wallets',
+      { method: 'POST', body: JSON.stringify(existingKey ? { walletKey: existingKey } : {}) },
+    ),
   demoSep10: () =>
     request<{ sessionId: string; expiresAt: string }>('/api/v1/demo/sep10', { method: 'POST' }),
   demoSign: (unsignedXdr: string) =>
