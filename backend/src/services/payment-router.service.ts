@@ -36,7 +36,13 @@ export class PaymentRouter {
   }
 
   private async resolveBalances(fromAccount: string) {
-    const balances = await this.stellar.getBalances(fromAccount).catch(() => []);
+    const balances = await this.stellar.getBalances(fromAccount).catch((err: unknown) => {
+      // An account Horizon has never seen genuinely holds nothing; any other failure must not
+      // masquerade as "insufficient balance".
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) return [];
+      throw new ApiError('ADAPTER_UNAVAILABLE', 'Unable to read Stellar balances', 503);
+    });
     const usdcLine = balances.find(
       (b) => b.assetCode === 'USDC' && b.assetIssuer === this.config.USDC_ISSUER,
     );
