@@ -19,6 +19,8 @@ export type PaymentQuoteRequest = {
   /** Amount the recipient should receive (7dp Stellar assets, 2dp TRY). */
   receiveAmount: DecimalString;
   receiveCurrency: string;
+  /** TRY cash-out only: exact USDC to sell. When set, the anchor quotes the sell side and receiveAmount is ignored. */
+  sendAmount?: DecimalString;
   balanceSource?: BalanceSource;
   anchorSessionId?: string;
   /** SEP-6 withdraw bank destination (required for TRY / fiat_payout). */

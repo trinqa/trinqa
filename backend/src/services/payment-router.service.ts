@@ -57,32 +57,11 @@ export class PaymentRouter {
     return { available, earning };
   }
 
-  private async trySep38TryQuote(
+  /** SEP-38 USDC→TRY firm quote, by exact USDC sold or exact TRY received. */
+  private async sep38UsdcToTry(
     anchorSessionId: string,
     fromAccount: string,
-    usdcAmount: string,
-  ): Promise<{ buyAmount: string; sellAmount: string; quoteId: string; expiresAt: string; price: string }> {
-    const jwt = this.anchorSessions.resolve(anchorSessionId, fromAccount);
-    const sellAsset = `stellar:USDC:${this.config.USDC_ISSUER}`;
-    const buyAsset = 'iso4217:TRY';
-    const quote = await this.anchor.sep38Quote(jwt, {
-      sellAsset,
-      buyAsset,
-      sellAmount: usdcAmount,
-    });
-    return {
-      buyAmount: quote.buy_amount,
-      sellAmount: quote.sell_amount,
-      quoteId: quote.id,
-      expiresAt: quote.expires_at,
-      price: quote.price,
-    };
-  }
-
-  private async trySep38TryQuoteReceive(
-    anchorSessionId: string,
-    fromAccount: string,
-    tryReceiveAmount: string,
+    amount: { sellAmount: string } | { buyAmount: string },
   ): Promise<{
     buyAmount: string;
     sellAmount: string;
@@ -93,12 +72,7 @@ export class PaymentRouter {
   }> {
     const jwt = this.anchorSessions.resolve(anchorSessionId, fromAccount);
     const sellAsset = `stellar:USDC:${this.config.USDC_ISSUER}`;
-    const buyAsset = 'iso4217:TRY';
-    const quote = await this.anchor.sep38Quote(jwt, {
-      sellAsset,
-      buyAsset,
-      buyAmount: tryReceiveAmount,
-    });
+    const quote = await this.anchor.sep38Quote(jwt, { sellAsset, buyAsset: 'iso4217:TRY', ...amount });
     return {
       buyAmount: quote.buy_amount,
       sellAmount: quote.sell_amount,
@@ -166,7 +140,7 @@ export class PaymentRouter {
       }
     }
 
-    let trySep38: Awaited<ReturnType<PaymentRouter['trySep38TryQuoteReceive']>> | null = null;
+    let trySep38: Awaited<ReturnType<PaymentRouter['sep38UsdcToTry']>> | null = null;
     if (dest === 'TRY') {
       if (!req.anchorSessionId) {
         throw new ApiError('VALIDATION_ERROR', 'anchorSessionId required for TRY cash-out quote', 400);
@@ -181,10 +155,12 @@ export class PaymentRouter {
           400,
         );
       }
-      trySep38 = await this.trySep38TryQuoteReceive(
+      trySep38 = await this.sep38UsdcToTry(
         req.anchorSessionId,
         req.fromAccount,
-        formatTryAmount(receiveAmount),
+        req.sendAmount
+          ? { sellAmount: formatStellarAmount(req.sendAmount) }
+          : { buyAmount: formatTryAmount(receiveAmount) },
       );
       debitUsdc = formatStellarAmount(trySep38.sellAmount);
       await this.assertWithinWithdrawLimits(debitUsdc);
@@ -517,12 +493,12 @@ export class PaymentRouter {
     withdrawDest: string,
     withdrawDestExtra?: string,
   ): Promise<PaymentRouteQuote> {
-    const sep38 = await this.trySep38TryQuote(anchorSessionId, fromAccount, usdcAmount);
     return this.quote({
       fromAccount,
       recipient: fromAccount,
-      receiveAmount: formatTryAmount(sep38.buyAmount),
+      receiveAmount: '0',
       receiveCurrency: 'TRY',
+      sendAmount: usdcAmount,
       anchorSessionId,
       withdrawDest,
       withdrawDestExtra,

@@ -22,7 +22,8 @@
     "e2e:defindex": "tsx ../scripts/e2e-defindex.ts",
     "e2e:soroswap": "tsx ../scripts/e2e-soroswap.ts",
     "e2e:trinqa": "tsx ../scripts/e2e-trinqa.ts",
-    "e2e:core": "tsx ../scripts/e2e-core.ts"
+    "e2e:core": "tsx ../scripts/e2e-core.ts",
+    "smoke:remote": "tsx ../scripts/smoke-remote.ts"
   },
   "dependencies": {
     "@defindex/sdk": "^0.3.0",

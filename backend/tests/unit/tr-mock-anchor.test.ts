@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { Account, Keypair, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 import TOML from 'toml';
 import { TrMockAnchorAdapter } from '../../src/adapters/tr-mock-anchor.adapter.js';
 import { env } from '../../src/config/env.js';
@@ -29,5 +30,32 @@ issuer="GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
     expect(toml.transferServer).toContain('sep6');
     expect(toml.webAuthEndpoint).toContain('auth');
     expect(toml.usdcIssuer).toBe(env.USDC_ISSUER);
+  });
+});
+
+describe('TrMockAnchorAdapter (SEP-10)', () => {
+  it('binds the session to the client account, not the anchor server account', async () => {
+    const server = Keypair.random();
+    const client = Keypair.random();
+    const challenge = new TransactionBuilder(new Account(server.publicKey(), '-1'), {
+      fee: '100',
+      networkPassphrase: env.STELLAR_PASSPHRASE,
+    })
+      .addOperation(
+        Operation.manageData({ source: client.publicKey(), name: 'tr-mock-anchor.fly.dev auth', value: 'x'.repeat(48) }),
+      )
+      .setTimeout(300)
+      .build();
+    challenge.sign(server, client);
+
+    const adapter = new TrMockAnchorAdapter(env, env.STELLAR_PASSPHRASE);
+    vi.spyOn(adapter, 'discover').mockResolvedValue({ domain: 'x', webAuthEndpoint: 'https://example.test/auth' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: 'jwt' }), { status: 200 })));
+    try {
+      const result = await adapter.sep10TokenFromSignedTransaction(challenge.toXDR());
+      expect(result.account).toBe(client.publicKey());
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

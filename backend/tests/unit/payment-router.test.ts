@@ -120,6 +120,12 @@ describe('PaymentRouter', () => {
       'branch-1',
     );
     expect(quote.routeType).toBe('fiat_payout');
+    // Cash-out by USDC amount must quote the sell side once, not round-trip through TRY.
+    expect(anchor.sep38Quote).toHaveBeenCalledTimes(1);
+    const [, sep38Request] = vi.mocked(anchor.sep38Quote).mock.calls[0]!;
+    expect(Number(sep38Request.sellAmount)).toBe(10);
+    expect(sep38Request.buyAmount).toBeUndefined();
+    expect(Number(quote.source.amount)).toBe(10);
     expect(quote.destination.currency).toBe('TRY');
     expect(quote.providerPayload.anchorQuoteId).toBe('q-1');
     expect(quote.providerPayload.withdrawDest).toBe(withdrawDest);

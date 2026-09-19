@@ -42,6 +42,29 @@ export type Sep38Quote = {
 
 export type TransferLimits = { min?: string; max?: string };
 
+/** Non-2xx response from the anchor; `reason` is the anchor's own error text when it sent one. */
+export class AnchorRequestError extends Error {
+  readonly reason: string;
+
+  constructor(
+    readonly operation: string,
+    readonly status: number,
+    body: string,
+  ) {
+    super(`${operation} failed (${status}): ${body.slice(0, 300)}`);
+    this.name = 'AnchorRequestError';
+    let reason = body.slice(0, 300);
+    try {
+      const parsed = JSON.parse(body) as { error?: unknown; message?: unknown };
+      if (typeof parsed.error === 'string') reason = parsed.error;
+      else if (typeof parsed.message === 'string') reason = parsed.message;
+    } catch {
+      // plain-text body
+    }
+    this.reason = reason;
+  }
+}
+
 type Sep6AssetInfo = { enabled?: boolean; min_amount?: number | string; max_amount?: number | string };
 
 /** Anchor metadata (stellar.toml, /info) changes rarely; cache it instead of refetching per call. */
@@ -133,7 +156,7 @@ export class TrMockAnchorAdapter {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`SEP-12 customer failed (${res.status}): ${err.slice(0, 200)}`);
+      throw new AnchorRequestError('SEP-12 customer', res.status, err);
     }
     return res.json();
   }
@@ -152,7 +175,7 @@ export class TrMockAnchorAdapter {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`SEP-12 customer update failed (${res.status}): ${err.slice(0, 200)}`);
+      throw new AnchorRequestError('SEP-12 customer update', res.status, err);
     }
     return res.json();
   }
@@ -188,7 +211,7 @@ export class TrMockAnchorAdapter {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`SEP-38 quote failed (${res.status}): ${err.slice(0, 300)}`);
+      throw new AnchorRequestError('SEP-38 quote', res.status, err);
     }
     return res.json() as Promise<Sep38Quote>;
   }
@@ -224,7 +247,7 @@ export class TrMockAnchorAdapter {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`SEP-6 deposit failed (${res.status}): ${err.slice(0, 300)}`);
+      throw new AnchorRequestError('SEP-6 deposit', res.status, err);
     }
     return res.json();
   }
@@ -262,7 +285,7 @@ export class TrMockAnchorAdapter {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`SEP-6 withdraw failed (${res.status}): ${err.slice(0, 300)}`);
+      throw new AnchorRequestError('SEP-6 withdraw', res.status, err);
     }
     return res.json();
   }
@@ -276,7 +299,7 @@ export class TrMockAnchorAdapter {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`SEP-6 simulate bank transfer failed (${res.status}): ${err.slice(0, 300)}`);
+      throw new AnchorRequestError('SEP-6 simulate bank transfer', res.status, err);
     }
     return res.json();
   }
@@ -288,7 +311,7 @@ export class TrMockAnchorAdapter {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`SEP-6 transaction failed (${res.status}): ${err.slice(0, 300)}`);
+      throw new AnchorRequestError('SEP-6 transaction', res.status, err);
     }
     return res.json();
   }
@@ -311,7 +334,11 @@ export class TrMockAnchorAdapter {
     if (!(tx instanceof Transaction)) {
       throw new Error('SEP-10 token requires a signed transaction envelope');
     }
-    const account = tx.source;
+    // SEP-10: tx.source is the anchor's server account; the client account is the source of the first op.
+    const account = tx.operations[0]?.source;
+    if (!account) {
+      throw new Error('SEP-10 challenge has no client account operation');
+    }
 
     const tokenRes = await fetch(authBase, {
       method: 'POST',
@@ -320,7 +347,7 @@ export class TrMockAnchorAdapter {
     });
     if (!tokenRes.ok) {
       const err = await tokenRes.text();
-      throw new Error(`SEP-10 token failed (${tokenRes.status}): ${err.slice(0, 200)}`);
+      throw new AnchorRequestError('SEP-10 token', tokenRes.status, err);
     }
     const token = (await tokenRes.json()) as Sep10Token;
     return { ...token, account };
