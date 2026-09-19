@@ -4,34 +4,22 @@ import { Divider, Group, ScrollView, Text, VStack } from '@expo/ui/swift-ui';
 import { font, foregroundStyle, frame, padding } from '@expo/ui/swift-ui/modifiers';
 import { useRouter } from 'expo-router';
 
-import { FlowCard, FlowInfoRow, FlowNotice, SecondaryActionButton } from '@/components/FlowControls';
+import {
+  FlowCard,
+  FlowCardLabel,
+  FlowCardNote,
+  FlowInfoRow,
+  FlowNotice,
+  SecondaryActionButton,
+} from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { FlowInlineState } from '@/components/FlowStates';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { ANCHOR_STATUS_COPY } from '@/data/routeCopy';
 import { api } from '@/services/api';
 import { errorMessage } from '@/services/apiErrors';
 import { colors, screenTokens, spacing, typography } from '@/theme';
-import type { AnchorAssetRail, AnchorSnapshot, AnchorStatus } from '@/services/types';
-
-/** Plain wording for each registry status: only EXECUTABLE can move money today. */
-const STATUS_COPY: Record<AnchorStatus, { label: string; explanation: string }> = {
-  EXECUTABLE: {
-    label: 'Can move money',
-    explanation: 'Trinqa can run a real transfer through this anchor.',
-  },
-  QUOTE_ONLY: {
-    label: 'Prices only',
-    explanation: 'Trinqa can read prices here, but cannot move money through it.',
-  },
-  DISCOVERY_ONLY: {
-    label: 'Found only',
-    explanation: 'Trinqa found this anchor but could not read enough to price or move money.',
-  },
-  UNAVAILABLE: {
-    label: 'Not usable',
-    explanation: 'Trinqa cannot price or move money through this anchor right now.',
-  },
-};
+import type { AnchorAssetRail, AnchorSnapshot } from '@/services/types';
 
 /** The registry reports Stellar's native asset as `native`; everywhere else it is XLM. */
 function assetLabel(rail: AnchorAssetRail) {
@@ -73,28 +61,6 @@ function railKey(rail: AnchorAssetRail, index: number) {
   return `${rail.direction}-${rail.assetCode}-${rail.assetIssuer ?? 'none'}-${index}`;
 }
 
-function CardLabel({ text }: { text: string }) {
-  return (
-    <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
-      {text}
-    </Text>
-  );
-}
-
-function CardNote({ text }: { text: string }) {
-  return (
-    <Text
-      modifiers={[
-        font({ size: typography.footnote, weight: 'medium' }),
-        foregroundStyle(colors.textSecondary),
-        frame({ maxWidth: Infinity, alignment: 'leading' }),
-      ]}
-    >
-      {text}
-    </Text>
-  );
-}
-
 function AnchorRail({ rail }: { rail: AnchorAssetRail }) {
   const limits = limitLabel(rail);
   const fee = feeLabel(rail);
@@ -102,8 +68,8 @@ function AnchorRail({ rail }: { rail: AnchorAssetRail }) {
 
   return (
     <VStack alignment="leading" spacing={spacing.row} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-      <CardLabel text={`${direction} · ${assetLabel(rail)}`} />
-      {rail.enabled ? null : <CardNote text="Turned off by the anchor." />}
+      <FlowCardLabel text={`${direction} · ${assetLabel(rail)}`} />
+      {rail.enabled ? null : <FlowCardNote text="Turned off by the anchor." />}
       {rail.fiat.length > 0 ? <FlowInfoRow label="Currencies" value={rail.fiat.join(', ')} /> : null}
       {limits ? <FlowInfoRow label="Limits" value={limits} /> : null}
       {fee ? <FlowInfoRow label="Fee" value={fee} /> : null}
@@ -115,7 +81,7 @@ function AnchorRail({ rail }: { rail: AnchorAssetRail }) {
 }
 
 function AnchorCard({ anchor }: { anchor: AnchorSnapshot }) {
-  const status = STATUS_COPY[anchor.status];
+  const status = ANCHOR_STATUS_COPY[anchor.status];
 
   return (
     <FlowCard>
@@ -124,18 +90,18 @@ function AnchorCard({ anchor }: { anchor: AnchorSnapshot }) {
           <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
             {anchor.name}
           </Text>
-          <CardNote text={anchor.domain} />
+          <FlowCardNote text={anchor.domain} />
         </VStack>
         <Divider />
         <FlowInfoRow label="Status" value={status.label} />
-        <CardNote text={status.explanation} />
-        {anchor.statusReason ? <CardNote text={`Reported reason: ${anchor.statusReason}`} /> : null}
+        <FlowCardNote text={status.explanation} />
+        {anchor.statusReason ? <FlowCardNote text={`Reported reason: ${anchor.statusReason}`} /> : null}
         <FlowInfoRow label="Responded" value={anchor.healthy ? 'Yes' : 'No'} />
         <FlowInfoRow label="Network" value={anchor.network} />
         <FlowInfoRow label="Checked" value={checkedLabel(anchor.fetchedAt)} />
         <VStack alignment="leading" spacing={spacing.xs} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-          <CardLabel text="Standards" />
-          <CardNote text={anchor.seps.length > 0 ? anchor.seps.map(sepLabel).join(', ') : 'None published.'} />
+          <FlowCardLabel text="Standards" />
+          <FlowCardNote text={anchor.seps.length > 0 ? anchor.seps.map(sepLabel).join(', ') : 'None published.'} />
         </VStack>
         <Divider />
         {anchor.rails.length > 0 ? (
@@ -145,7 +111,7 @@ function AnchorCard({ anchor }: { anchor: AnchorSnapshot }) {
             ))}
           </VStack>
         ) : (
-          <CardNote text="No deposit or withdrawal rails published." />
+          <FlowCardNote text="No deposit or withdrawal rails published." />
         )}
       </VStack>
     </FlowCard>
@@ -225,7 +191,7 @@ export function AnchorDirectoryScreen() {
               </VStack>
             ) : anchors && anchors.length > 0 ? (
               <VStack alignment="leading" spacing={spacing.cardGap}>
-                <CardNote
+                <FlowCardNote
                   text={`${anchors.length} ${anchors.length === 1 ? 'anchor' : 'anchors'} discovered · ${executableCount} can move money today.`}
                 />
                 {anchors.map((anchor) => (

@@ -54,9 +54,17 @@ import {
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
 import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
+import { ROUTE_REJECT_REASONS } from '@/data/routeCopy';
+import { RoutePreviewSheet } from '@/features/withdraw/RoutePreviewSheet';
+import { api } from '@/services/api';
 import { errorMessage } from '@/services/apiErrors';
 import { executeWithdrawTry, quoteWithdrawTry, type WithdrawLiveQuote } from '@/services/flows';
-import type { QuoteRouteDecision, RouteAdvisorInfo, RouteRejectReason } from '@/services/types';
+import type {
+  QuoteRouteDecision,
+  RouteAdvisorInfo,
+  RouteDecision,
+  RouteRejectReason,
+} from '@/services/types';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
@@ -106,18 +114,6 @@ function formatUsdRate(value: number) {
     maximumFractionDigits: 4,
   })} $`;
 }
-
-/** One short clause per reason the route planner can emit, written for people who don't know SEPs. */
-const ROUTE_REJECT_REASONS: Record<RouteRejectReason, string> = {
-  CURRENCY_UNSUPPORTED: 'does not pay out in this currency',
-  DIRECTION_UNSUPPORTED: 'does not support withdrawals',
-  BELOW_MIN: 'needs a larger amount',
-  ABOVE_MAX: 'caps payouts below this amount',
-  SEP_MISSING: 'does not support the connection we need',
-  UNAVAILABLE: 'is not available for payouts',
-  KYC_REQUIRED: 'needs identity checks to be completed first',
-  NOT_EXECUTABLE: 'is not ready to complete a payout',
-};
 
 const ADVISOR_FALLBACK_REASONS = [
   'disabled',
@@ -517,11 +513,13 @@ function WithdrawalAmountSummary({
   intent,
   quote,
   quoteState,
+  routePreview,
   ruledOut,
 }: {
   intent: WithdrawalIntent;
   quote: WithdrawalQuote;
   quoteState: LiveQuoteState<WithdrawLiveQuote>;
+  routePreview: RouteDecision | null;
   ruledOut: string | null;
 }) {
   const ready = Boolean(quoteState.data);
@@ -562,6 +560,10 @@ function WithdrawalAmountSummary({
           />
         </VStack>
       </FlowCard>
+
+      {/* Renders nothing while the preview is missing, in flight or empty — it must never
+          delay the quote or crowd the amount step. */}
+      <RoutePreviewSheet decision={routePreview} />
 
       {quote.requiresEarnUnwind && quote.hasSufficientTotal ? (
         <FlowNotice
@@ -703,6 +705,21 @@ export function WithdrawFlowScreen() {
     () => toWithdrawalQuote(intent, balances.available, liveQuote.data),
     [balances.available, intent, liveQuote.data],
   );
+  /**
+   * The planner's own view, independent of the quote: it answers before a quote exists and
+   * also when the quote fails. Debounced on the same key as the quote so a settling amount
+   * fires one request, not one per keystroke. Its failure is swallowed — `routePreview.data`
+   * is simply null and the row disappears.
+   *
+   * `amount` is the payout figure the user typed, but the endpoint reads it as USDC. No rate
+   * exists before a quote, so nothing better can be sent; the sheet's wording therefore never
+   * ties a score to the amount on screen.
+   */
+  const routePreview = useLiveQuote(
+    `routes:${currency}:${amount}`,
+    amount > 0,
+    () => api.routesPreview({ direction: 'withdraw', currency, amount: String(amount) }),
+  );
   // A failed quote carries no decision, so the last one is kept to explain what was already ruled out.
   const [lastDecision, setLastDecision] = useState<
     { currency: WithdrawalCurrency; decision: QuoteRouteDecision } | null
@@ -818,7 +835,13 @@ export function WithdrawFlowScreen() {
           selectionSymbol="wallet.bifold.fill"
           selectionTitle={`Available ${formatUsd(balances.available)}`}
           summary={
-            <WithdrawalAmountSummary intent={intent} quote={quote} quoteState={liveQuote} ruledOut={ruledOut} />
+            <WithdrawalAmountSummary
+              intent={intent}
+              quote={quote}
+              quoteState={liveQuote}
+              routePreview={routePreview.data}
+              ruledOut={ruledOut}
+            />
           }
           title="Withdraw"
         />
