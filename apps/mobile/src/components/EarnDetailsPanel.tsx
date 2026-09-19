@@ -2,6 +2,7 @@ import { VStack } from '@expo/ui/swift-ui';
 import { padding } from '@expo/ui/swift-ui/modifiers';
 
 import { EarnSegmentPicker } from '@/components/EarnSegmentPicker';
+import { FlowEmptyState } from '@/components/FlowStates';
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { transactionStatusColor, transactionStatusSymbol } from '@/domain/transactionPresentation';
@@ -41,6 +42,12 @@ export function EarnDetailsPanel({
         <EarnSegmentPicker segment={segment} onChange={onChange} />
 
         <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
+          {items.length === 0 ? (
+            <FlowEmptyState
+              title="No earnings yet"
+              subtitle="Once your money starts growing, the payouts land here."
+            />
+          ) : null}
           {items.map((item) => {
             const isEarning = item.iconStyle === 'earning';
             const onPress =
