@@ -24,6 +24,8 @@ const envSchema = z.object({
   USDC_ISSUER: z
     .string()
     .default('GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'),
+  /** Comma-separated home domains for read-only SEP anchor discovery (Phase 2 anchor directory). */
+  ANCHOR_DISCOVERY_DOMAINS: optionalString,
 
   DEMO_SIGNER_ENABLED: z
     .preprocess((v) => emptyToUndefined(v) ?? 'false', z.enum(['true', 'false']))
