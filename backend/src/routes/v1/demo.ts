@@ -10,6 +10,7 @@ import type { AnchorSessionStore } from '../../services/anchor-session-store.ser
 import {
   CustodialWallets,
   envDemoSigner,
+  isContactId,
   isWalletKey,
   type AccountSigner,
 } from '../../services/custodial-wallet.service.js';
@@ -25,6 +26,10 @@ const signBody = z.object({
 
 const walletBody = z.object({
   walletKey: z.string().optional(),
+});
+
+const contactsBody = z.object({
+  ids: z.array(z.string()).min(1).max(12),
 });
 
 /** Header carrying a device's custodial wallet key; absent = the shared env demo account. */
@@ -80,6 +85,32 @@ export function registerDemoRoutes(
     } catch (err) {
       if (err instanceof z.ZodError) {
         return reply.status(400).send({ error: 'VALIDATION_ERROR', message: 'Invalid wallet payload' });
+      }
+      if (err instanceof ApiError) return sendApiError(reply, err);
+      const message = err instanceof Error ? err.message : String(err);
+      return reply.status(502).send({ error: 'ADAPTER_UNAVAILABLE', message });
+    }
+  });
+
+  /**
+   * Accounts for the seeded demo contacts, so "send to Ana" reaches a real
+   * testnet account instead of the sender's own. Idempotent; funds on first call.
+   */
+  app.post('/api/v1/demo/contacts', { preHandler: demoSignerGuard }, async (request, reply) => {
+    try {
+      if (!wallets) throw new ApiError('ADAPTER_UNAVAILABLE', 'Custodial wallets are not configured', 503);
+      const body = contactsBody.parse(request.body ?? {});
+      const invalid = body.ids.find((id) => !isContactId(id));
+      if (invalid !== undefined) {
+        throw new ApiError('VALIDATION_ERROR', `Invalid contact id: ${invalid}`, 400);
+      }
+      const contacts = await Promise.all(
+        body.ids.map(async (id) => ({ id, ...(await wallets.provisionContact(id)) })),
+      );
+      return { contacts, network: env.STELLAR_NETWORK };
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'VALIDATION_ERROR', message: 'Invalid contacts payload' });
       }
       if (err instanceof ApiError) return sendApiError(reply, err);
       const message = err instanceof Error ? err.message : String(err);
