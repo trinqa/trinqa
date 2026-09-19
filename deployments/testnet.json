@@ -1,0 +1,9 @@
+{
+  "network": "testnet",
+  "contractId": "CAFTEI4RY7OOWIWTBHYGJV5SV7C6UEG5MKNQI77BZSQNB3AZPC5GMESP",
+  "contractName": "trinqa-allocation-policy",
+  "wasmHash": "0ec6ee0b9d1ba56334e5f8a17221774cf2d7d38b470e8cc2fbe2af86aa7fba10",
+  "deployTxHash": null,
+  "deployedAt": "2026-09-18T20:45:02.678Z",
+  "deployerPublicKey": "GCHE7VBNM4FCYKIPOKVBQ4DGNVUNJQQ5MVEHOVKVO5IJ5T5O5FFFVQWE"
+}

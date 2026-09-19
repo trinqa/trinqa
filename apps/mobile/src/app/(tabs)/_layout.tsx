@@ -1,0 +1,36 @@
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
+
+import { colors } from '@/theme';
+
+export default function TabLayout() {
+  return (
+    <NativeTabs disableTransparentOnScrollEdge backgroundColor={colors.surface}>
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="pay">
+        <NativeTabs.Trigger.Label>Wallet</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'wallet.bifold', selected: 'wallet.bifold.fill' }}
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="earn">
+        <NativeTabs.Trigger.Label>Earn</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{
+            default: 'chart.line.uptrend.xyaxis',
+            selected: 'chart.line.uptrend.xyaxis',
+          }}
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="activity">
+        <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} />
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
+}

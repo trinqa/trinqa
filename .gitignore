@@ -1,0 +1,103 @@
+# secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.p8
+
+# dependencies / generated
+node_modules/
+dist/
+build/
+out/
+coverage/
+target/
+.data/
+.expo/
+.next/
+.cache/
+tmp/
+temp/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# internal material
+docs/
+references/
+source-material/
+qa/
+documentation/
+research/
+audit/
+audits/
+evidence/
+artifacts/
+reports/
+planning/
+notes/
+archive/
+archives/
+draft/
+drafts/
+screenshots/
+
+# tests / QA
+tests/
+test/
+__tests__/
+e2e/
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.test.jsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+**/*.spec.jsx
+
+# documents
+*.md
+!README.md
+*.mdx
+*.txt
+*.rtf
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.pages
+*.numbers
+*.keynote
+
+# screenshots / media / references
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.heic
+*.heif
+*.tiff
+*.bmp
+*.mov
+*.mp4
+*.webm
+*.avi
+
+# generated native folders
+/ios
+/android
+apps/mobile/ios
+apps/mobile/android
+
+# packaged files
+*.zip
+*.tar
+*.gz
