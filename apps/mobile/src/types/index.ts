@@ -242,7 +242,7 @@ export interface EarnListItem {
   action?: 'manage-strategy' | 'details';
 }
 export type CurrencyCode = 'TRY' | 'USD' | 'EUR' | 'BRL';
-export type CapabilityStatus = 'mock' | 'unavailable';
+export type CapabilityStatus = 'mock' | 'unavailable' | 'live' | 'unsupported';
 export type MoneyOperation = 'deposit' | 'receive' | 'pay' | 'withdraw' | 'display';
 
 export interface CurrencyCapability {
@@ -273,6 +273,7 @@ export interface AccountIdentity {
   displayName: string;
   initials: string;
   displayCurrency: CurrencyCode;
+  ledgerAsset?: 'USDC' | 'TRY';
   publicReceiveIdentifier?: string;
   networkDetails?: {
     network: string;
@@ -284,7 +285,7 @@ export interface AccountIdentity {
 export interface BalanceState {
   available: number;
   earning: number;
-  baseCurrency: 'TRY';
+  baseCurrency: 'TRY' | 'USDC';
 }
 
 export type OperationState =

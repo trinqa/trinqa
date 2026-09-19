@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   BottomSheet,
@@ -51,7 +51,10 @@ import {
   paymentRecipients,
   quickPaymentAmounts,
 } from '@/data/mocks/pay';
-import { recordPayment, useMockAppState } from '@/state/mockAppState';
+import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
+import { errorMessage } from '@/services/apiErrors';
+import { executePay } from '@/services/flows';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
@@ -399,11 +402,13 @@ function ReviewStep({
   onBack,
   onConfirm,
   quote,
+  error,
 }: {
   intent: PaymentIntent;
   onBack: () => void;
   onConfirm: () => void;
   quote: PaymentQuote;
+  error?: string | null;
 }) {
   const receiveAmount = formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
 
@@ -469,8 +474,11 @@ function ReviewStep({
         <FlowNotice
           symbol="arrow.triangle.branch"
           title="Fast & routed automatically"
-          subtitle="Trinqa finds the best available route for this payment."
+          subtitle="Trinqa uses the live Stellar USDC rail when it is available."
         />
+        {error ? (
+          <FlowInlineState symbol="exclamationmark.circle" title="Payment failed" subtitle={error} />
+        ) : null}
       </VStack>
     </FlowStepLayout>
   );
@@ -478,44 +486,35 @@ function ReviewStep({
 
 export function PayFlowScreen() {
   const router = useRouter();
-  const { balances } = useMockAppState();
+  const { account, balances, capabilities } = useMockAppState();
   const [step, setStep] = useState<PaymentStep>('recipient');
   const [recipient, setRecipient] = useState(paymentRecipients[0]);
-  const [currency, setCurrency] = useState<PaymentCurrency>('BRL');
-  const [amount, setAmount] = useState(500);
+  const [currency, setCurrency] = useState<PaymentCurrency>('USD');
+  const [amount, setAmount] = useState(1);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('initiated');
   const [earnApprovalPresented, setEarnApprovalPresented] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const paymentId = useMemo(
     () => `payment-${recipient.id}-${currency.toLowerCase()}-${amount}`,
     [amount, currency, recipient.id]
   );
-  const amountText = useNativeState(formatWholeAmount(500));
+  const amountText = useNativeState(formatWholeAmount(1));
+  const currencies = liveCurrenciesFor('pay', capabilities);
+  const payOptions = currencies.length ? currencies : paymentCurrencies;
 
   const intent = useMemo<PaymentIntent>(
     () => ({ recipientId: recipient.id, recipient, receiveAmount: amount, receiveCurrency: currency }),
     [amount, currency, recipient],
   );
-  const quote = useMemo(() => createPaymentQuote(intent, balances), [balances, intent]);
+  const quote = useMemo(() => {
+    const next = createPaymentQuote(intent, balances);
+    const blocked = payoutBlockedReason(currency, capabilities);
+    if (blocked) {
+      return { ...next, status: 'unavailable' as const, hasSufficientTotal: false };
+    }
+    return next;
+  }, [balances, capabilities, currency, intent]);
   const receiveAmount = formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
-
-  useEffect(() => {
-    if (step !== 'processing') return;
-
-    setPaymentStatus('initiated');
-    const convertingTimer = setTimeout(() => setPaymentStatus('converting'), 650);
-    const sendingTimer = setTimeout(() => setPaymentStatus('sending'), 1350);
-    const completedTimer = setTimeout(() => {
-      setPaymentStatus('completed');
-      recordPayment(paymentId, intent, quote);
-      setStep('success');
-    }, 2600);
-
-    return () => {
-      clearTimeout(convertingTimer);
-      clearTimeout(sendingTimer);
-      clearTimeout(completedTimer);
-    };
-  }, [intent, paymentId, quote, step]);
 
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -592,7 +591,9 @@ export function PayFlowScreen() {
           onBack={goBack}
           onSelectRecipient={(nextRecipient) => {
             setRecipient(nextRecipient);
-            if (nextRecipient.preferredCurrency) setCurrency(nextRecipient.preferredCurrency);
+            const preferred = nextRecipient.preferredCurrency;
+            if (preferred && !payoutBlockedReason(preferred, capabilities)) setCurrency(preferred);
+            else setCurrency('USD');
             setStep('amount');
           }}
         />
@@ -613,7 +614,7 @@ export function PayFlowScreen() {
             <FlowCurrencyMenu
               accessibilityName="Recipient currency"
               onChange={chooseCurrency}
-              options={paymentCurrencies}
+              options={payOptions}
               value={currency}
             />
           )}
@@ -639,9 +640,30 @@ export function PayFlowScreen() {
 
       {step === 'review' ? (
         <ReviewStep
+          error={submitError}
           intent={intent}
           onBack={goBack}
-          onConfirm={() => setStep('processing')}
+          onConfirm={() => {
+            setSubmitError(null);
+            setPaymentStatus('sending');
+            setStep('processing');
+            void (async () => {
+              try {
+                await executePay({
+                  accountId: account.id,
+                  amount,
+                  currency,
+                  approveEarnUnwind: quote.earnContribution > 0,
+                });
+                setPaymentStatus('completed');
+                setStep('success');
+              } catch (err) {
+                setSubmitError(errorMessage(err));
+                setPaymentStatus('failed');
+                setStep('review');
+              }
+            })();
+          }}
           quote={quote}
         />
       ) : null}

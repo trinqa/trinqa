@@ -93,7 +93,7 @@ export class CapabilityService {
         },
         defindex: defindexHealth,
         soroswap: soroswapHealth,
-        demoSigner: this.config.DEMO_SIGNER_ENABLED,
+        demoSigner: this.config.DEMO_SIGNER_ENABLED && Boolean(this.config.DEMO_SIGNER_SECRET?.startsWith('S')),
         earnUnwind: {
           mode: 'explicit',
           requiresPolicyAuthorization: false,

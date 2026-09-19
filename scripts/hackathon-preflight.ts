@@ -18,7 +18,7 @@ function run(cmd: string, args: string[], cwd: string): number {
 async function secretScan(): Promise<boolean> {
   const res = spawnSync(
     'git',
-    ['grep', '-E', 'S[A-Z0-9]{55}|sk_live|Bearer eyJ', '--', '.', ':!*.lock'],
+    ['grep', '-E', 'S[A-Z0-9]{55}|sk_live|Bearer eyJ', '--', '.', ':!*.lock', ':!scripts/hackathon-preflight.ts'],
     { cwd: repoRoot, encoding: 'utf8' },
   );
   if (res.status === 0 && res.stdout) {

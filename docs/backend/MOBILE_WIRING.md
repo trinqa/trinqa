@@ -45,6 +45,21 @@ POST /api/v1/payments/execute-step
 
 `INSUFFICIENT_BALANCE`, `EARN_UNWIND_APPROVAL_REQUIRED`, `ROUTE_UNAVAILABLE`, `QUOTE_EXPIRED`, `NO_SUPPORTED_PAYOUT_RAIL`, `ALREADY_COMPLETED`, `DEFINDEX_VAULT_ASSET_MISMATCH`
 
+## Testnet demo signer (backend-only)
+
+Mobile never holds `DEMO_SIGNER_SECRET`, anchor JWTs, DeFindex keys, or Soroswap keys.
+
+When `GET /api/v1/capabilities` → `features.demoSigner` is true:
+
+- `GET /api/v1/demo/account` → `{ account }` (G-address only)
+- `POST /api/v1/demo/sep10` → `{ sessionId, expiresAt }`
+- `POST /api/v1/demo/sign` `{ unsignedXdr }` → `{ signedXdr }`
+- `POST /api/v1/demo/anchor/simulate-bank-transfer` `{ sessionId, transferId }`
+
+If the demo signer is off those routes return `403`. Production wallets sign locally instead.
+
+TRY off-ramp `POST /api/v1/payments/build` returns `unsignedXdr` + `currentStep: "anchor_withdraw"` so mobile can `execute-step` the USDC funding payment.
+
 ## CLI fallback
 
 `npm run e2e:core` — full demo without partner keys.

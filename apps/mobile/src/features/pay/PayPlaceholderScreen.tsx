@@ -29,7 +29,7 @@ import { SurfacePanel } from '@/components/SurfacePanel';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { WalletTransactionRow } from '@/components/WalletTransactionRow';
 import { currencyCapability } from '@/data/capabilities';
-import { convertFromTry, formatMoney } from '@/domain/money';
+import { formatLedgerMoney, toDisplayAmount } from '@/domain/money';
 import { toWalletTransactionItem, transactionSection, walletTransactions } from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
@@ -119,12 +119,12 @@ export function WalletScreen() {
       <VStack modifiers={[padding({ top: wallet.headerToBalance })]}>
         <BalanceSummary
           totalLabel="Total Balance"
-          totalValue={formatBalance(convertFromTry(walletTotal, account.displayCurrency))}
+          totalValue={formatBalance(toDisplayAmount(walletTotal, account))}
           currencySymbol={capability.symbol}
           leftLabel="Available"
-          leftValue={formatBalance(convertFromTry(balances.available, account.displayCurrency))}
+          leftValue={formatBalance(toDisplayAmount(balances.available, account))}
           rightLabel="Earning"
-          rightValue={formatBalance(convertFromTry(balances.earning, account.displayCurrency))}
+          rightValue={formatBalance(toDisplayAmount(balances.earning, account))}
         />
       </VStack>
 
@@ -197,7 +197,7 @@ export function WalletScreen() {
                         foregroundStyle(colors.textPrimary),
                       ]}
                     >
-                      {`${formatMoney(convertFromTry(balances.earning, account.displayCurrency), account.displayCurrency)}/${formatMoney(convertFromTry(walletTotal, account.displayCurrency), account.displayCurrency)}`}
+                      {`${formatLedgerMoney(balances.earning, account)}/${formatLedgerMoney(walletTotal, account)}`}
                     </Text>
                   </HStack>
                 </VStack>

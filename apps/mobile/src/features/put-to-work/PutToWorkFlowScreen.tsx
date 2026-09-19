@@ -38,6 +38,7 @@ import {
   FlowSuccessState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
+import { FlowInlineState } from '@/components/FlowStates';
 import { NativeSegmentedControl } from '@/components/NativeSegmentedControl';
 import { StrategyDetailsSheet } from '@/components/StrategyDetailsSheet';
 import {
@@ -46,7 +47,10 @@ import {
   putToWorkRiskProfiles,
   quickPutToWorkAmounts,
 } from '@/data/mocks/putToWork';
-import { recordAllocation, useMockAppState } from '@/state/mockAppState';
+import { errorMessage } from '@/services/apiErrors';
+import { executePutToWork } from '@/services/flows';
+import { earnUnavailable, earnUnavailableReason } from '@/services/session';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import type {
   PutToWorkHorizon,
@@ -68,7 +72,7 @@ function formatWholeAmount(value: number) {
 }
 
 function formatUsd(value: number, decimals = true) {
-  return `₺${value.toLocaleString('en-US', {
+  return `$${value.toLocaleString('en-US', {
     minimumFractionDigits: decimals ? 2 : 0,
     maximumFractionDigits: decimals ? 2 : 0,
   })}`;
@@ -332,12 +336,16 @@ function ReviewStep({
   onConfirm,
   profile,
   quote,
+  error,
+  earnBlockedReason,
 }: {
   horizon: PutToWorkHorizon;
   onBack: () => void;
   onConfirm: () => void;
   profile: PutToWorkRiskProfile;
   quote: PutToWorkQuote;
+  error?: string | null;
+  earnBlockedReason?: string | null;
 }) {
   return (
     <FlowStepLayout
@@ -418,9 +426,15 @@ function ReviewStep({
 
         <FlowNotice
           symbol="arrow.left.arrow.right"
-          title="Flexible access"
-          subtitle="You can move money back to available whenever needed."
+          title={earnBlockedReason ? 'Policy only' : 'Flexible access'}
+          subtitle={
+            earnBlockedReason
+              ?? 'You can move money back to available whenever needed.'
+          }
         />
+        {error ? (
+          <FlowInlineState symbol="exclamationmark.circle" title="Could not complete" subtitle={error} />
+        ) : null}
         <StrategyDetailsSheet profile={profile} />
       </VStack>
     </FlowStepLayout>
@@ -429,7 +443,7 @@ function ReviewStep({
 
 export function PutToWorkFlowScreen() {
   const router = useRouter();
-  const { balances } = useMockAppState();
+  const { account, balances, capabilities } = useMockAppState();
   const params = useLocalSearchParams<{ origin?: string }>();
   const originParam = Array.isArray(params.origin) ? params.origin[0] : params.origin;
   const origin: PutToWorkOrigin =
@@ -438,9 +452,12 @@ export function PutToWorkFlowScreen() {
   const [step, setStep] = useState<PutToWorkStep>('strategy');
   const [profileId, setProfileId] = useState<PutToWorkRiskId>('balanced');
   const [horizonId, setHorizonId] = useState<PutToWorkHorizonId>('anytime');
-  const [amount, setAmount] = useState(2500);
+  const [amount, setAmount] = useState(1);
   const [targetDate, setTargetDate] = useState(new Date(2026, 9, 25));
-  const amountText = useNativeState(formatWholeAmount(2500));
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deposited, setDeposited] = useState(false);
+  const amountText = useNativeState(formatWholeAmount(1));
+  const blockedReason = earnUnavailable(capabilities) ? earnUnavailableReason(capabilities) : null;
 
   const profile =
     putToWorkRiskProfiles.find((option) => option.id === profileId) ?? putToWorkRiskProfiles[1];
@@ -496,7 +513,7 @@ export function PutToWorkFlowScreen() {
         <FlowAmountEntry
           amount={amount}
           amountText={amountText}
-          currencySymbol="₺"
+          currencySymbol="$"
           formatQuickAmount={(value) => formatUsd(value, false)}
           isContinueDisabled={amount <= 0 || amount > balances.available}
           onAmountChange={updateAmount}
@@ -513,19 +530,28 @@ export function PutToWorkFlowScreen() {
 
       {step === 'review' ? (
         <ReviewStep
+          earnBlockedReason={blockedReason}
+          error={submitError}
           horizon={horizon}
           onBack={goBack}
           onConfirm={() => {
-            recordAllocation({
-              id: `allocation-${profile.id}-${horizon.id}-${amount}`,
-              amountTry: amount,
-              risk: profile.id,
-              timeHorizon: {
-                kind: horizon.id,
-                ...(horizon.id === 'date' ? { targetDate: targetDate.toISOString() } : {}),
-              },
-            });
-            setStep('success');
+            setSubmitError(null);
+            void (async () => {
+              try {
+                const result = await executePutToWork({
+                  accountId: account.id,
+                  amount,
+                  risk: profile.id,
+                  horizon: horizon.id,
+                  targetDate,
+                  capabilities,
+                });
+                setDeposited(result.deposited);
+                setStep('success');
+              } catch (err) {
+                setSubmitError(errorMessage(err));
+              }
+            })();
           }}
           profile={profile}
           quote={quote}
@@ -535,15 +561,19 @@ export function PutToWorkFlowScreen() {
       {step === 'success' ? (
         <FlowSuccessState
           amount={formatUsd(quote.amount)}
-          noticeSubtitle="Your funds are now working in your Trinqa Earn balance."
+          noticeSubtitle={
+            deposited
+              ? 'Your funds are now working in your Trinqa Earn balance.'
+              : 'Allocation policy was saved. Yield deposit is unavailable until DeFindex is configured.'
+          }
           noticeSymbol="chart.line.uptrend.xyaxis"
-          noticeTitle="Earning balance updated"
+          noticeTitle={deposited ? 'Earning balance updated' : 'Policy saved'}
           onClose={finish}
           onDone={finish}
           onSecondaryPress={viewEarn}
           secondaryLabel="View Earn"
           supportingText={`${profile.title} · ${profile.estimatedApy.toFixed(1)}% estimated APY`}
-          title="Money put to work"
+          title={deposited ? 'Money put to work' : 'Policy updated'}
         />
       ) : null}
     </FlowScreenShell>

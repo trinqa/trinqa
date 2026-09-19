@@ -1,3 +1,4 @@
+import type { BackendCapabilities } from '@/services/types';
 import type {
   CurrencyCapability,
   CurrencyCode,
@@ -93,4 +94,36 @@ export function depositNetworks(): NetworkCapability[] {
   return mockNetworkCapabilities.filter(
     (network) => network.canDeposit && network.status === 'mock',
   );
+}
+
+export function liveCurrenciesFor(
+  operation: MoneyOperation,
+  capabilities: BackendCapabilities | null,
+): CurrencyCode[] {
+  if (!capabilities) return currenciesFor(operation);
+  const codes: CurrencyCode[] = [];
+  for (const currency of capabilities.currencies) {
+    if (currency.code === 'TRY') {
+      if (operation === 'deposit' && currency.canDeposit) codes.push('TRY');
+      if (operation === 'withdraw' && currency.canWithdraw) codes.push('TRY');
+      if (operation === 'display') codes.push('TRY');
+    }
+    if (currency.code === 'USDC') {
+      if (operation === 'pay' || operation === 'display' || operation === 'receive') codes.push('USD');
+    }
+  }
+  return [...new Set(codes)];
+}
+
+export function payoutBlockedReason(
+  currency: string,
+  capabilities: BackendCapabilities | null,
+): string | null {
+  const code = currency.toUpperCase();
+  if (code === 'USD' || code === 'USDC') return null;
+  const match = capabilities?.currencies.find((item) => item.code === code);
+  if (match?.reason) return match.reason;
+  if (code === 'BRL') return 'NO_SUPPORTED_PAYOUT_RAIL';
+  if (code === 'EUR') return 'ROUTE_UNAVAILABLE';
+  return null;
 }

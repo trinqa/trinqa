@@ -9,7 +9,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { ShortcutRow } from '@/components/ShortcutRow';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { currencyCapability } from '@/data/capabilities';
-import { convertFromTry } from '@/domain/money';
+import { toDisplayAmount } from '@/domain/money';
 import { useMockAppState } from '@/state/mockAppState';
 import { homeTokens, spacing } from '@/theme';
 import type { AccountSummary } from '@/types';
@@ -35,13 +35,13 @@ function HomeWalletHost({ account }: { account: AccountSummary }) {
 export function HomeScreen() {
   const router = useRouter();
   const { account, balances } = useMockAppState();
-  const totalTry = balances.available + balances.earning;
+  const total = balances.available + balances.earning;
   const capability = currencyCapability(account.displayCurrency);
   const homeAccount: AccountSummary = {
     accountName: 'Trinqa Account',
     cardLabel: 'Account Balance',
     displayCurrency: capability.symbol,
-    balance: convertFromTry(totalTry, account.displayCurrency).toLocaleString('en-US', {
+    balance: toDisplayAmount(total, account).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }),

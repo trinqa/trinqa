@@ -2,18 +2,20 @@ import { useSyncExternalStore } from 'react';
 
 import {
   mockAccountIdentity,
-  mockInitialBalances,
   mockInitialStrategy,
-  mockInitialTransactions,
 } from '@/data/mocks/appFixtures';
 import { convertToTry } from '@/domain/money';
+import { api } from '@/services/api';
+import { activityToTransaction } from '@/services/mapActivity';
+import { parseAmount, resolveAccountId } from '@/services/session';
+import type { BackendCapabilities, BackendHealth } from '@/services/types';
 import type {
   AccountBootstrapState,
-  AccountIdentity,
   BalanceState,
   CurrencyCode,
   PaymentIntent,
   PaymentQuote,
+  PutToWorkRiskId,
   StrategyPreference,
   Transaction,
   WithdrawalDestination,
@@ -27,20 +29,28 @@ interface MockSettings {
 
 export interface MockAppState {
   accountBootstrap: AccountBootstrapState;
-  account: AccountIdentity;
+  account: import('@/types').AccountIdentity;
   balances: BalanceState;
   strategy: StrategyPreference;
   transactions: Transaction[];
   settings: MockSettings;
+  health: BackendHealth | null;
+  capabilities: BackendCapabilities | null;
+  backendError: string | null;
 }
+
+const emptyBalances: BalanceState = { available: 0, earning: 0, baseCurrency: 'USDC' };
 
 let state: MockAppState = {
   accountBootstrap: 'new',
   account: mockAccountIdentity,
-  balances: mockInitialBalances,
+  balances: emptyBalances,
   strategy: mockInitialStrategy,
-  transactions: mockInitialTransactions,
+  transactions: [],
   settings: { securityEnabled: true },
+  health: null,
+  capabilities: null,
+  backendError: null,
 };
 
 const listeners = new Set<() => void>();
@@ -73,6 +83,68 @@ export function setDisplayCurrency(displayCurrency: CurrencyCode) {
 
 export function setSecurityEnabled(securityEnabled: boolean) {
   emit({ ...state, settings: { ...state.settings, securityEnabled } });
+}
+
+function riskFromPolicy(riskProfile?: number): PutToWorkRiskId {
+  if (riskProfile === 0) return 'stable';
+  if (riskProfile === 2) return 'growth';
+  return 'balanced';
+}
+
+export async function refreshLedger() {
+  const accountId = state.account.id;
+  if (!accountId.startsWith('G')) return;
+  const [balancesRes, activityRes, positionsRes, policyRes] = await Promise.all([
+    api.balances(accountId),
+    api.activity(accountId),
+    api.yieldPositions(accountId).catch(() => ({ positions: [] })),
+    api.policy(accountId).catch(() => null),
+  ]);
+  const usdc = balancesRes.balances.find((line) => line.assetCode === 'USDC');
+  const earning = positionsRes.positions.reduce(
+    (sum, position) => sum + parseAmount(position.positionValue.amount),
+    0,
+  );
+  emit({
+    ...state,
+    balances: {
+      available: parseAmount(usdc?.amount),
+      earning,
+      baseCurrency: 'USDC',
+    },
+    transactions: activityRes.items.map(activityToTransaction),
+    strategy: policyRes?.configured
+      ? { ...state.strategy, risk: riskFromPolicy(policyRes.riskProfile) }
+      : state.strategy,
+    backendError: null,
+  });
+}
+
+export async function bootstrapAccount() {
+  const health = await api.health();
+  const capabilities = await api.capabilities();
+  const accountId = await resolveAccountId(capabilities);
+  emit({
+    ...state,
+    health,
+    capabilities,
+    account: {
+      ...state.account,
+      id: accountId,
+      displayCurrency: 'USD',
+      ledgerAsset: 'USDC',
+      publicReceiveIdentifier: accountId,
+      networkDetails: {
+        network: 'Stellar testnet',
+        address: accountId,
+        asset: 'USDC',
+      },
+    },
+    balances: emptyBalances,
+    transactions: [],
+    backendError: null,
+  });
+  await refreshLedger();
 }
 
 function addTransaction(transaction: Transaction) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   BottomSheet,
@@ -54,7 +54,10 @@ import {
   withdrawalCurrencies,
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
-import { recordWithdrawal, useMockAppState } from '@/state/mockAppState';
+import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
+import { errorMessage } from '@/services/apiErrors';
+import { executeWithdrawTry } from '@/services/flows';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
@@ -416,12 +419,14 @@ function ReviewStep({
   onBack,
   onConfirm,
   quote,
+  error,
 }: {
   destination: WithdrawalDestination;
   intent: WithdrawalIntent;
   onBack: () => void;
   onConfirm: () => void;
   quote: WithdrawalQuote;
+  error?: string | null;
 }) {
   const receiveAmount = formatPayoutAmount(intent.amount, intent.payoutCurrency);
 
@@ -485,9 +490,12 @@ function ReviewStep({
 
         <FlowNotice
           symbol="point.3.connected.trianglepath.dotted"
-          title="Best route selected automatically"
-          subtitle="Trinqa will use the best available payout route."
+          title="TRY payout rail"
+          subtitle="Withdrawals use the TR mock anchor. Other payout currencies are unavailable."
         />
+        {error ? (
+          <FlowInlineState symbol="exclamationmark.circle" title="Withdrawal failed" subtitle={error} />
+        ) : null}
       </VStack>
     </FlowStepLayout>
   );
@@ -495,56 +503,34 @@ function ReviewStep({
 
 export function WithdrawFlowScreen() {
   const router = useRouter();
-  const { balances } = useMockAppState();
+  const { account, balances, capabilities } = useMockAppState();
   const [step, setStep] = useState<WithdrawalStep>('amount');
-  const [currency, setCurrency] = useState<WithdrawalCurrency>('EUR');
-  const [amount, setAmount] = useState(500);
+  const [currency, setCurrency] = useState<WithdrawalCurrency>('TRY');
+  const [amount, setAmount] = useState(1);
   const [destination, setDestination] = useState<WithdrawalDestination>(withdrawalDestinations[0]);
   const [withdrawalStatus, setWithdrawalStatus] = useState<WithdrawalStatus>('initiated');
-  const amountText = useNativeState(formatWholeAmount(500));
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const amountText = useNativeState(formatWholeAmount(1));
+  const currencies = liveCurrenciesFor('withdraw', capabilities);
+  const withdrawOptions = currencies.length ? currencies : withdrawalCurrencies;
 
   const intent = useMemo<WithdrawalIntent>(
     () => ({ amount, payoutCurrency: currency, destinationId: destination.id }),
     [amount, currency, destination.id],
   );
-  const quote = useMemo(
-    () => createWithdrawalQuote(intent, balances),
-    [balances, intent],
-  );
+  const quote = useMemo(() => {
+    const next = createWithdrawalQuote(intent, balances);
+    const blocked = payoutBlockedReason(currency, capabilities);
+    if (blocked) {
+      return { ...next, hasSufficientTotal: false };
+    }
+    return next;
+  }, [balances, capabilities, currency, intent]);
   const receiveAmount = formatPayoutAmount(amount, currency);
   const withdrawalId = useMemo(
     () => `withdrawal-${destination.id}-${currency.toLowerCase()}-${amount}`,
     [amount, currency, destination.id],
   );
-
-  useEffect(() => {
-    if (step !== 'processing') return;
-
-    setWithdrawalStatus('initiated');
-    const unwindTimer = quote.requiresEarnUnwind
-      ? setTimeout(() => setWithdrawalStatus('unwinding'), 500)
-      : null;
-    const convertingTimer = setTimeout(
-      () => setWithdrawalStatus('converting'),
-      quote.requiresEarnUnwind ? 1050 : 650,
-    );
-    const sendingTimer = setTimeout(
-      () => setWithdrawalStatus('sending'),
-      quote.requiresEarnUnwind ? 1750 : 1350,
-    );
-    const completedTimer = setTimeout(() => {
-      setWithdrawalStatus('completed');
-      recordWithdrawal(withdrawalId, intent, quote, destination);
-      setStep('success');
-    }, quote.requiresEarnUnwind ? 3100 : 2600);
-
-    return () => {
-      if (unwindTimer) clearTimeout(unwindTimer);
-      clearTimeout(convertingTimer);
-      clearTimeout(sendingTimer);
-      clearTimeout(completedTimer);
-    };
-  }, [destination, intent, quote, receiveAmount, step, withdrawalId]);
 
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -627,7 +613,7 @@ export function WithdrawFlowScreen() {
             <FlowCurrencyMenu
               accessibilityName="Payout currency"
               onChange={chooseCurrency}
-              options={withdrawalCurrencies}
+              options={withdrawOptions}
               value={currency}
             />
           )}
@@ -660,9 +646,34 @@ export function WithdrawFlowScreen() {
       {step === 'review' ? (
         <ReviewStep
           destination={destination}
+          error={submitError}
           intent={intent}
           onBack={goBack}
-          onConfirm={() => setStep('processing')}
+          onConfirm={() => {
+            if (destination.kind !== 'bank') {
+              setSubmitError('Wallet withdrawals are not available. Use a TRY bank destination.');
+              return;
+            }
+            setSubmitError(null);
+            setWithdrawalStatus('sending');
+            setStep('processing');
+            void (async () => {
+              try {
+                await executeWithdrawTry({
+                  accountId: account.id,
+                  usdcAmount: amount,
+                  currency,
+                  approveEarnUnwind: quote.requiresEarnUnwind,
+                });
+                setWithdrawalStatus('completed');
+                setStep('success');
+              } catch (err) {
+                setSubmitError(errorMessage(err));
+                setWithdrawalStatus('failed');
+                setStep('review');
+              }
+            })();
+          }}
           quote={quote}
         />
       ) : null}

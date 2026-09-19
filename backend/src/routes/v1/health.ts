@@ -4,7 +4,7 @@ import type { TrMockAnchorAdapter } from '../../adapters/tr-mock-anchor.adapter.
 import type { DefindexYieldAdapter } from '../../adapters/defindex-yield.adapter.js';
 import type { SoroswapAdapter } from '../../adapters/soroswap.adapter.js';
 import type { PolicyService } from '../../services/policy.service.js';
-import { env } from '../../config/env.js';
+import { env, isDemoSignerAvailable } from '../../config/env.js';
 
 export function registerHealthRoutes(
   app: FastifyInstance,
@@ -54,7 +54,7 @@ export function registerHealthRoutes(
         contractId: policy.adapter.contractId,
         wasmHash: policy.adapter.wasmHash,
       },
-      demoSigner: env.DEMO_SIGNER_ENABLED,
+      demoSigner: isDemoSignerAvailable(),
       timestamp: new Date().toISOString(),
     };
   });

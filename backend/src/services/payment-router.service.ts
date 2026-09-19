@@ -371,28 +371,83 @@ export class PaymentRouter {
         withdrawDest?: string;
         withdrawDestExtra?: string;
         anchorQuoteId?: string;
+        anchorSessionId?: string;
       };
       if (!withdrawPayload.withdrawDest) {
         throw new ApiError('VALIDATION_ERROR', 'Missing withdrawDest on TRY quote', 400);
       }
+      const sessionId = withdrawPayload.anchorSessionId;
+      if (!sessionId) {
+        throw new ApiError('VALIDATION_ERROR', 'Missing anchor session for TRY withdraw', 400);
+      }
+      let jwt: string;
+      try {
+        jwt = this.anchorSessions.resolve(sessionId, fromAccount);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'ANCHOR_SESSION_INVALID';
+        if (msg === 'ANCHOR_SESSION_NOT_FOUND' || msg === 'ANCHOR_SESSION_EXPIRED') {
+          throw new ApiError('ANCHOR_SESSION_INVALID', 'Anchor session expired or unknown', 401);
+        }
+        if (msg === 'ANCHOR_SESSION_ACCOUNT_MISMATCH') {
+          throw new ApiError('VALIDATION_ERROR', 'Anchor session account mismatch', 400);
+        }
+        throw err;
+      }
+      const withdrawSession = (await this.anchor.sep6Withdraw(jwt, {
+        asset_code: 'USDC',
+        account: fromAccount,
+        amount: quote.source.amount,
+        dest: withdrawPayload.withdrawDest,
+        dest_extra: withdrawPayload.withdrawDestExtra,
+        quote_id: withdrawPayload.anchorQuoteId,
+      })) as { id?: string; account_id?: string; memo?: string; memo_type?: string };
+      const transferId = withdrawSession.id;
+      const treasury = withdrawSession.account_id;
+      const memo = withdrawSession.memo;
+      if (!transferId || !treasury || !memo) {
+        throw new ApiError('ADAPTER_UNAVAILABLE', 'Anchor withdraw session missing treasury or memo', 502);
+      }
+      if (withdrawSession.memo_type && withdrawSession.memo_type !== 'id') {
+        throw new ApiError('VALIDATION_ERROR', `Expected memo_type id, got ${withdrawSession.memo_type}`, 502);
+      }
+      const unsignedXdr = await this.stellar.buildUsdcPaymentWithMemoIdXdr(
+        fromAccount,
+        treasury,
+        quote.source.amount,
+        memo,
+      );
+      await this.operations.update(op.id, {
+        status: 'awaiting_signature',
+        externalRefs: {
+          quoteId,
+          anchorTransferId: transferId,
+        },
+        metadata: {
+          routeType: quote.routeType,
+          currentStep: 'anchor_withdraw',
+          quoteId,
+          anchorSessionId: sessionId,
+          withdrawDest: withdrawPayload.withdrawDest,
+          withdrawDestExtra: withdrawPayload.withdrawDestExtra,
+          anchorQuoteId: withdrawPayload.anchorQuoteId,
+        },
+      });
       return {
         operationId: op.id,
+        unsignedXdr,
+        currentStep: 'anchor_withdraw',
         networkPassphrase: this.stellar.networkPassphrase,
         anchorSession: {
           kind: 'sep6_withdraw',
           domain: this.config.TR_ANCHOR_DOMAIN,
-          assetCode: 'USDC',
-          amount: quote.source.amount,
-          destinationCurrency: quote.destination.currency,
-          quoteId: withdrawPayload.anchorQuoteId,
+          transferId,
           dest: withdrawPayload.withdrawDest,
           destExtra: withdrawPayload.withdrawDestExtra,
-          note: 'Complete SEP-6 withdraw with sessionId; pass quoteId to lock SEP-38 rate',
+          quoteId: withdrawPayload.anchorQuoteId,
+          memo,
+          note: 'Sign the USDC funding payment; poll transfer status via BFF',
         },
-        steps: [
-          { type: 'sep10', description: 'Authenticate with TR mock anchor (opaque sessionId)' },
-          { type: 'sep6_withdraw', description: 'Start interactive withdraw to TRY' },
-        ],
+        steps: [{ type: 'anchor_withdraw', description: 'Sign USDC funding payment to TR mock anchor' }],
       };
     }
 

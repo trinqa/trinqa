@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 import { PrimaryActionButton, SecondaryActionButton } from '@/components/FlowControls';
 import { FlowErrorState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
+import { bootstrapAccount, setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, typography } from '@/theme';
 
 export function OnboardingScreen() {
@@ -26,11 +26,21 @@ export function OnboardingScreen() {
 
   useEffect(() => {
     if (accountBootstrap !== 'creating') return;
-    const timer = setTimeout(() => {
-      setAccountBootstrap('ready');
-      router.replace('/');
-    }, 850);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    void (async () => {
+      try {
+        await bootstrapAccount();
+        if (!cancelled) {
+          setAccountBootstrap('ready');
+          router.replace('/');
+        }
+      } catch {
+        if (!cancelled) setAccountBootstrap('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [accountBootstrap, router]);
 
   if (accountBootstrap === 'error') {
@@ -38,7 +48,7 @@ export function OnboardingScreen() {
       <FlowScreenShell>
         <FlowErrorState
           title="Account couldn't be prepared"
-          subtitle="Try again to continue with the mock Trinqa account."
+          subtitle="Could not reach the Trinqa backend or resolve a Stellar account."
           onRetry={() => setAccountBootstrap('creating')}
           onCancel={() => setAccountBootstrap('new')}
         />

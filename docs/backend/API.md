@@ -72,6 +72,16 @@ Base URL: `http://localhost:8787` (default)
 | GET | `/api/v1/operations/:id` | Normalized operation |
 | GET | `/api/v1/activity/:accountId` | Activity stub from operation store |
 
+## Demo signer (testnet only, never expose secrets)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/demo/account` | Demo G-address (`403` if signer disabled) |
+| POST | `/api/v1/demo/sign` | Sign classic/Soroban XDR with server demo key |
+| POST | `/api/v1/demo/sep10` | SEP-10 + opaque `sessionId` |
+| POST | `/api/v1/demo/anchor/simulate-bank-transfer` | Mock bank credit for SEP-6 deposit |
+| POST | `/api/v1/demo/trustline/usdc` | Add USDC trustline for the demo account |
+
 ## Transactions
 
 | Method | Path | Description |

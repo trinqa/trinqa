@@ -9,12 +9,14 @@ import { EarnDetailsPanel } from '@/components/EarnDetailsPanel';
 import { MetricCard } from '@/components/MetricCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
+import { FlowInlineState } from '@/components/FlowStates';
 import {
   earnChartPoints,
 } from '@/data/mocks/earnAnalytics';
 import { putToWorkRiskProfiles } from '@/data/mocks/putToWork';
-import { convertFromTry, formatMoney } from '@/domain/money';
+import { formatLedgerMoney } from '@/domain/money';
 import { earnTransactions, toEarnListItem } from '@/domain/transactionPresentation';
+import { earnUnavailable, earnUnavailableReason } from '@/services/session';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens } from '@/theme';
 import { captionTextModifiers } from '@/theme/swiftUi';
@@ -24,7 +26,7 @@ const METRIC_WIDTHS = [112, 112, 112] as const;
 
 export function EarnScreen() {
   const router = useRouter();
-  const { account, balances, strategy, transactions } = useMockAppState();
+  const { account, balances, strategy, transactions, capabilities } = useMockAppState();
   const [segment, setSegment] = useState<EarnSegment>('earnings');
   const profile = putToWorkRiskProfiles.find((item) => item.id === strategy.risk) ?? putToWorkRiskProfiles[1];
   const dynamicItems = earnTransactions(transactions).map(toEarnListItem);
@@ -45,17 +47,18 @@ export function EarnScreen() {
   const yieldEarned = transactions
     .filter((transaction) => transaction.type === 'yield-earned')
     .reduce((total, transaction) => total + transaction.amount, 0);
-  const headline = formatMoney(yieldEarned, 'USD');
+  const headline = formatLedgerMoney(yieldEarned, account);
   const metrics = [
     { id: 'apy', label: 'Current APY', value: `${profile.estimatedApy.toFixed(1)}%` },
     {
       id: 'balance',
       label: 'Earning Balance',
-      value: formatMoney(convertFromTry(balances.earning, account.displayCurrency), account.displayCurrency),
+      value: formatLedgerMoney(balances.earning, account),
     },
     { id: 'risk', label: 'Risk', value: profile.title },
   ];
   const earn = screenTokens.earn;
+  const providerBlocked = earnUnavailable(capabilities);
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
@@ -117,6 +120,16 @@ export function EarnScreen() {
           />
         ))}
       </HStack>
+
+      {providerBlocked ? (
+        <Group modifiers={[padding({ top: 12, leading: earn.contentHorizontalOffset })]}>
+          <FlowInlineState
+            symbol="exclamationmark.triangle"
+            title="Earn unavailable"
+            subtitle={earnUnavailableReason(capabilities)}
+          />
+        </Group>
+      ) : null}
 
       <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
         <EarnDetailsPanel

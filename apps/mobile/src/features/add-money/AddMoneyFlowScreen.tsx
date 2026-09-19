@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   Button,
@@ -39,6 +39,7 @@ import {
   FlowSuccessState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
+import { FlowInlineState } from '@/components/FlowStates';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { depositNetworks } from '@/data/capabilities';
 import {
@@ -48,7 +49,9 @@ import {
   quickAddMoneyAmounts,
 } from '@/data/mocks/addMoney';
 import { formatMoney } from '@/domain/money';
-import { recordDeposit } from '@/state/mockAppState';
+import { errorMessage } from '@/services/apiErrors';
+import { executeAddMoney } from '@/services/flows';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, typography } from '@/theme';
 import type { AddMoneyQuote, AddMoneySourceId, AddMoneyStep, CurrencyCode, NetworkCapability } from '@/types';
 
@@ -154,10 +157,12 @@ function ReviewStep({
   onBack,
   onConfirm,
   quote,
+  error,
 }: {
   onBack: () => void;
   onConfirm: () => void;
   quote: AddMoneyQuote;
+  error?: string | null;
 }) {
   return (
     <FlowStepLayout
@@ -234,8 +239,11 @@ function ReviewStep({
         <FlowNotice
           symbol="lock.fill"
           title="Secure & reliable"
-          subtitle="Your deposit is processed through regulated partners."
+          subtitle="Your deposit is processed through the TR mock anchor on Stellar testnet."
         />
+        {error ? (
+          <FlowInlineState symbol="exclamationmark.circle" title="Deposit failed" subtitle={error} />
+        ) : null}
       </VStack>
     </FlowStepLayout>
   );
@@ -309,7 +317,7 @@ function NetworkStep({
       </Group>
       <VStack alignment="leading" spacing={8} modifiers={[padding({ top: 28 })]}>
         <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
-          Choose the network your funds are coming from. These options are frontend mocks.
+          Stellar is the live deposit network. Other networks are unavailable.
         </Text>
         {networks.map((network) => (
           <Button
@@ -342,6 +350,7 @@ function NetworkStep({
 
 export function AddMoneyFlowScreen() {
   const router = useRouter();
+  const { account } = useMockAppState();
   const params = useLocalSearchParams<{ source?: string }>();
   const sourceParam = Array.isArray(params.source) ? params.source[0] : params.source;
   const sourceId: AddMoneySourceId =
@@ -351,28 +360,9 @@ export function AddMoneyFlowScreen() {
   const [step, setStep] = useState<AddMoneyStep>(sourceId === 'wallet' ? 'network' : 'amount');
   const [amount, setAmount] = useState(10000);
   const [currency, setCurrency] = useState<CurrencyCode>('TRY');
-  const [sourceNetwork, setSourceNetwork] = useState<NetworkCapability | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const amountText = useNativeState(formatWholeAmount(10000));
   const quote = useMemo(() => createAddMoneyQuote(amount, currency), [amount, currency]);
-  const depositId = useMemo(() => `deposit-${sourceId}-${currency.toLowerCase()}-${amount}`, [amount, currency, sourceId]);
-
-  useEffect(() => {
-    if (step !== 'processing') return;
-
-    const timer = setTimeout(() => setStep('success'), 2600);
-    return () => clearTimeout(timer);
-  }, [step]);
-
-  useEffect(() => {
-    if (step !== 'success') return;
-    recordDeposit({
-      id: depositId,
-      amount,
-      creditedAmount: quote.receivedAmount,
-      currency,
-      source: sourceNetwork ? `${sourceNetwork.displayName} wallet` : source.title,
-    });
-  }, [amount, currency, depositId, quote.receivedAmount, source.title, sourceNetwork, step]);
 
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -410,8 +400,7 @@ export function AddMoneyFlowScreen() {
       {step === 'network' ? (
         <NetworkStep
           onBack={goBack}
-          onSelect={(network) => {
-            setSourceNetwork(network);
+          onSelect={() => {
             setStep('amount');
           }}
         />
@@ -434,7 +423,29 @@ export function AddMoneyFlowScreen() {
       ) : null}
 
       {step === 'review' ? (
-        <ReviewStep onBack={goBack} onConfirm={() => setStep('processing')} quote={quote} />
+        <ReviewStep
+          error={submitError}
+          onBack={goBack}
+          onConfirm={() => {
+            setSubmitError(null);
+            setStep('processing');
+            void (async () => {
+              try {
+                await executeAddMoney({
+                  accountId: account.id,
+                  amount,
+                  currency,
+                  sourceId,
+                });
+                setStep('success');
+              } catch (err) {
+                setSubmitError(errorMessage(err));
+                setStep('review');
+              }
+            })();
+          }}
+          quote={quote}
+        />
       ) : null}
 
       {step === 'processing' ? <ProcessingStep onBack={goBack} /> : null}
