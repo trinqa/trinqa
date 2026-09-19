@@ -13,6 +13,7 @@ web-build/
 .env.*
 !.env.example
 !**/.env.example
+*.pem
 coverage/
 **/target/
 **/.data/
