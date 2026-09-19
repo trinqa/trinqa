@@ -27,3 +27,43 @@ describe('DefindexYieldAdapter.normalizeStrategy', () => {
     expect(highProfile.breakdown.assetRisk).not.toBe(lowProfile.breakdown.assetRisk);
   });
 });
+
+describe('DefindexYieldAdapter.normalizePosition', () => {
+  const vault = 'CVAULT1234567890123456789012345678901234567890123456789012';
+
+  function adapterWithBalance(balance: unknown) {
+    const adapter = new DefindexYieldAdapter({ ...env, DEFINDEX_API_KEY: 'test-key', DEFINDEX_VAULT_ADDRESS: vault });
+    vi.spyOn(adapter, 'getVaultInfo').mockResolvedValue({
+      assets: [{ address: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA', symbol: 'USDC' }],
+    } as never);
+    vi.spyOn(adapter as never, 'usdcUnderlyingIndex').mockReturnValue(0 as never);
+    vi.spyOn(adapter, 'getVaultBalance').mockResolvedValue(balance as never);
+    return adapter;
+  }
+
+  it('reads DeFindex balances as atomic integer strings (live API shape)', async () => {
+    const pos = await adapterWithBalance({ dfTokens: '5000001', underlyingBalance: ['5000001'] }).normalizePosition(
+      'G'.repeat(56),
+      `defindex:${vault}`,
+    );
+    expect(pos?.positionValue.amount).toBe('0.5000001');
+    expect(pos?.shares).toBe('5000001');
+  });
+
+  it('treats an empty position as no position', async () => {
+    const pos = await adapterWithBalance({ dfTokens: '0', underlyingBalance: ['0'] }).normalizePosition(
+      'G'.repeat(56),
+      `defindex:${vault}`,
+    );
+    expect(pos).toBeNull();
+  });
+
+  it('rejects non-integer atomic amounts instead of guessing units', async () => {
+    await expect(
+      adapterWithBalance({ dfTokens: '1', underlyingBalance: ['0.5'] }).normalizePosition(
+        'G'.repeat(56),
+        `defindex:${vault}`,
+      ),
+    ).rejects.toMatchObject({ code: 'ADAPTER_UNAVAILABLE' });
+  });
+});

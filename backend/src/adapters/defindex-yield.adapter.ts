@@ -6,7 +6,7 @@ import {
   type YieldStrategy,
   strategyIdForVault,
 } from '../domain/yield.js';
-import { providerNumberToDecimalString } from '../domain/provider-amount.js';
+import { providerAtomicToDecimalString } from '../domain/provider-amount.js';
 import { bigintToSafeNumber } from '../domain/safe-integer.js';
 import { normalizeProviderError } from '../util/provider-error.js';
 import { ApiError } from '../domain/api-errors.js';
@@ -258,9 +258,10 @@ export class DefindexYieldAdapter {
       throw new ApiError('DEFINDEX_VAULT_ASSET_MISMATCH', 'Vault has no Trinqa USDC asset slot', 422);
     }
     const balance = await this.getVaultBalance(accountId);
-    const shares = String(balance.dfTokens ?? 0);
-    const underlying = (balance.underlyingBalance ?? []).map((n: number, i: number) =>
-      providerNumberToDecimalString(n, 7, `underlyingBalance[${i}]`),
+    // dfTokens are vault shares; kept as the raw atomic integer string.
+    const shares = providerAtomicToDecimalString(balance.dfTokens ?? '0', 0, 'dfTokens');
+    const underlying = ((balance.underlyingBalance ?? []) as unknown[]).map((n, i) =>
+      providerAtomicToDecimalString(n, 7, `underlyingBalance[${i}]`),
     );
     const totalUnderlying = underlying[usdcIndex] ?? '0';
     if (Number(shares) <= 0 && Number(totalUnderlying) <= 0) {
