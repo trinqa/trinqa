@@ -152,6 +152,9 @@ function AnchorCard({ anchor }: { anchor: AnchorSnapshot }) {
   );
 }
 
+// A scrolling list like Activity, so it takes that screen's content width.
+const directory = screenTokens.activity;
+
 export function AnchorDirectoryScreen() {
   const router = useRouter();
   const [anchors, setAnchors] = useState<AnchorSnapshot[] | null>(null);
@@ -187,7 +190,7 @@ export function AnchorDirectoryScreen() {
 
   return (
     <FlowScreenShell>
-      <VStack alignment="leading" spacing={0} modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}>
+      <VStack alignment="leading" spacing={0} modifiers={[frame({ width: directory.contentWidth, maxHeight: Infinity })]}>
         <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
           <ScreenHeader showBack title="Anchor directory" onBackPress={() => router.back()} />
         </Group>
@@ -197,7 +200,7 @@ export function AnchorDirectoryScreen() {
             spacing={spacing.cardGap}
             modifiers={[
               padding({ bottom: spacing.scrollBottom }),
-              frame({ width: screenTokens.addMoney.contentWidth, alignment: 'leading' }),
+              frame({ width: directory.contentWidth, alignment: 'leading' }),
             ]}
           >
             <FlowNotice
