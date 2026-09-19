@@ -62,6 +62,8 @@ export function createWithdrawalQuote(
     requiresEarnUnwind: contribution.earnContribution > 0,
     earnUnwindAmount: contribution.earnContribution,
     routeId: configuration.routeId,
+    // Mock data never carries a real route decision, so nothing about routing is claimed.
+    routeDecision: null,
     hasSufficientTotal: contribution.hasSufficientTotal,
   };
 }
