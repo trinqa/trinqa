@@ -33,6 +33,8 @@ const envSchema = z.object({
   DEMO_SIGNER_SECRET: optionalString,
   /** Shared secret for /api/v1/demo/* (header x-demo-token). Required in production when the demo signer is on. */
   DEMO_ACCESS_TOKEN: optionalString,
+  /** Master secret for per-device custodial testnet wallets; derived from DEMO_SIGNER_SECRET when unset. */
+  WALLET_MASTER_SECRET: optionalString,
 
   DEFINDEX_API_KEY: optionalString,
   DEFINDEX_API_URL: optionalUrl.default('https://api.defindex.io'),
