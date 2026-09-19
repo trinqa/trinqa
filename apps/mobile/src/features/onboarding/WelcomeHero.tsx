@@ -65,10 +65,13 @@ function Orb({
     <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: size, height: size, ...start }, style]}>
       <Svg width="100%" height="100%">
         <Defs>
+          {/* A long, shallow falloff stands in for a blur — SVG filters are too costly here. */}
           <RadialGradient id={gradientId} cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={color} stopOpacity={0.95} />
-            <Stop offset="45%" stopColor={color} stopOpacity={0.28} />
-            <Stop offset="72%" stopColor={color} stopOpacity={0} />
+            <Stop offset="0%" stopColor={color} stopOpacity={0.8} />
+            <Stop offset="28%" stopColor={color} stopOpacity={0.42} />
+            <Stop offset="55%" stopColor={color} stopOpacity={0.16} />
+            <Stop offset="78%" stopColor={color} stopOpacity={0.04} />
+            <Stop offset="100%" stopColor={color} stopOpacity={0} />
           </RadialGradient>
         </Defs>
         <Circle cx={size / 2} cy={size / 2} r={size / 2} fill={`url(#${gradientId})`} />
@@ -188,7 +191,7 @@ export function WelcomeHero({ logo, isCreating }: WelcomeHeroProps) {
           size={230}
           start={{ left: -60, top: -30 }}
           travel={{ x: 170, y: 150 }}
-          durationMs={46000}
+          durationMs={36000}
           scaleTo={1.35}
         />
         <Orb
@@ -196,7 +199,7 @@ export function WelcomeHero({ logo, isCreating }: WelcomeHeroProps) {
           size={200}
           start={{ right: -50, top: 70 }}
           travel={{ x: -160, y: 120 }}
-          durationMs={54000}
+          durationMs={42000}
           scaleTo={0.75}
         />
         <Orb
@@ -204,7 +207,7 @@ export function WelcomeHero({ logo, isCreating }: WelcomeHeroProps) {
           size={180}
           start={{ left: 40, bottom: -60 }}
           travel={{ x: 130, y: -165 }}
-          durationMs={50000}
+          durationMs={39000}
           scaleTo={1.4}
         />
       </View>

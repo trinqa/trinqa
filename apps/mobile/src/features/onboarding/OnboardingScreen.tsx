@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,6 +8,7 @@ import { FlowErrorState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { WelcomeHero } from '@/features/onboarding/WelcomeHero';
 import { welcomePalette as palette } from '@/features/onboarding/welcomePalette';
+import { errorMessage } from '@/services/apiErrors';
 import { bootstrapAccount, setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
 import { componentTokens } from '@/theme';
 
@@ -41,6 +42,7 @@ function WelcomeButton({
 export function OnboardingScreen() {
   const router = useRouter();
   const { accountBootstrap } = useMockAppState();
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const isCreating = accountBootstrap === 'creating';
 
   useEffect(() => {
@@ -53,8 +55,13 @@ export function OnboardingScreen() {
           setAccountBootstrap('ready');
           router.replace('/');
         }
-      } catch {
-        if (!cancelled) setAccountBootstrap('error');
+      } catch (err) {
+        // The real reason matters here: a missing demo token and an unreachable
+        // backend both used to read as the same generic failure.
+        if (!cancelled) {
+          setBootstrapError(errorMessage(err, 'Could not reach the Trinqa backend.'));
+          setAccountBootstrap('error');
+        }
       }
     })();
     return () => {
@@ -67,7 +74,7 @@ export function OnboardingScreen() {
       <FlowScreenShell>
         <FlowErrorState
           title="Account couldn't be prepared"
-          subtitle="Could not reach the Trinqa backend or resolve a Stellar account."
+          subtitle={bootstrapError ?? 'Could not reach the Trinqa backend or resolve a Stellar account.'}
           onRetry={() => setAccountBootstrap('creating')}
           onCancel={() => setAccountBootstrap('new')}
         />
