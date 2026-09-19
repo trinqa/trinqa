@@ -100,7 +100,7 @@ export function ScreenHeader({
             <Text
               modifiers={[
                 font({ size: typography.micro, weight: 'bold' }),
-                foregroundStyle(colors.surface),
+                foregroundStyle(colors.textInverse),
                 frame({ width: 16, height: 16 }),
                 background(colors.danger, shapes.circle()),
               ]}

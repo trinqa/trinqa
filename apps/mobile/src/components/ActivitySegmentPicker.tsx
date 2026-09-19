@@ -5,7 +5,7 @@ import type { ActivitySegment } from '@/types';
 const ACTIVITY_OPTIONS = [
   { label: 'All', value: 'all' },
   { label: 'Payments', value: 'payments' },
-  { label: 'Earnings', value: 'earnings' },
+  { label: 'Growing', value: 'earnings' },
 ] as const;
 
 interface ActivitySegmentPickerProps {

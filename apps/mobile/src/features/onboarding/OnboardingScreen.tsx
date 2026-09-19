@@ -44,7 +44,7 @@ export function OnboardingScreen() {
           {accountBootstrap === 'creating' ? (
             <ProgressView modifiers={[progressViewStyle('circular'), controlSize('large'), tint(colors.action)]} />
           ) : (
-            <Image systemName="hand.thumbsup.fill" size={38} color={colors.surface} />
+            <Image systemName="hand.thumbsup.fill" size={38} color={colors.textInverse} />
           )}
         </ZStack>
         <Text
@@ -65,7 +65,7 @@ export function OnboardingScreen() {
         >
           {accountBootstrap === 'creating'
             ? 'Getting your Trinqa account ready.'
-            : 'Your money works until you need it.'}
+            : 'See your money, send it, or let it grow.'}
         </Text>
         <Spacer />
         {accountBootstrap === 'new' ? (

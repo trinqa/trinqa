@@ -86,17 +86,17 @@ function formatPaymentAmount(
   currency: PaymentCurrency,
   decimals = true,
 ) {
-  return `${CURRENCY_SYMBOLS[currency]}${value.toLocaleString('en-US', {
+  return `${value.toLocaleString('en-US', {
     minimumFractionDigits: decimals ? 2 : 0,
     maximumFractionDigits: decimals ? 2 : 0,
-  })}`;
+  })} ${CURRENCY_SYMBOLS[currency]}`;
 }
 
 function formatTry(value: number) {
-  return `₺${value.toLocaleString('en-US', {
+  return `${value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  })} ₺`;
 }
 
 function processingRowState(
@@ -456,7 +456,7 @@ function ReviewStep({
             <FlowInfoRow label="Estimated arrival" value={quote.estimatedArrival} />
             <FlowInfoRow
               label="Exchange rate"
-              value={`${CURRENCY_SYMBOLS[intent.receiveCurrency]}1 ≈ ${formatTry(quote.exchangeRate)}`}
+              value={`1 ${CURRENCY_SYMBOLS[intent.receiveCurrency]} ≈ ${formatTry(quote.exchangeRate)}`}
             />
             {quote.earnContribution > 0 ? (
               <VStack alignment="leading" spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>

@@ -40,7 +40,7 @@ interface LayeredTransactionRowProps {
   footerTrailingColor?: string;
 }
 
-/** Shared Home-quality transaction card with a white body and muted lower layer. */
+/** Shared Home-quality transaction card with a surface body and muted lower layer. */
 export function LayeredTransactionRow({
   title,
   subtitle,

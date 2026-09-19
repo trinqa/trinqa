@@ -25,7 +25,7 @@ export function StrategyDetailsSheet({ profile }: { profile: PutToWorkRiskProfil
       onIsPresentedChange={setIsPresented}
       anchor={
         <Button
-          label="See risk details"
+          label="What's the risk?"
           systemImage="info.circle"
           onPress={() => setIsPresented(true)}
           modifiers={[buttonStyle('bordered')]}
@@ -42,17 +42,17 @@ export function StrategyDetailsSheet({ profile }: { profile: PutToWorkRiskProfil
         <VStack alignment="leading" spacing={12} modifiers={[padding({ top: 18, bottom: 14, horizontal: 18 })]}>
           <VStack alignment="leading" spacing={4}>
             <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
-              Why this strategy?
+              Why this plan?
             </Text>
             <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
               {profile.recommendationReason}
             </Text>
           </VStack>
           <Divider />
-          <FlowInfoRow label="Strategy" value={profile.title} emphasized />
-          <FlowInfoRow label="Risk" value={profile.riskLabel} />
-          <FlowInfoRow label="Estimated APY" value={`~${profile.estimatedApy.toFixed(1)}%`} />
-          <FlowInfoRow label="Access" value={profile.accessDescription} />
+          <FlowInfoRow label="Plan" value={profile.title} emphasized />
+          <FlowInfoRow label="How risky" value={profile.riskLabel} />
+          <FlowInfoRow label="Yearly return" value={`~${profile.estimatedApy.toFixed(1)}%`} />
+          <FlowInfoRow label="When you can use it" value={profile.accessDescription} />
           <VStack alignment="leading" spacing={4}>
             <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>Main risk</Text>
             <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textPrimary)]}>
@@ -66,7 +66,7 @@ export function StrategyDetailsSheet({ profile }: { profile: PutToWorkRiskProfil
           >
             <VStack alignment="leading" spacing={10} modifiers={[padding({ top: 8 })]}>
               <FlowInfoRow label="Underlying provider" value={profile.underlyingProvider ?? 'Automatic'} />
-              <FlowInfoRow label="Current allocation" value={`${profile.title} strategy`} />
+              <FlowInfoRow label="Current plan" value={`${profile.title} plan`} />
             </VStack>
           </DisclosureGroup>
           <SecondaryActionButton label="Close" onPress={() => setIsPresented(false)} />

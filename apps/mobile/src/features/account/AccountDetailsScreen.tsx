@@ -21,7 +21,7 @@ export function AccountDetailsScreen() {
     <FlowScreenShell>
       <VStack alignment="leading" spacing={0} modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}>
         <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
-          <ScreenHeader showBack title="Account Details" onBackPress={() => router.back()} />
+          <ScreenHeader showBack title="Account details" onBackPress={() => router.back()} />
         </Group>
         <VStack alignment="leading" spacing={spacing.control} modifiers={[padding({ top: spacing.xxxl })]}>
           <FlowCard>

@@ -96,7 +96,7 @@ export function ShortcutRow({
       modifiers={[frame({ maxWidth: Infinity, minHeight: homeTokens.shortcuts.height })]}
     >
       <AddMoneySourceSheet
-        anchor={<ShortcutButton label="Add Money" symbol="plus.circle" isSheetAnchor />}
+        anchor={<ShortcutButton label="Add money" symbol="plus.circle" isSheetAnchor />}
       />
       <ShortcutButton label="Pay" symbol="arrow.up.circle" onPress={onPay} />
       <Menu
@@ -105,7 +105,7 @@ export function ShortcutRow({
       >
         <Button label="Withdraw" systemImage="arrow.down.to.line" onPress={onWithdraw} />
         <Button label="Receive" systemImage="arrow.down.circle" onPress={onReceive} />
-        <Button label="Account Details" systemImage="doc.text" onPress={onAccountDetails} />
+        <Button label="Account details" systemImage="doc.text" onPress={onAccountDetails} />
         <Button label="Settings" systemImage="gearshape" onPress={onSettings} />
       </Menu>
     </HStack>

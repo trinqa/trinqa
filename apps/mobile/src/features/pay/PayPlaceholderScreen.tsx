@@ -1,9 +1,10 @@
+import { useState } from 'react';
+
 import {
   Button,
   Group,
   HStack,
   Image,
-  RNHostView,
   Spacer,
   Text,
   VStack,
@@ -21,21 +22,26 @@ import {
 import { useRouter } from 'expo-router';
 
 import { BalanceSummary } from '@/components/BalanceSummary';
-import { CardLimitGauge } from '@/components/CardLimitGauge';
 import { DateSectionDivider } from '@/components/DateSectionDivider';
 import { InsetLayer } from '@/components/InsetLayer';
+import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
-import { WalletTransactionRow } from '@/components/WalletTransactionRow';
+import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
 import { currencyCapability } from '@/data/capabilities';
-import { formatLedgerMoney, toDisplayAmount } from '@/domain/money';
-import { toWalletTransactionItem, transactionSection, walletTransactions } from '@/domain/transactionPresentation';
+import { toDisplayAmount } from '@/domain/money';
+import {
+  toActivityListItem,
+  transactionSection,
+  transactionStatusColor,
+  transactionStatusLabel,
+  transactionStatusSymbol,
+  walletTransactions,
+} from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
-
-const GAUGE_WIDTH = screenTokens.wallet.gaugeWidth;
-const GAUGE_HEIGHT = screenTokens.wallet.gaugeHeight;
+import type { Transaction } from '@/types';
 
 function formatBalance(value: number) {
   return value.toLocaleString('en-US', {
@@ -75,14 +81,14 @@ function WalletActionRow({
       <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
         <Text
           modifiers={[
-            font({ size: typography.body, weight: 'medium' }),
+            font({ size: typography.label, weight: 'semibold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
           {label}
         </Text>
         <Spacer />
-        <Image systemName={symbol} size={14} color={colors.textPrimary} />
+        <Image systemName={symbol} size={componentTokens.headerControl.symbolSize} color={colors.textPrimary} />
       </HStack>
     </Button>
   );
@@ -91,23 +97,26 @@ function WalletActionRow({
 export function WalletScreen() {
   const router = useRouter();
   const { account, balances, transactions } = useMockAppState();
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const wallet = screenTokens.wallet;
   const transactionContentWidth =
     wallet.contentWidth - wallet.detailsHorizontalPadding * 2;
   const walletTotal = balances.available + balances.earning;
-  const allocationProgress = walletTotal > 0 ? balances.earning / walletTotal : 0;
   const capability = currencyCapability(account.displayCurrency);
-  const walletRows = walletTransactions(transactions).map(toWalletTransactionItem);
+  const walletActivity = walletTransactions(transactions).map((transaction) => ({
+    transaction,
+    item: toActivityListItem(transaction),
+  }));
   const sections = Array.from(
     new Map(
-      walletTransactions(transactions).map((transaction) => {
+      walletActivity.map(({ transaction }) => {
         const section = transactionSection(transaction);
         return [section.id, section];
       }),
     ).values(),
   ).map((section) => ({
     ...section,
-    items: walletRows.filter((item) => item.group === section.id),
+    rows: walletActivity.filter(({ item }) => item.group === section.id),
   }));
 
   return (
@@ -118,12 +127,12 @@ export function WalletScreen() {
 
       <VStack modifiers={[padding({ top: wallet.headerToBalance })]}>
         <BalanceSummary
-          totalLabel="Total Balance"
+          totalLabel="Your money"
           totalValue={formatBalance(toDisplayAmount(walletTotal, account))}
           currencySymbol={capability.symbol}
-          leftLabel="Available"
+          leftLabel="Ready to use"
           leftValue={formatBalance(toDisplayAmount(balances.available, account))}
-          rightLabel="Earning"
+          rightLabel="Growing"
           rightValue={formatBalance(toDisplayAmount(balances.earning, account))}
         />
       </VStack>
@@ -148,69 +157,20 @@ export function WalletScreen() {
                 foregroundStyle(colors.textPrimary),
               ]}
             >
-              Allocation
+              Move money
             </Text>
 
             <Group modifiers={[padding({ top: wallet.titleToLimitCard })]}>
               <InsetLayer>
-                <VStack
-                  alignment="leading"
-                  spacing={0}
-                  modifiers={[
-                    padding({ horizontal: 14, vertical: 10 }),
-                    frame({ maxWidth: Infinity, height: wallet.limitCardHeight }),
-                    background(
-                      colors.surface,
-                      shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-                    ),
-                    strokeBorder({
-                      content: colors.borderStrong,
-                      style: { lineWidth: componentTokens.surface.borderWidth },
-                      shape: 'roundedRectangle',
-                      cornerRadius: componentTokens.surface.cardRadius,
-                    }),
-                  ]}
-                >
-                  <Group modifiers={[frame({ width: GAUGE_WIDTH, height: GAUGE_HEIGHT })]}>
-                    <RNHostView matchContents>
-                      <CardLimitGauge
-                        width={GAUGE_WIDTH}
-                        height={GAUGE_HEIGHT}
-                        progress={allocationProgress}
-                      />
-                    </RNHostView>
-                  </Group>
-
-                  <HStack spacing={8} modifiers={[padding({ top: 8 }), frame({ maxWidth: Infinity })]}>
-                    <Text
-                      modifiers={[
-                        font({ size: typography.footnote, weight: 'medium' }),
-                        foregroundStyle(colors.textSecondary),
-                      ]}
-                    >
-                      Earning
-                    </Text>
-                    <Spacer />
-                    <Text
-                      modifiers={[
-                        font({ size: typography.footnote, weight: 'semibold' }),
-                        foregroundStyle(colors.textPrimary),
-                      ]}
-                    >
-                      {`${formatLedgerMoney(balances.earning, account)}/${formatLedgerMoney(walletTotal, account)}`}
-                    </Text>
-                  </HStack>
-                </VStack>
-
                 <WalletActionRow
-                  label="Manage allocation"
+                  label="Move money to grow"
                   symbol="arrow.right"
                   onPress={() =>
                     router.push({ pathname: '/put-to-work', params: { origin: 'wallet' } })
                   }
                 />
                 <WalletActionRow
-                  label="Withdraw"
+                  label="Take money out"
                   symbol="arrow.down.to.line"
                   onPress={() => router.push('/withdraw')}
                 />
@@ -224,23 +184,44 @@ export function WalletScreen() {
                 foregroundStyle(colors.textPrimary),
               ]}
             >
-              Transaction
+              Recent
             </Text>
 
-            {sections.map((section, index) => (
-              <VStack key={section.id} alignment="leading" spacing={componentTokens.dateSectionDivider.toRowsGap}>
-                <DateSectionDivider
-                  contentWidth={transactionContentWidth}
-                  label={section.title}
-                  modifiers={[padding({ top: index === 0 ? wallet.transactionTitleToGroup : 12 })]}
-                />
-                <VStack alignment="leading" spacing={wallet.transactionRowGap}>
-                  {section.items.map((item) => (
-                    <WalletTransactionRow key={item.id} item={item} />
+            <TransactionDetailsSheet
+              transaction={selectedTransaction}
+              onDismiss={() => setSelectedTransaction(null)}
+              anchor={(
+                <VStack alignment="leading" spacing={0}>
+                  {sections.map((section, index) => (
+                    <VStack key={section.id} alignment="leading" spacing={componentTokens.dateSectionDivider.toRowsGap}>
+                      <DateSectionDivider
+                        contentWidth={transactionContentWidth}
+                        label={section.title}
+                        modifiers={[padding({ top: index === 0 ? wallet.transactionTitleToGroup : 12 })]}
+                      />
+                      <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
+                        {section.rows.map(({ item, transaction }) => (
+                          <LayeredTransactionRow
+                            key={item.id}
+                            title={item.title}
+                            subtitle={item.subtitle}
+                            amount={item.amount}
+                            meta={item.timestamp}
+                            symbol={item.symbol}
+                            footerLeadingText={transactionStatusLabel(transaction.status)}
+                            footerSymbol={transactionStatusSymbol(transaction.status)}
+                            footerLeadingColor={transactionStatusColor(transaction.status)}
+                            footerTrailingText="Details"
+                            onFooterPress={() => setSelectedTransaction(transaction)}
+                            onPress={() => setSelectedTransaction(transaction)}
+                          />
+                        ))}
+                      </VStack>
+                    </VStack>
                   ))}
                 </VStack>
-              </VStack>
-            ))}
+              )}
+            />
           </VStack>
         </SurfacePanel>
       </VStack>

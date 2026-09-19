@@ -6,7 +6,7 @@ export const colorDistribution = {
   method: 'Approximate painted area of primary screens, not a 60/30/10 target.',
   current: [
     { role: 'Dominant', token: 'colors.background', value: '#F3F3F3', percent: 46 },
-    { role: 'Supporting', token: 'colors.surface', value: '#FFFFFF', percent: 28 },
+    { role: 'Supporting', token: 'colors.surface', value: '#F5F5F5', percent: 28 },
     { role: 'Supporting dark', token: 'walletColors.bodyStart', value: '#2B2D33', percent: 12 },
     { role: 'Accent', token: 'colors.action', value: '#08AFD3', percent: 6 },
     { role: 'Text / ink', token: 'colors.textPrimary', value: '#111111', percent: 5 },
@@ -22,12 +22,12 @@ export const colorDistribution = {
 export const accessibilityFlags = [
   {
     id: 'cyan-on-white',
-    issue: 'Action cyan #08AFD3 on white is below 4.5:1 for small text.',
+    issue: 'Action cyan #08AFD3 on #F5F5F5 is below 4.5:1 for small text.',
     usedFor: 'Selected chip fills, some icon tints',
   },
   {
     id: 'white-on-cyan',
-    issue: 'White label on PrimaryActionButton (~3:1) is below AA for 14pt semibold.',
+    issue: 'Inverse label on PrimaryActionButton (~3:1) is below AA for small type.',
     usedFor: 'Primary CTA',
   },
   {

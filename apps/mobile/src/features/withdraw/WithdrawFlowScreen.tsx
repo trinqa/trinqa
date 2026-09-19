@@ -82,24 +82,24 @@ function formatPayoutAmount(
   currency: WithdrawalCurrency,
   decimals = true,
 ) {
-  return `${CURRENCY_SYMBOLS[currency]}${value.toLocaleString('en-US', {
+  return `${value.toLocaleString('en-US', {
     minimumFractionDigits: decimals ? 2 : 0,
     maximumFractionDigits: decimals ? 2 : 0,
-  })}`;
+  })} ${CURRENCY_SYMBOLS[currency]}`;
 }
 
 function formatUsd(value: number) {
-  return `₺${value.toLocaleString('en-US', {
+  return `${value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  })} ₺`;
 }
 
 function formatUsdRate(value: number) {
-  return `₺${value.toLocaleString('en-US', {
+  return `${value.toLocaleString('en-US', {
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
-  })}`;
+  })} ₺`;
 }
 
 function processingRowState(
@@ -387,7 +387,7 @@ function WithdrawalAmountSummary({
           </HStack>
           <FlowInfoRow
             label="Exchange rate"
-            value={`${CURRENCY_SYMBOLS[intent.payoutCurrency]}1 ≈ ${formatUsdRate(quote.exchangeRate)}`}
+            value={`1 ${CURRENCY_SYMBOLS[intent.payoutCurrency]} ≈ ${formatUsdRate(quote.exchangeRate)}`}
           />
         </VStack>
       </FlowCard>
@@ -472,7 +472,7 @@ function ReviewStep({
             <FlowInfoRow label="Estimated arrival" value={quote.estimatedArrival} />
             <FlowInfoRow
               label="Exchange rate"
-              value={`${CURRENCY_SYMBOLS[intent.payoutCurrency]}1 ≈ ${formatUsdRate(quote.exchangeRate)}`}
+              value={`1 ${CURRENCY_SYMBOLS[intent.payoutCurrency]} ≈ ${formatUsdRate(quote.exchangeRate)}`}
             />
 
             {quote.requiresEarnUnwind ? (

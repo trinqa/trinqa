@@ -7,7 +7,7 @@ export const semanticColor = {
   surface: {
     canvas: primitiveColor.grayF3,
     primary: primitiveColor.white,
-    secondary: primitiveColor.grayF2,
+    secondary: primitiveColor.grayF5,
     layer: primitiveColor.grayF2,
     inverse: primitiveColor.gray2B,
     splash: primitiveColor.grayF4F2,
@@ -15,7 +15,7 @@ export const semanticColor = {
   text: {
     primary: primitiveColor.gray111,
     secondary: primitiveColor.gray787,
-    inverse: primitiveColor.white,
+    inverse: primitiveColor.walletTextF6,
     walletPrimary: primitiveColor.walletTextF6,
     walletSecondary: primitiveColor.walletTextF2,
     walletTertiary: primitiveColor.walletTextD4,

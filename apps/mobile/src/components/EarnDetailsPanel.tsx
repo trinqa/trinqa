@@ -13,6 +13,7 @@ interface EarnDetailsPanelProps {
   onChange: (segment: EarnSegment) => void;
   items: EarnListItem[];
   onManageStrategy: () => void;
+  onSelectTransaction: (id: string) => void;
 }
 
 export function EarnDetailsPanel({
@@ -20,6 +21,7 @@ export function EarnDetailsPanel({
   onChange,
   items,
   onManageStrategy,
+  onSelectTransaction,
 }: EarnDetailsPanelProps) {
   const earn = screenTokens.earn;
 
@@ -41,6 +43,10 @@ export function EarnDetailsPanel({
         <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
           {items.map((item) => {
             const isEarning = item.iconStyle === 'earning';
+            const onPress =
+              item.action === 'manage-strategy'
+                ? onManageStrategy
+                : () => onSelectTransaction(item.id);
 
             return (
               <LayeredTransactionRow
@@ -65,9 +71,8 @@ export function EarnDetailsPanel({
                   item.status ? transactionStatusColor(item.status) : undefined
                 }
                 footerTrailingColor={colors.action}
-                onFooterPress={
-                  item.action === 'manage-strategy' ? onManageStrategy : () => undefined
-                }
+                onFooterPress={onPress}
+                onPress={onPress}
               />
             );
           })}

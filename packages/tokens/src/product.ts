@@ -19,9 +19,11 @@ export {
 export const colors = {
   background: primitiveColor.grayF3,
   surface: primitiveColor.white,
+  surfaceSecondary: primitiveColor.grayF5,
   surfaceLayer: primitiveColor.grayF2,
   textPrimary: primitiveColor.gray111,
   textSecondary: primitiveColor.gray787,
+  textInverse: primitiveColor.walletTextF6,
   borderStrong: primitiveColor.grayE5,
   action: primitiveColor.cyan08AFD3,
   actionPrimaryDark: primitiveColor.cyan08A7CA,
@@ -302,7 +304,7 @@ export const walletColors = {
   textPrimary: primitiveColor.walletTextF6,
   textSecondary: primitiveColor.walletTextF2,
   textTertiary: primitiveColor.walletTextD4,
-  textInverse: primitiveColor.white,
+  textInverse: primitiveColor.walletTextF6,
 } as const;
 
 export const walletShadow = primitiveShadow.wallet;

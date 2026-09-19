@@ -89,8 +89,8 @@ export function PrimaryActionButton({ label, onPress, isDisabled = false }: Flow
         </VStack>
         <Text
           modifiers={[
-            font({ size: typography.body, weight: 'semibold' }),
-            foregroundStyle(colors.surface),
+            font({ size: typography.sectionTitle, weight: 'semibold' }),
+            foregroundStyle(colors.textInverse),
           ]}
         >
           {label}
@@ -480,7 +480,7 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
         }),
       ]}
     >
-      <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+      <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
         {label}
       </Text>
     </Button>
@@ -528,7 +528,7 @@ export function FlowInfoRow({ label, value, emphasized = false }: FlowInfoRowPro
       <Spacer />
       <Text
         modifiers={[
-          font({ size: emphasized ? typography.body : typography.footnote, weight: emphasized ? 'semibold' : 'medium' }),
+          font({ size: emphasized ? typography.label : typography.footnote, weight: emphasized ? 'semibold' : 'medium' }),
           foregroundStyle(colors.textPrimary),
         ]}
       >

@@ -90,14 +90,6 @@ export function FlowAmountEntry({
             frame({ width: flow.contentWidth, height: flow.amountFieldHeight }),
           ]}
         >
-          <Text
-            modifiers={[
-              font({ size: typography.amountCurrency, weight: 'bold' }),
-              foregroundStyle(colors.textPrimary),
-            ]}
-          >
-            {currencySymbol}
-          </Text>
           <TextField
             autoFocus
             maxLength={13}
@@ -113,6 +105,14 @@ export function FlowAmountEntry({
               frame({ width: 270, height: flow.amountFieldHeight }),
             ]}
           />
+          <Text
+            modifiers={[
+              font({ size: typography.amountCurrency, weight: 'bold' }),
+              foregroundStyle(colors.textPrimary),
+            ]}
+          >
+            {currencySymbol}
+          </Text>
         </HStack>
 
         {amountAccessory ? (

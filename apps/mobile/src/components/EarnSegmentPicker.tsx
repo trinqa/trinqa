@@ -3,8 +3,8 @@ import { screenTokens } from '@/theme';
 import type { EarnSegment } from '@/types';
 
 const EARN_OPTIONS = [
-  { label: 'Earnings', value: 'earnings' },
-  { label: 'Strategies', value: 'strategies' },
+  { label: 'Earned', value: 'earnings' },
+  { label: 'Plan', value: 'strategies' },
 ] as const;
 
 interface EarnSegmentPickerProps {

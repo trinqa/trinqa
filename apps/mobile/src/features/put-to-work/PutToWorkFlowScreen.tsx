@@ -69,10 +69,10 @@ function formatWholeAmount(value: number) {
 }
 
 function formatUsd(value: number, decimals = true) {
-  return `$${value.toLocaleString('en-US', {
+  return `${value.toLocaleString('en-US', {
     minimumFractionDigits: decimals ? 2 : 0,
     maximumFractionDigits: decimals ? 2 : 0,
-  })}`;
+  })} $`;
 }
 
 function StrategyOption({
@@ -92,7 +92,7 @@ function StrategyOption({
       modifiers={[
         buttonStyle('plain'),
         accessibilityLabel(
-          `${profile.title}, ${profile.riskLabel}, ${profile.estimatedApy.toFixed(1)} percent estimated APY`,
+          `${profile.title}, ${profile.riskLabel}, ${profile.estimatedApy.toFixed(1)} percent yearly return`,
         ),
         ...(selected ? [accessibilityAddTraits(['isSelected'])] : []),
         frame({ width: flow.contentWidth, height: flow.strategyRowHeight }),
@@ -121,7 +121,7 @@ function StrategyOption({
           <HStack spacing={6}>
             <Text
               modifiers={[
-                font({ size: typography.body, weight: 'semibold' }),
+                font({ size: typography.label, weight: 'semibold' }),
                 foregroundStyle(colors.textPrimary),
               ]}
             >
@@ -138,11 +138,11 @@ function StrategyOption({
         <Spacer />
         <VStack alignment="trailing" spacing={3}>
           <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-            Estimated APY
+            Yearly return
           </Text>
           <Text
             modifiers={[
-              font({ size: typography.body, weight: 'semibold' }),
+              font({ size: typography.label, weight: 'semibold' }),
               foregroundStyle(colors.textPrimary),
             ]}
           >
@@ -179,7 +179,7 @@ function StrategyStep({
 
   return (
     <FlowStepLayout
-      title="Put it to work"
+      title="Grow money"
       onBack={onBack}
       primaryLabel="Continue"
       onPrimaryPress={onContinue}
@@ -205,11 +205,11 @@ function StrategyStep({
             >
               <VStack alignment="leading" spacing={3}>
                 <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-                  Available to allocate
+                  Ready to move
                 </Text>
                 <Text
                   modifiers={[
-                    font({ size: typography.sectionTitle, weight: 'semibold' }),
+                    font({ size: typography.amountCurrency, weight: 'bold' }),
                     foregroundStyle(colors.textPrimary),
                   ]}
                 >
@@ -225,11 +225,11 @@ function StrategyStep({
         <Text
           modifiers={[
             padding({ top: 16 }),
-            font({ size: typography.sectionTitle, weight: 'semibold' }),
+            font({ size: typography.kicker, weight: 'semibold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
-          Strategy
+          Pick a plan
         </Text>
         <VStack spacing={flow.strategyGap} modifiers={[padding({ top: 8 })]}>
           {putToWorkRiskProfiles.map((option) => (
@@ -245,11 +245,11 @@ function StrategyStep({
         <Text
           modifiers={[
             padding({ top: flow.horizonTopGap }),
-            font({ size: typography.sectionTitle, weight: 'semibold' }),
+            font({ size: typography.kicker, weight: 'semibold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
-          Time horizon
+          How long can it stay?
         </Text>
         <Group modifiers={[padding({ top: 8 })]}>
           <NativeSegmentedControl
@@ -304,11 +304,11 @@ function AmountSummary({
         ]}
       >
         <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-          You’ll add to earning
+          This amount will grow
         </Text>
         <Text
           modifiers={[
-            font({ size: typography.sectionTitle, weight: 'semibold' }),
+            font({ size: typography.amountCurrency, weight: 'bold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -317,10 +317,10 @@ function AmountSummary({
         <Divider />
         <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
           <FlowInfoRow
-            label="Est. yearly"
+            label="Yearly estimate"
             value={`~${formatUsd(quote.estimatedYearlyReturn)}`}
           />
-          <FlowInfoRow label="Access" value={horizon.accessLabel} />
+          <FlowInfoRow label="When you can use it" value={horizon.accessLabel} />
         </HStack>
       </VStack>
     </FlowCard>
@@ -400,24 +400,24 @@ function ReviewStep({
             >
               <VStack alignment="leading" spacing={4}>
                 <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-                  To earning
+                  Moving to grow
                 </Text>
                 <Text
                   modifiers={[
-                    font({ size: typography.body, weight: 'semibold' }),
+                    font({ size: typography.label, weight: 'semibold' }),
                     foregroundStyle(colors.textPrimary),
                   ]}
                 >
-                  {profile.title} · {profile.estimatedApy.toFixed(1)}% estimated APY
+                  {profile.title} · {profile.estimatedApy.toFixed(1)}% yearly return
                 </Text>
               </VStack>
             </HStack>
 
             <Divider />
-            <FlowInfoRow label="Available after" value={formatUsd(quote.availableAfter)} />
-            <FlowInfoRow label="Earning after" value={formatUsd(quote.earningAfter)} />
-            <FlowInfoRow label="Access" value={horizon.accessLabel} />
-            <FlowInfoRow label="Risk" value={profile.reviewRiskLabel} />
+            <FlowInfoRow label="Ready to use after" value={formatUsd(quote.availableAfter)} />
+            <FlowInfoRow label="Growing after" value={formatUsd(quote.earningAfter)} />
+            <FlowInfoRow label="When you can use it" value={horizon.accessLabel} />
+            <FlowInfoRow label="How risky" value={profile.reviewRiskLabel} />
           </VStack>
         </FlowCard>
 
@@ -519,7 +519,7 @@ export function PutToWorkFlowScreen() {
           selectionSymbol="chart.line.uptrend.xyaxis"
           selectionTitle={profile.title}
           summary={<AmountSummary horizon={horizon} quote={quote} />}
-          title="Put it to work"
+          title="Grow money"
         />
       ) : null}
 
@@ -550,15 +550,15 @@ export function PutToWorkFlowScreen() {
       {step === 'success' ? (
         <FlowSuccessState
           amount={formatUsd(quote.amount)}
-          noticeSubtitle="Your funds are now working in your Trinqa Earn balance."
+          noticeSubtitle="That money is now set aside to grow."
           noticeSymbol="chart.line.uptrend.xyaxis"
-          noticeTitle="Earning balance updated"
+          noticeTitle="Growing money updated"
           onClose={finish}
           onDone={finish}
           onSecondaryPress={viewEarn}
-          secondaryLabel="View Earn"
-          supportingText={`${profile.title} · ${profile.estimatedApy.toFixed(1)}% estimated APY`}
-          title="Money put to work"
+          secondaryLabel="See growing money"
+          supportingText={`${profile.title} · ${profile.estimatedApy.toFixed(1)}% yearly return`}
+          title="Money is set aside to grow"
         />
       ) : null}
     </FlowScreenShell>

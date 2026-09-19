@@ -20,7 +20,7 @@ interface InsetLayerProps {
   modifiers?: ViewModifier[];
 }
 
-/** Shared muted layer that holds elevated white controls and cards. */
+/** Shared muted layer that holds elevated surface controls and cards. */
 export function InsetLayer({
   children,
   axis = 'vertical',

@@ -37,7 +37,7 @@ export function SettingsScreen() {
           <Section title="Account">
             <Text>{account.displayName}</Text>
             <Picker
-              label="Default display currency"
+              label="Currency you see"
               selection={account.displayCurrency}
               onSelectionChange={(value) => setDisplayCurrency(value as CurrencyCode)}
               modifiers={[pickerStyle('menu')]}

@@ -9,15 +9,14 @@ import { EarnDetailsPanel } from '@/components/EarnDetailsPanel';
 import { MetricCard } from '@/components/MetricCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
-import {
-  earnChartPoints,
-} from '@/data/mocks/earnAnalytics';
+import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
+import { earnChartPoints } from '@/data/mocks/earnAnalytics';
 import { putToWorkRiskProfiles } from '@/data/mocks/putToWork';
 import { formatLedgerMoney } from '@/domain/money';
 import { earnTransactions, toEarnListItem } from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, spacing, typography } from '@/theme';
-import type { EarnSegment } from '@/types';
+import type { EarnSegment, Transaction } from '@/types';
 
 const METRIC_WIDTHS = [112, 112, 112] as const;
 
@@ -25,16 +24,17 @@ export function EarnScreen() {
   const router = useRouter();
   const { account, balances, strategy, transactions } = useMockAppState();
   const [segment, setSegment] = useState<EarnSegment>('earnings');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const profile = putToWorkRiskProfiles.find((item) => item.id === strategy.risk) ?? putToWorkRiskProfiles[1];
   const dynamicItems = earnTransactions(transactions).map(toEarnListItem);
   const strategyItem = {
     id: 'current-strategy',
     title: profile.title,
-    subtitle: 'Current strategy',
+    subtitle: 'Your plan',
     amount: `${profile.estimatedApy.toFixed(1)}%`,
-    meta: 'est. APY',
-    footerLeadingText: 'Estimated APY',
-    footerTrailingText: 'Manage Strategy',
+    meta: 'yearly return',
+    footerLeadingText: 'Yearly return',
+    footerTrailingText: 'Change plan',
     symbol: 'chart.line.uptrend.xyaxis' as const,
     iconStyle: 'strategy' as const,
     segment: 'strategies' as const,
@@ -46,13 +46,13 @@ export function EarnScreen() {
     .reduce((total, transaction) => total + transaction.amount, 0);
   const headline = formatLedgerMoney(yieldEarned, account);
   const metrics = [
-    { id: 'apy', label: 'Current APY', value: `${profile.estimatedApy.toFixed(1)}%` },
+    { id: 'apy', label: 'Yearly return', value: `${profile.estimatedApy.toFixed(1)}%` },
     {
       id: 'balance',
-      label: 'Earning Balance',
+      label: 'Money growing',
       value: formatLedgerMoney(balances.earning, account),
     },
-    { id: 'risk', label: 'Risk', value: profile.title },
+    { id: 'risk', label: 'How risky', value: profile.riskLabel },
   ];
   const earn = screenTokens.earn;
 
@@ -73,21 +73,30 @@ export function EarnScreen() {
       >
         <Text
           modifiers={[
-            font({ size: typography.kicker, weight: 'medium' }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
-          Total Earned
+          You've earned
         </Text>
-        <HStack alignment="firstTextBaseline" spacing={0}>
-          <Text modifiers={[font({ size: typography.kicker, weight: 'bold' }), foregroundStyle(colors.textSecondary)]}>
+        <HStack alignment="firstTextBaseline" spacing={4}>
+          <Text modifiers={[font({ size: typography.label, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
             +
           </Text>
           <Text modifiers={[font({ size: typography.amountCurrency, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
             {headline}
           </Text>
         </HStack>
+        <Text
+          modifiers={[
+            font({ size: typography.body, weight: 'medium' }),
+            foregroundStyle(colors.textSecondary),
+            frame({ maxWidth: Infinity, alignment: 'leading' }),
+          ]}
+        >
+          This is extra money your savings made.
+        </Text>
       </VStack>
 
       <VStack
@@ -110,7 +119,6 @@ export function EarnScreen() {
           <MetricCard
             key={metric.id}
             label={metric.label}
-            labelFontSize={metric.id === 'balance' ? typography.footnote : undefined}
             value={metric.value}
             width={METRIC_WIDTHS[index] ?? 117}
           />
@@ -118,13 +126,22 @@ export function EarnScreen() {
       </HStack>
 
       <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
-        <EarnDetailsPanel
-          segment={segment}
-          onChange={setSegment}
-          items={items}
-          onManageStrategy={() =>
-            router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })
-          }
+        <TransactionDetailsSheet
+          transaction={selectedTransaction}
+          onDismiss={() => setSelectedTransaction(null)}
+          anchor={(
+            <EarnDetailsPanel
+              segment={segment}
+              onChange={setSegment}
+              items={items}
+              onManageStrategy={() =>
+                router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })
+              }
+              onSelectTransaction={(id) =>
+                setSelectedTransaction(transactions.find((transaction) => transaction.id === id) ?? null)
+              }
+            />
+          )}
         />
       </VStack>
     </SwiftUIScreenShell>

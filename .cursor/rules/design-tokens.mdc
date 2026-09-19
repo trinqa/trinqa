@@ -9,9 +9,12 @@ alwaysApply: false
 Source of truth: Home, Wallet, Earn, Activity.
 
 - Import `typography`, `spacing`, `radius`, `colors`, `motion` from `@/theme` or `@trinqa/tokens`.
-- Type roles: `pageTitle 30`, `amountHero 32`, `amountDisplay 25`, `amountCurrency 22`, `sectionTitle 17`, `kicker 16`, `label 15`, `body 14`, `caption 13`, `footnote 12`, `fine 11`, `micro 10`.
-- Weights: regular / medium / semibold / bold. RN StyleSheet uses `typeWeightRn` (`400/500/600/700`).
+- Type roles: `pageTitle 30`, `amountHero 32`, `amountDisplay 25`, `amountCurrency 22` (Title 2 hero), `sectionTitle 17` (header / primary CTA), `kicker 16` (section name), `label 15` (row title, list amount, currency beside 22), `body 14` (supporting sentence), `caption 13`, `footnote 12` (hero label, date), `fine 11` (status), `micro 10`.
+- Weights: medium / semibold / bold only. RN StyleSheet uses `typeWeightRn` (`500/600/700`). Do not use regular/400.
+- Home hierarchy: hero label `footnote`, currency `label`, amount `amountCurrency`; section `kicker` semibold; rows `label`/`footnote`; status `fine`.
 - Status: `colors.success` `#20AD2B`, `colors.danger` `#FF3B30`, `colors.pending` `#787878`. Never use named `'red'`/`'green'`.
+- Surfaces stay the extracted stack: canvas `#F3F3F3`, elevated `surface` `#FFFFFF`, muted `surfaceSecondary` `#F5F5F5`, inset `surfaceLayer` `#F2F2F2`. Do not flatten this by painting buttons with the muted fill.
+- No pure black `#000000`. Ink is `#111111`.
 - CTA cyan (`colors.action*`) is excluded from palette work. Do not replace it with a new brand color.
 - Do not add new font sizes, hex values, or radii in screens. Wallet illustration colors stay in `walletColors`.
 - Native navigation, BottomSheet, and tab motion stay system-owned. Use `motion.press|selection|contentChange|processing` only for micro-motion.

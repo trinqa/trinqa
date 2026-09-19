@@ -15,7 +15,7 @@ export function ActivitySegmentPicker({
 }: ActivitySegmentPickerProps) {
   const options: Array<{ id: ActivitySegment; label: string }> = [
     { id: 'payments', label: 'Payments' },
-    { id: 'earnings', label: 'Earnings' },
+    { id: 'earnings', label: 'Growing' },
   ];
 
   return (

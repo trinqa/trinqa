@@ -43,7 +43,7 @@ export function formatMoney(
     minimumFractionDigits: decimals ? capability.decimals : 0,
     maximumFractionDigits: decimals ? capability.decimals : 0,
   });
-  return `${capability.symbol}${amount}${options.code ? ` ${currency}` : ''}`;
+  return `${amount} ${capability.symbol}${options.code ? ` ${currency}` : ''}`;
 }
 
 export function formatLedgerMoney(

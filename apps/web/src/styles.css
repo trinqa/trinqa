@@ -112,7 +112,7 @@ a {
   border: 0.5px solid var(--line-strong);
   border-radius: 16px;
   padding: 18px;
-  box-shadow: 0 2px 8px #0000000a;
+  box-shadow: 0 2px 8px #1111110a;
 }
 
 .stat {
@@ -414,7 +414,7 @@ a {
 .flag {
   padding: 14px 16px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   border: 0.5px solid var(--line-strong);
 }
 

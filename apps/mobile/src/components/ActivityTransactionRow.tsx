@@ -29,7 +29,7 @@ export function ActivityTransactionRow({ item, onPress }: ActivityTransactionRow
         isEarning ? colors.successMuted : isAmazon ? colors.merchantLogo : undefined
       }
       iconColor={isEarning ? colors.success : undefined}
-      iconLetterColor={isAmazon ? colors.surface : undefined}
+      iconLetterColor={isAmazon ? colors.textInverse : undefined}
       iconAccentText={isAmazon ? '⌣' : undefined}
       iconAccentColor={isAmazon ? colors.merchantLogoAccent : undefined}
       footerLeadingText={transactionStatusLabel(item.status)}

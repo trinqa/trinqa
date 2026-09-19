@@ -217,17 +217,6 @@ export type ActivitySegment = 'all' | 'payments' | 'earnings';
 
 export type EarnSegment = 'earnings' | 'strategies';
 
-export interface WalletTransactionItem {
-  id: string;
-  title: string;
-  detail: string;
-  amount: string;
-  time: string;
-  symbol: import('sf-symbols-typescript').SFSymbol;
-  iconStyle: 'neutral' | 'accent';
-  group: string;
-}
-
 export interface EarnListItem {
   id: string;
   title: string;

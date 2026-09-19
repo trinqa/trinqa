@@ -410,7 +410,7 @@ function Elevation() {
           Flat surface
           <p className="note">Default lists, tabs, forms</p>
         </div>
-        <div className="card" style={{ boxShadow: '0 2px 8px #0000000A' }}>
+        <div className="card" style={{ boxShadow: '0 2px 8px #1111110A' }}>
           Surface 2 / 8
           <p className="note">{primitiveShadow.surface.color}</p>
         </div>
@@ -697,9 +697,9 @@ function A11y() {
   const pairs = [
     [colors.textPrimary, colors.background, 'primary on canvas'],
     [colors.textSecondary, colors.background, 'secondary on canvas'],
-    [colors.surface, colors.action, 'white on CTA'],
-    [colors.action, colors.surface, 'cyan on white'],
-    [colors.success, colors.surface, 'success on white'],
+    [colors.textInverse, colors.action, 'inverse on CTA'],
+    [colors.action, colors.surface, 'cyan on surface'],
+    [colors.success, colors.surface, 'success on surface'],
   ] as const;
   return (
     <Section id="a11y" title="13 Accessibility" kicker="Flags only. No automatic redesign.">

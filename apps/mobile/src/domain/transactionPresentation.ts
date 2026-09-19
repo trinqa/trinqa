@@ -8,7 +8,6 @@ import type {
   EarnListItem,
   Transaction,
   TransactionStatus,
-  WalletTransactionItem,
 } from '@/types';
 
 const earningTypes = new Set<Transaction['type']>([
@@ -80,10 +79,10 @@ export function transactionTypeLabel(transaction: Transaction) {
     received: 'Received',
     deposit: 'Deposit',
     withdrawal: 'Withdrawal',
-    'yield-earned': 'Yield earned',
-    'added-to-earning': 'Added to earning',
-    'returned-to-available': 'Returned to available',
-    rebalance: 'Strategy change',
+    'yield-earned': 'You earned',
+    'added-to-earning': 'Moved to grow',
+    'returned-to-available': 'Moved back',
+    rebalance: 'Plan change',
   };
   return labels[transaction.type];
 }
@@ -151,7 +150,7 @@ export function getTransactionDetails(transaction: Transaction): TransactionDeta
   const rows: TransactionDetailRow[] = [];
 
   if (isStrategyMovement) {
-    pushUniqueRow(rows, 'Strategy', strategyValue(transaction), used);
+    pushUniqueRow(rows, 'Plan', strategyValue(transaction), used);
   } else {
     rows.push({ label: 'Type', value: typeLabel });
     used.add(typeLabel);
@@ -202,19 +201,6 @@ export function toActivityListItem(transaction: Transaction): ActivityListItem {
     symbol: transaction.symbol,
     iconStyle: transaction.iconStyle,
     status: transaction.status,
-  };
-}
-
-export function toWalletTransactionItem(transaction: Transaction): WalletTransactionItem {
-  return {
-    id: transaction.id,
-    title: transaction.title,
-    detail: transaction.subtitle,
-    amount: formatSignedMoney(transaction.amount, transaction.currency, transaction.direction),
-    time: transactionTime(transaction),
-    symbol: transaction.symbol ?? 'arrow.left.arrow.right',
-    iconStyle: transaction.type === 'added-to-earning' ? 'accent' : 'neutral',
-    group: transactionSection(transaction).id,
   };
 }
 

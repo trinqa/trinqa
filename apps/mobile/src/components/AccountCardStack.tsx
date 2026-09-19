@@ -172,8 +172,8 @@ export function AccountCardStack({ account, width = 380 }: AccountCardStackProps
       >
         <Text style={[styles.cardLabel, { fontSize: typography.footnote * scale }]}>{account.cardLabel}</Text>
         <View style={styles.balanceRow}>
-          <Text style={[styles.currency, { fontSize: typography.label * scale }]}>{account.displayCurrency}</Text>
           <Text style={[styles.balance, { fontSize: homeTokens.wallet.balanceTypeSize * scale }]}>{account.balance}</Text>
+          <Text style={[styles.currency, { fontSize: typography.label * scale }]}>{account.displayCurrency}</Text>
         </View>
       </View>
     </View>
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   currency: {
     color: walletColors.textInverse,
     fontWeight: typeWeightRn.medium,
-    marginRight: homeTokens.wallet.currencyGap,
+    marginLeft: homeTokens.wallet.currencyGap,
   },
   balance: {
     fontWeight: typeWeightRn.bold,

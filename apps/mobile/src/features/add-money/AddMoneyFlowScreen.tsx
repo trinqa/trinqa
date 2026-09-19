@@ -201,7 +201,7 @@ function ReviewStep({
                   background(colors.textPrimary, shapes.circle()),
                 ]}
               >
-                <Text modifiers={[font({ size: typography.caption, weight: 'bold' }), foregroundStyle(colors.surface)]}>
+                <Text modifiers={[font({ size: typography.caption, weight: 'bold' }), foregroundStyle(colors.textInverse)]}>
                   ₺
                 </Text>
               </ZStack>

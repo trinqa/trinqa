@@ -21,7 +21,7 @@ export const outliers = [
   },
   {
     id: 'shadows',
-    values: ['card 0/4/0.06/14', 'surface 2/8/#0000000A', 'wallet 0/4/0.1/7', 'seam 1.5/2/#00000009'],
+    values: ['card 0/4/0.06/14', 'surface 2/8/#1111110A', 'wallet 0/4/0.1/7', 'seam 1.5/2/#11111109'],
     note: 'Four distinct elevation recipes.',
   },
   {
@@ -60,7 +60,9 @@ export const usage = {
   'colors.success': ['Earn metrics', 'put-to-work strategy icon', 'completed status'],
   'colors.danger': ['Home profile badge', 'failed outcomes'],
   'typography.pageTitle': ['Activity title', 'onboarding 30'],
-  'typography.body': ['PrimaryActionButton label (14) and many body.semibold rows'],
+  'typography.body': ['Supporting sentences'],
+  'typography.sectionTitle': ['ScreenHeader titles', 'PrimaryActionButton'],
+  'colors.textInverse': ['Text on CTA, badge, onboarding icon'],
   'spacing.screenHorizontal': ['18 — also spacing.xl'],
   'radius.card': ['14 — action button, selection rows'],
   'motion.duration.onboardingReady': ['OnboardingScreen setTimeout'],
@@ -85,7 +87,6 @@ export const componentInventory = [
   { name: 'AccountCardStack', reusable: true, file: 'AccountCardStack.tsx' },
   { name: 'ShortcutRow', reusable: true, file: 'ShortcutRow.tsx' },
   { name: 'LayeredTransactionRow', reusable: true, file: 'LayeredTransactionRow.tsx' },
-  { name: 'WalletTransactionRow', reusable: true, file: 'WalletTransactionRow.tsx' },
   { name: 'TransactionDetailsSheet', reusable: true, file: 'TransactionDetailsSheet.tsx' },
   { name: 'NativeSegmentedControl', reusable: true, file: 'NativeSegmentedControl.tsx' },
   { name: 'FlowAmountEntry', reusable: true, file: 'FlowAmountEntry.tsx' },
