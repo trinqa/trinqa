@@ -1,22 +1,18 @@
 import { ApiError } from './api-errors.js';
-import { Decimal, fromAtomic, toAtomic } from './money.js';
-import { bigintToSafeNumber } from './safe-integer.js';
+import { fromAtomic } from './money.js';
 
-/** Convert DeFindex SDK number balances to 7-decimal Stellar amounts without unsafe BigInt truncation. */
-export function providerNumberToDecimalString(value: number, decimals = 7, label = 'amount'): string {
-  if (!Number.isFinite(value)) {
+/**
+ * DeFindex API balances arrive as atomic-unit integers (usually strings, e.g. "5000001" = 0.5000001 USDC),
+ * despite the SDK typing them as numbers. Anything that is not a non-negative integer is rejected.
+ */
+export function providerAtomicToDecimalString(value: unknown, decimals = 7, label = 'amount'): string {
+  const raw = typeof value === 'number' && Number.isSafeInteger(value) ? String(value) : value;
+  if (typeof raw !== 'string' && typeof raw !== 'bigint') {
     throw new ApiError('ADAPTER_UNAVAILABLE', `Invalid ${label} from provider`, 502);
   }
-  const asDecimal = new Decimal(String(value));
-  const atomic = toAtomic(asDecimal.toFixed(decimals), decimals);
-  try {
-    bigintToSafeNumber(atomic, label);
-  } catch {
-    throw new ApiError('VALIDATION_ERROR', `${label} exceeds safe integer range`, 422);
+  const text = String(raw).trim();
+  if (!/^\d+$/.test(text)) {
+    throw new ApiError('ADAPTER_UNAVAILABLE', `Invalid ${label} from provider`, 502);
   }
-  const scaled = asDecimal.mul(new Decimal(10).pow(decimals));
-  if (!scaled.minus(scaled.trunc()).abs().lte(new Decimal(`1e-${decimals - 2}`))) {
-    throw new ApiError('VALIDATION_ERROR', `${label} has unsupported fractional atomic units`, 422);
-  }
-  return fromAtomic(atomic, decimals);
+  return fromAtomic(BigInt(text), decimals);
 }

@@ -2,7 +2,7 @@ import { Client } from '@stellar/stellar-sdk/contract';
 import type { AppConfig } from '../config/env.js';
 import { loadTestnetDeployment } from '../config/deployments.js';
 import type { UserPolicyInput } from '../domain/policy.js';
-import { policyViewFromNative } from '../domain/policy.js';
+import { policyStrategySymbol, policyViewFromNative } from '../domain/policy.js';
 
 type ContractClient = Client & {
   get_policy: (args: { user: string }) => Promise<{ result?: unknown; simulate: () => Promise<void>; toXDR: () => string }>;
@@ -42,7 +42,7 @@ function toContractPolicy(policy: UserPolicyInput) {
     target_timestamp: policy.targetTimestamp,
     liquidity_target_bps: policy.liquidityTargetBps,
     automation_paused: policy.automationPaused,
-    allowed_strategies: policy.allowedStrategies,
+    allowed_strategies: policy.allowedStrategies.map(policyStrategySymbol),
   };
 }
 
@@ -126,14 +126,17 @@ export class TrinqaPolicyAdapter {
 
   buildSetStrategyAllowed(accountId: string, strategy: string, allowed: boolean) {
     return this.buildTx(accountId, (client) =>
-      client.set_strategy_allowed({ user: accountId, strategy, allowed }, { simulate: true }),
+      client.set_strategy_allowed(
+        { user: accountId, strategy: policyStrategySymbol(strategy), allowed },
+        { simulate: true },
+      ),
     );
   }
 
   buildAuthorizeAllocation(accountId: string, strategy: string, amountBps: number) {
     return this.buildTx(accountId, (client) =>
       client.authorize_allocation(
-        { user: accountId, strategy, amount_bps: amountBps },
+        { user: accountId, strategy: policyStrategySymbol(strategy), amount_bps: amountBps },
         { simulate: true },
       ),
     );
@@ -142,7 +145,11 @@ export class TrinqaPolicyAdapter {
   buildAuthorizeRebalance(accountId: string, fromStrategy: string, toStrategy: string) {
     return this.buildTx(accountId, (client) =>
       client.authorize_rebalance(
-        { user: accountId, from_strategy: fromStrategy, to_strategy: toStrategy },
+        {
+          user: accountId,
+          from_strategy: policyStrategySymbol(fromStrategy),
+          to_strategy: policyStrategySymbol(toStrategy),
+        },
         { simulate: true },
       ),
     );

@@ -17,6 +17,12 @@ describe('money helpers', () => {
     expect(formatTryAmount('1000.5')).toBe('1000.50');
   });
 
+  it('fromAtomic with zero decimals keeps the integer', () => {
+    expect(fromAtomic(5_000_001n, 0)).toBe('5000001');
+    expect(fromAtomic(0n, 0)).toBe('0');
+    expect(fromAtomic(-7n, 0)).toBe('-7');
+  });
+
   it('safe integer boundary', () => {
     expect(bigintToSafeNumber(100n)).toBe(100);
     expect(() => bigintToSafeNumber(BigInt(Number.MAX_SAFE_INTEGER) + 2n)).toThrow();

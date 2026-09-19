@@ -55,6 +55,7 @@ export function toRecommendationPayload(scored: ScoredStrategy, rank: number) {
     name: scored.strategy.name,
     risk: scored.strategy.risk,
     estimatedApy: scored.strategy.estimatedApy,
+    apySource: scored.strategy.apySource,
     withdrawalAvailability: scored.strategy.withdrawalAvailability,
     score: Math.round(scored.score * 10) / 10,
     accessDescription: ACCESS_LABEL[scored.strategy.withdrawalAvailability] ?? 'Flexible',
