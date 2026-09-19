@@ -1,0 +1,8 @@
+# Allowlist: the image only needs the backend sources and the testnet deployment record.
+*
+!backend/package.json
+!backend/pnpm-lock.yaml
+!backend/pnpm-workspace.yaml
+!backend/tsconfig.json
+!backend/src/
+!deployments/
