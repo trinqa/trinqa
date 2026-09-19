@@ -24,6 +24,8 @@ type PaymentMeta = {
   anchorQuoteId?: string;
   withdrawDest?: string;
   withdrawDestExtra?: string;
+  /** Hash of the unsigned XDR handed out for currentStep; the signed envelope must match it. */
+  expectedTxHash?: string;
 };
 
 export class PaymentExecutionService {
@@ -38,6 +40,46 @@ export class PaymentExecutionService {
     private readonly quotes: QuoteStore,
     private readonly operations: OperationStore,
   ) {}
+
+  private assertSignedMatchesBuilt(expectedTxHash: string | undefined, signedXdr: string): void {
+    if (!expectedTxHash) return;
+    let actual: string;
+    try {
+      actual = this.stellar.transactionHash(signedXdr);
+    } catch {
+      throw new ApiError('VALIDATION_ERROR', 'signedXdr is not a valid transaction envelope', 400);
+    }
+    if (actual !== expectedTxHash) {
+      throw new ApiError(
+        'SIGNED_TX_MISMATCH',
+        'Signed transaction does not match the transaction built for this step',
+        409,
+      );
+    }
+  }
+
+  /** Metadata patch that pins the next step to the XDR we are about to hand out. */
+  expectTx(unsignedXdr: string | undefined): { expectedTxHash?: string } {
+    return { expectedTxHash: unsignedXdr ? this.stellar.transactionHash(unsignedXdr) : undefined };
+  }
+
+  /** USDC payment to the anchor treasury (Memo.id) that funds a SEP-6 withdraw. */
+  async buildAnchorFunding(
+    fromAccount: string,
+    withdrawSession: unknown,
+    amount: string,
+  ): Promise<{ transferId: string; treasury: string; memo: string; unsignedXdr: string }> {
+    const session = withdrawSession as { id?: string; account_id?: string; memo?: string; memo_type?: string };
+    const { id: transferId, account_id: treasury, memo } = session;
+    if (!transferId || !treasury || !memo) {
+      throw new ApiError('ADAPTER_UNAVAILABLE', 'Anchor withdraw session missing treasury or memo', 502);
+    }
+    if (session.memo_type && session.memo_type !== 'id') {
+      throw new ApiError('VALIDATION_ERROR', `Expected memo_type id, got ${session.memo_type}`, 502);
+    }
+    const unsignedXdr = await this.stellar.buildUsdcPaymentWithMemoIdXdr(fromAccount, treasury, amount, memo);
+    return { transferId, treasury, memo, unsignedXdr };
+  }
 
   private loadQuoteForExecution(quoteId: string) {
     return this.quotes.get(quoteId);
@@ -86,6 +128,8 @@ export class PaymentExecutionService {
       this.quotes.get(meta.quoteId);
     }
 
+    this.assertSignedMatchesBuilt(meta.expectedTxHash, signedXdr);
+
     if (step === 'yield_withdraw') {
       if (!this.defindex.isConfigured) {
         throw new ApiError('ADAPTER_UNAVAILABLE', 'DeFindex not configured', 503);
@@ -128,6 +172,7 @@ export class PaymentExecutionService {
             completedSteps: completed,
             currentStep: 'stellar_payment',
             yieldWithdrawTxHash: txHash,
+            ...this.expectTx(unsignedXdr),
           },
         });
         return {
@@ -162,6 +207,7 @@ export class PaymentExecutionService {
             currentStep: 'soroswap_swap',
             yieldWithdrawTxHash: txHash,
             soroswapQuote: swapQuote,
+            ...this.expectTx(unsignedXdr),
           },
         });
         return {
@@ -194,9 +240,13 @@ export class PaymentExecutionService {
           dest_extra: withdrawDestExtra,
           quote_id: anchorQuoteId,
         });
-        const transferId = (withdrawSession as { id?: string }).id;
+        const { transferId, unsignedXdr } = await this.buildAnchorFunding(
+          payload.fromAccount,
+          withdrawSession,
+          quote.source.amount,
+        );
         await this.operations.update(operationId, {
-          status: 'processing',
+          status: 'awaiting_signature',
           externalRefs: {
             ...op.externalRefs,
             txHash,
@@ -212,12 +262,14 @@ export class PaymentExecutionService {
             anchorWithdrawSession: withdrawSession,
             withdrawDest,
             withdrawDestExtra,
+            ...this.expectTx(unsignedXdr),
           },
         });
         return {
           operationId,
           stepCompleted: 'yield_withdraw',
           nextStep: 'anchor_withdraw' as const,
+          unsignedXdr,
           anchorSession: {
             kind: 'sep6_withdraw',
             domain: this.config.TR_ANCHOR_DOMAIN,
@@ -324,6 +376,7 @@ export class PaymentExecutionService {
         soroswapQuote: payload.soroswapQuote,
         withdrawDest: payload.withdrawDest,
         withdrawDestExtra: payload.withdrawDestExtra,
+        ...this.expectTx(built.unsignedXdr),
       },
     });
     return {

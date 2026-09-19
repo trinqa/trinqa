@@ -29,6 +29,8 @@ const envSchema = z.object({
     .preprocess((v) => emptyToUndefined(v) ?? 'false', z.enum(['true', 'false']))
     .transform((v) => v === 'true'),
   DEMO_SIGNER_SECRET: optionalString,
+  /** Shared secret for /api/v1/demo/* (header x-demo-token). Required in production when the demo signer is on. */
+  DEMO_ACCESS_TOKEN: optionalString,
 
   DEFINDEX_API_KEY: optionalString,
   DEFINDEX_API_URL: optionalUrl.default('https://api.defindex.io'),
@@ -65,6 +67,7 @@ function parseEnv(): AppConfig {
   if (data.DEMO_SIGNER_ENABLED && data.STELLAR_NETWORK !== 'testnet') {
     throw new Error('Demo signer is forbidden outside testnet');
   }
+  assertDemoAccessConfigured(data);
   let policyContractId = data.TRINQA_POLICY_CONTRACT_ID ?? data.POLICY_CONTRACT_ID;
   let policyWasmHash = data.POLICY_WASM_HASH;
   if (!policyContractId || !policyWasmHash) {
@@ -88,6 +91,17 @@ function parseEnv(): AppConfig {
     OPERATIONS_DATA_DIR: operationsDataDir,
     usdcAssetCode: 'USDC',
   };
+}
+
+/** A publicly reachable demo signer must not sign for anyone who finds the URL. */
+export function assertDemoAccessConfigured(config: {
+  NODE_ENV: string;
+  DEMO_SIGNER_ENABLED: boolean;
+  DEMO_ACCESS_TOKEN?: string;
+}): void {
+  if (config.NODE_ENV === 'production' && config.DEMO_SIGNER_ENABLED && !config.DEMO_ACCESS_TOKEN) {
+    throw new Error('DEMO_ACCESS_TOKEN is required when DEMO_SIGNER_ENABLED=true in production');
+  }
 }
 
 export const env = parseEnv();

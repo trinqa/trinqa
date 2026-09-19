@@ -35,10 +35,22 @@ export type Sep38Quote = {
   buy_amount: string;
   sell_amount: string;
   expires_at: string;
+  /** SEP-38 fee object; `total` is denominated in `asset`. */
+  fee?: { total: string; asset: string; details?: unknown[] };
   [key: string]: unknown;
 };
 
+export type TransferLimits = { min?: string; max?: string };
+
+type Sep6AssetInfo = { enabled?: boolean; min_amount?: number | string; max_amount?: number | string };
+
+/** Anchor metadata (stellar.toml, /info) changes rarely; cache it instead of refetching per call. */
+const METADATA_TTL_MS = 5 * 60 * 1000;
+
 export class TrMockAnchorAdapter {
+  private tomlCache?: { value: AnchorToml; at: number };
+  private sep6InfoCache?: { value: unknown; at: number };
+
   constructor(
     private readonly config: AppConfig,
     private readonly networkPassphrase: string,
@@ -53,6 +65,15 @@ export class TrMockAnchorAdapter {
   }
 
   async discover(): Promise<AnchorToml> {
+    if (this.tomlCache && Date.now() - this.tomlCache.at < METADATA_TTL_MS) {
+      return this.tomlCache.value;
+    }
+    const value = await this.fetchToml();
+    this.tomlCache = { value, at: Date.now() };
+    return value;
+  }
+
+  private async fetchToml(): Promise<AnchorToml> {
     const res = await fetch(this.tomlUrl());
     if (!res.ok) {
       throw new Error(`SEP-1 TOML fetch failed: ${res.status}`);
@@ -82,13 +103,26 @@ export class TrMockAnchorAdapter {
   }
 
   async sep6Info(): Promise<unknown> {
+    if (this.sep6InfoCache && Date.now() - this.sep6InfoCache.at < METADATA_TTL_MS) {
+      return this.sep6InfoCache.value;
+    }
     const toml = await this.discover();
     const base = toml.transferServer ?? `https://${this.domain}/sep6`;
     const res = await fetch(`${base}/info`);
     if (!res.ok) {
       throw new Error(`SEP-6 info failed: ${res.status}`);
     }
-    return res.json();
+    const value = await res.json();
+    this.sep6InfoCache = { value, at: Date.now() };
+    return value;
+  }
+
+  /** SEP-6 withdraw min/max for an asset (asset units), as published in /info. */
+  async withdrawLimits(assetCode = 'USDC'): Promise<TransferLimits> {
+    const info = (await this.sep6Info()) as { withdraw?: Record<string, Sep6AssetInfo> };
+    const asset = info.withdraw?.[assetCode];
+    const str = (v: number | string | undefined) => (v === undefined ? undefined : String(v));
+    return { min: str(asset?.min_amount), max: str(asset?.max_amount) };
   }
 
   async sep12Customer(token: string, account: string): Promise<unknown> {
@@ -100,6 +134,25 @@ export class TrMockAnchorAdapter {
     if (!res.ok) {
       const err = await res.text();
       throw new Error(`SEP-12 customer failed (${res.status}): ${err.slice(0, 200)}`);
+    }
+    return res.json();
+  }
+
+  async sep12PutCustomer(
+    token: string,
+    account: string,
+    fields: Record<string, string> = {},
+  ): Promise<unknown> {
+    const toml = await this.discover();
+    const base = toml.kycServer ?? `https://${this.domain}/sep12`;
+    const res = await fetch(`${base}/customer`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account, ...fields }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`SEP-12 customer update failed (${res.status}): ${err.slice(0, 200)}`);
     }
     return res.json();
   }
@@ -176,21 +229,6 @@ export class TrMockAnchorAdapter {
     return res.json();
   }
 
-  /** @deprecated alias — TR mock anchor implements SEP-6 GET /deposit, not POST /interactive */
-  async sep6DepositInteractive(
-    token: string,
-    body: { asset_code: string; account: string; amount?: string; quote_id?: string },
-  ): Promise<unknown> {
-    if (!body.amount) {
-      throw new Error('SEP-6 deposit requires amount');
-    }
-    return this.sep6Deposit(token, {
-      asset_code: body.asset_code,
-      account: body.account,
-      amount: body.amount,
-      quote_id: body.quote_id,
-    });
-  }
 
   async sep6Withdraw(
     token: string,
@@ -229,13 +267,6 @@ export class TrMockAnchorAdapter {
     return res.json();
   }
 
-  /** @deprecated alias — TR mock anchor implements SEP-6 GET /withdraw */
-  async sep6WithdrawInteractive(
-    token: string,
-    body: { asset_code: string; account: string; amount: string; dest: string; dest_extra?: string },
-  ): Promise<unknown> {
-    return this.sep6Withdraw(token, body);
-  }
 
   async sep6SimulateBankTransfer(token: string, transactionId: string): Promise<unknown> {
     const base = await this.transferServerBase();

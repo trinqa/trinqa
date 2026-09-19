@@ -159,6 +159,11 @@ export class StellarService {
     return { hash: result.hash, successful: result.successful };
   }
 
+  /** Network-bound tx hash (hex). Unchanged by signing, so it pins a signed envelope to the XDR we built. */
+  transactionHash(xdr: string): string {
+    return TransactionBuilder.fromXDR(xdr, this.networkPassphrase).hash().toString('hex');
+  }
+
   signXdr(unsignedXdr: string, secretKey: string): string {
     const kp = Keypair.fromSecret(secretKey);
     const tx = TransactionBuilder.fromXDR(unsignedXdr, this.networkPassphrase);

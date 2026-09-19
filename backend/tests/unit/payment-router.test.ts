@@ -127,6 +127,54 @@ describe('PaymentRouter', () => {
     expect(quote.destination.amount).toBe('340.00');
   });
 
+  it('shows the anchor fee on TRY cash-out and enforces anchor withdraw limits', async () => {
+    const { router, stellar, anchor, sessions } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '1000',
+      },
+    ]);
+    vi.spyOn(anchor, 'withdrawLimits').mockResolvedValue({ min: '0.5', max: '300' });
+    const sep38 = vi.spyOn(anchor, 'sep38Quote');
+    const account = 'G'.repeat(56);
+    const session = sessions.create('jwt-test', account);
+    const request = (receiveAmount: string) =>
+      router.quote({
+        fromAccount: account,
+        recipient: account,
+        receiveAmount,
+        receiveCurrency: 'TRY',
+        anchorSessionId: session.sessionId,
+        withdrawDest: 'TR330006100519786457841326',
+      });
+
+    sep38.mockResolvedValueOnce({
+      id: 'q-ok',
+      price: '0.0205',
+      buy_amount: '1000.00',
+      sell_amount: '20.6010768',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      fee: { total: '0.1030057', asset: `stellar:USDC:${env.USDC_ISSUER}` },
+    });
+    const ok = await request('1000');
+    expect(ok.fee).toEqual({ assetCode: 'USDC', amount: '0.1030057' });
+
+    sep38.mockResolvedValueOnce({
+      id: 'q-big',
+      price: '0.0205',
+      buy_amount: '20000.00',
+      sell_amount: '412.0215360',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    await expect(request('20000')).rejects.toMatchObject({
+      code: 'AMOUNT_OUT_OF_RANGE',
+      details: { min: '0.5', max: '300', assetCode: 'USDC' },
+    });
+  });
+
   it('honors balanceSource available without earn unwind', async () => {
     const { router, stellar, defindex } = makeRouter();
     vi.spyOn(stellar, 'getBalances').mockResolvedValue([
@@ -184,6 +232,31 @@ describe('PaymentRouter', () => {
     });
     expect(quote.funding?.requiresEarnUnwind).toBe(true);
     expect(quote.funding?.earnContribution).toBe('3.0000000');
+  });
+
+  it('refuses to build a second payment from the same quote', async () => {
+    const { router, stellar } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100.0000000',
+      },
+    ]);
+    vi.spyOn(stellar, 'buildPaymentXdr').mockResolvedValue('unsigned-xdr');
+    vi.spyOn(stellar, 'transactionHash').mockReturnValue('tx-hash');
+    const account = 'G'.repeat(56);
+    const quote = await router.quote({
+      fromAccount: account,
+      recipient: 'H'.repeat(56),
+      receiveAmount: '5.0000000',
+      receiveCurrency: 'USDC',
+    });
+    await router.build(quote.quoteId, account);
+    await expect(router.build(quote.quoteId, account)).rejects.toMatchObject({
+      code: 'QUOTE_ALREADY_USED',
+    });
   });
 
   it('returns ROUTE_UNAVAILABLE for XLM when Soroswap is not configured', async () => {

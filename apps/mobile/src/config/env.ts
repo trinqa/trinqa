@@ -17,6 +17,11 @@ export function getApiBaseUrl(): string {
   throw new Error('EXPO_PUBLIC_API_BASE_URL is required outside development');
 }
 
+/** Testnet demo-signer gate (x-demo-token). Ships in the bundle, so it only keeps casual callers out. */
+export function getDemoAccessToken(): string | undefined {
+  return process.env.EXPO_PUBLIC_DEMO_ACCESS_TOKEN?.trim() || undefined;
+}
+
 export function getOptionalAccountId(): string | undefined {
   return optionalGAddress(process.env.EXPO_PUBLIC_ACCOUNT_ID);
 }

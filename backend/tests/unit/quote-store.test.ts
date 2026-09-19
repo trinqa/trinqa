@@ -19,4 +19,23 @@ describe('QuoteStore', () => {
     expect(() => store.get(saved.quoteId)).toThrow(/expired/i);
     vi.useRealTimers();
   });
+
+  it('lets a quote back only one operation', () => {
+    const store = new QuoteStore();
+    const saved = store.save({
+      routeType: 'stellar_transfer',
+      candidateCount: 1,
+      source: { assetCode: 'USDC', amount: '1' },
+      destination: { currency: 'USDC', amount: '1' },
+      fee: { assetCode: 'USDC', amount: '0' },
+      estimatedArrivalMinutes: 1,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      providerPayload: {},
+    });
+    store.claim(saved.quoteId, 'op-1');
+    expect(() => store.claim(saved.quoteId, 'op-1')).not.toThrow();
+    expect(() => store.claim(saved.quoteId, 'op-2')).toThrow(
+      expect.objectContaining({ code: 'QUOTE_ALREADY_USED', statusCode: 409 }),
+    );
+  });
 });

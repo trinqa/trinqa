@@ -4,7 +4,7 @@ import { ApiError } from '../domain/api-errors.js';
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
-type StoredQuote = PaymentRouteQuote & { storedAt: number };
+type StoredQuote = PaymentRouteQuote & { storedAt: number; claimedBy?: string };
 
 function parseExpiresAt(iso: string): number {
   const t = Date.parse(iso);
@@ -47,6 +47,19 @@ export class QuoteStore {
     }
     this.assertNotExpired(q);
     return q;
+  }
+
+  /** Bind a quote to one operation so it cannot fund a second payment. Idempotent per operation. */
+  claim(quoteId: string, operationId: string): void {
+    const q = this.quotes.get(quoteId);
+    if (!q) {
+      throw new ApiError('NOT_FOUND', `Quote not found: ${quoteId}`, 404);
+    }
+    this.assertNotExpired(q);
+    if (q.claimedBy && q.claimedBy !== operationId) {
+      throw new ApiError('QUOTE_ALREADY_USED', 'Quote already used; request a fresh quote', 409);
+    }
+    q.claimedBy = operationId;
   }
 
   isExpired(quoteId: string): boolean {

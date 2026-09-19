@@ -78,7 +78,10 @@ async function main() {
     const { token } = await anchor.sep10Authenticate(kp.secretKey);
     if (!token) throw new Error('SEP-10 auth returned no token');
     const session = anchorSessions.create(token, kp.publicKey);
-    stageLog(2, TOTAL, 'SEP-10 auth', 'PASS');
+    await anchor.sep12PutCustomer(token, kp.publicKey);
+    const customer = (await anchor.sep12Customer(token, kp.publicKey)) as { status?: string };
+    if (customer.status !== 'ACCEPTED') throw new Error(`SEP-12 customer not accepted: ${customer.status}`);
+    stageLog(2, TOTAL, 'SEP-10 auth + SEP-12 KYC', 'PASS');
 
     const tryAmount = '500';
     const depositQuote = await anchor.sep38Quote(token, {
