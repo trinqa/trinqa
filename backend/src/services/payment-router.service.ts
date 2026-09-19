@@ -16,6 +16,8 @@ import type { AnchorSessionStore } from './anchor-session-store.service.js';
 import { SoroswapAssetRegistry } from './soroswap-asset-registry.js';
 import type { PaymentExecutionService } from './payment-execution.service.js';
 import { toAtomic } from '../domain/money.js';
+import type { RoutePlanner } from './route-planner.service.js';
+import type { RouteDecision } from '../domain/route.js';
 
 export class PaymentRouter {
   private readonly assetRegistry: SoroswapAssetRegistry;
@@ -31,8 +33,27 @@ export class PaymentRouter {
     private readonly operations: OperationStore,
     private readonly anchorSessions: AnchorSessionStore,
     private readonly execution: PaymentExecutionService,
+    /** Optional: when present, TRY cash-out quotes get a route-decision trace attached.
+     * Absent by default so existing construction and tests are unaffected. */
+    private readonly planner?: RoutePlanner,
   ) {
     this.assetRegistry = new SoroswapAssetRegistry(soroswap);
+  }
+
+  /** Best-effort route preview for a TRY cash-out quote. Never throws: a planner failure
+   * must not fail the quote it is merely annotating. */
+  private async previewTryCashOutRoute(debitUsdc: string): Promise<RouteDecision | null> {
+    if (!this.planner) return null;
+    try {
+      return await this.planner.preview({
+        direction: 'withdraw',
+        fiatCurrency: 'TRY',
+        assetCode: 'USDC',
+        amount: debitUsdc,
+      });
+    } catch {
+      return null;
+    }
   }
 
   private async resolveBalances(fromAccount: string) {
@@ -172,6 +193,8 @@ export class PaymentRouter {
       await this.assertWithinWithdrawLimits(debitUsdc);
     }
 
+    const routeDecision = dest === 'TRY' ? await this.previewTryCashOutRoute(debitUsdc) : null;
+
     const { available, earning } = await this.resolveBalances(req.fromAccount);
     const fundingCalc = this.execution.computeFunding(
       available,
@@ -239,8 +262,8 @@ export class PaymentRouter {
     const providerPayload: Record<string, unknown> = {
       fromAccount: req.fromAccount,
       recipient: req.recipient,
-      routeScore: ranked[0]?.score,
-      candidateCount: ranked.length,
+      routeScore: routeDecision?.chosen?.score ?? ranked[0]?.score,
+      candidateCount: routeDecision?.eligible.length ?? ranked.length,
       funding: {
         availableBalance: formatStellarAmount(available),
         earningBalance: formatStellarAmount(earning),
@@ -250,6 +273,18 @@ export class PaymentRouter {
         requiresEarnUnwind: fundingCalc.requiresEarnUnwind,
       },
     };
+
+    if (routeDecision) {
+      providerPayload.routeDecision = {
+        chosenRouteId: routeDecision.chosen?.routeId ?? null,
+        chosenAnchor: routeDecision.chosen?.anchorId ?? null,
+        executable: routeDecision.executable,
+        executedVia: this.config.TR_ANCHOR_DOMAIN,
+        advisor: routeDecision.advisor,
+        eligible: routeDecision.eligible.map((r) => ({ routeId: r.routeId, score: r.score })),
+        rejected: routeDecision.rejected.map((r) => ({ anchorId: r.anchorId, reasons: r.reasons })),
+      };
+    }
 
     if (chosen.routeType === 'fiat_payout' && dest === 'TRY' && trySep38) {
       destinationAmount = formatTryAmount(trySep38.buyAmount);
@@ -272,8 +307,8 @@ export class PaymentRouter {
 
     const stored = this.quotes.save({
       routeType: chosen.routeType,
-      candidateCount: ranked.length,
-      routeScore: ranked[0]?.score,
+      candidateCount: routeDecision?.eligible.length ?? ranked.length,
+      routeScore: routeDecision?.chosen?.score ?? ranked[0]?.score,
       source: { assetCode: 'USDC', amount: debitUsdc },
       destination: { currency: dest, amount: destinationAmount },
       receiveAmount: destinationAmount,
