@@ -13,8 +13,51 @@ import { AnchorSessionStore } from '../../src/services/anchor-session-store.serv
 import { PaymentExecutionService } from '../../src/services/payment-execution.service.js';
 import { YieldService } from '../../src/services/yield.service.js';
 import { ApiError } from '../../src/domain/api-errors.js';
+import { RoutePlanner } from '../../src/services/route-planner.service.js';
+import { NoopAdvisor } from '../../src/services/route-advisor.js';
+import type { AnchorAdapter, AnchorDirectory, AnchorSnapshot } from '../../src/domain/anchor.js';
+import type { RouteAdvice, RouteAdvisor } from '../../src/domain/route.js';
 
-function makeRouter() {
+class FakeDirectory implements AnchorDirectory {
+  constructor(private readonly snapshots: AnchorSnapshot[]) {}
+  async list(): Promise<AnchorSnapshot[]> {
+    return this.snapshots;
+  }
+  adapter(): AnchorAdapter | undefined {
+    return undefined;
+  }
+}
+
+function trMockSnapshot(domain: string): AnchorSnapshot {
+  return {
+    id: domain,
+    domain,
+    name: 'TR Mock Anchor',
+    status: 'EXECUTABLE',
+    seps: ['sep1', 'sep6', 'sep10', 'sep38'],
+    rails: [
+      {
+        assetCode: 'USDC',
+        direction: 'withdraw',
+        enabled: true,
+        fiat: ['TRY'],
+        methods: ['bank_account'],
+      },
+    ],
+    healthy: true,
+    network: 'testnet',
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+class ThrowingAdvisor implements RouteAdvisor {
+  readonly name = 'jev' as const;
+  async advise(): Promise<RouteAdvice[]> {
+    throw new Error('advisor down');
+  }
+}
+
+function makeRouter(planner?: RoutePlanner) {
   const stellar = new StellarService(env);
   const anchor = new TrMockAnchorAdapter(env, stellar.networkPassphrase);
   const defindex = new DefindexYieldAdapter(env);
@@ -47,6 +90,7 @@ function makeRouter() {
     ops,
     sessions,
     execution,
+    planner,
   );
   return { router, stellar, anchor, sessions, defindex };
 }
@@ -342,5 +386,105 @@ describe('PaymentRouter', () => {
     await expect(router.build(quote.quoteId, account)).rejects.toMatchObject({
       code: 'EARN_UNWIND_APPROVAL_REQUIRED',
     });
+  });
+
+  it('attaches a routeDecision trace to a TRY cash-out quote when a planner is given', async () => {
+    const directory = new FakeDirectory([trMockSnapshot(env.TR_ANCHOR_DOMAIN)]);
+    const planner = new RoutePlanner(directory, new NoopAdvisor(), { usdcIssuer: env.USDC_ISSUER });
+    const { router, stellar, anchor, sessions } = makeRouter(planner);
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100',
+      },
+    ]);
+    vi.spyOn(anchor, 'sep38Quote').mockResolvedValue({
+      id: 'q-1',
+      price: '34',
+      buy_amount: '340.00',
+      sell_amount: '10.0000000',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const account = 'G'.repeat(56);
+    const session = sessions.create('jwt-test', account);
+    const quote = await router.quoteWithdrawToTry(
+      account,
+      '10.0000000',
+      session.sessionId,
+      'TR330006100519786457841326',
+    );
+    const routeDecision = quote.providerPayload.routeDecision as Record<string, unknown>;
+    expect(routeDecision).toBeDefined();
+    expect(routeDecision.chosenAnchor).toBe(env.TR_ANCHOR_DOMAIN);
+    expect(routeDecision.executable).toBe(true);
+    expect(routeDecision.executedVia).toBe(env.TR_ANCHOR_DOMAIN);
+    expect(Array.isArray(routeDecision.eligible)).toBe(true);
+    expect(typeof quote.routeScore).toBe('number');
+    expect(quote.candidateCount).toBeGreaterThan(0);
+  });
+
+  it('never fails a TRY cash-out quote when the planner/advisor throws', async () => {
+    const directory = new FakeDirectory([trMockSnapshot(env.TR_ANCHOR_DOMAIN)]);
+    const planner = new RoutePlanner(directory, new ThrowingAdvisor(), { usdcIssuer: env.USDC_ISSUER });
+    const { router, stellar, anchor, sessions } = makeRouter(planner);
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100',
+      },
+    ]);
+    vi.spyOn(anchor, 'sep38Quote').mockResolvedValue({
+      id: 'q-1',
+      price: '34',
+      buy_amount: '340.00',
+      sell_amount: '10.0000000',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const account = 'G'.repeat(56);
+    const session = sessions.create('jwt-test', account);
+    // decideRoute swallows advisor errors into fallbackReason: 'error', so this should
+    // still resolve; the assertion that matters is that the quote never throws even if
+    // the planner itself somehow throws (previewTryCashOutRoute is wrapped separately).
+    const quote = await router.quoteWithdrawToTry(
+      account,
+      '10.0000000',
+      session.sessionId,
+      'TR330006100519786457841326',
+    );
+    expect(quote.routeType).toBe('fiat_payout');
+    const routeDecision = quote.providerPayload.routeDecision as { advisor: { fallbackReason?: string } };
+    expect(routeDecision.advisor.fallbackReason).toBe('error');
+  });
+
+  it('leaves quotes unaffected (no routeDecision) when no planner is configured', async () => {
+    const { router, stellar, anchor, sessions } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockResolvedValue([
+      {
+        assetType: 'credit_alphanum4',
+        assetCode: 'USDC',
+        assetIssuer: env.USDC_ISSUER,
+        balance: '100',
+      },
+    ]);
+    vi.spyOn(anchor, 'sep38Quote').mockResolvedValue({
+      id: 'q-1',
+      price: '34',
+      buy_amount: '340.00',
+      sell_amount: '10.0000000',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const account = 'G'.repeat(56);
+    const session = sessions.create('jwt-test', account);
+    const quote = await router.quoteWithdrawToTry(
+      account,
+      '10.0000000',
+      session.sessionId,
+      'TR330006100519786457841326',
+    );
+    expect(quote.providerPayload.routeDecision).toBeUndefined();
   });
 });
