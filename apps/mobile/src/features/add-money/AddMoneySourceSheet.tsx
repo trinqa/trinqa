@@ -64,7 +64,7 @@ function SourceSelectionRow({
         <ZStack
           modifiers={[
             frame({ width: row.iconSize, height: row.iconSize }),
-            background(colors.surfaceSecondary, shapes.circle()),
+            background(colors.surfaceLayer, shapes.circle()),
           ]}
         >
           <Image systemName={option.symbol} size={row.symbolSize} color={colors.textPrimary} />

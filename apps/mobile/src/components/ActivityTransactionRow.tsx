@@ -22,9 +22,9 @@ export function ActivityTransactionRow({ item, onPress }: ActivityTransactionRow
       symbol={item.symbol}
       iconLetter={isAmazon ? 'a' : undefined}
       iconBackgroundColor={
-        isEarning ? colors.earningMuted : isAmazon ? colors.merchantLogo : undefined
+        isEarning ? colors.successMuted : isAmazon ? colors.merchantLogo : undefined
       }
-      iconColor={isEarning ? colors.earning : undefined}
+      iconColor={isEarning ? colors.success : undefined}
       iconLetterColor={isAmazon ? colors.surface : undefined}
       iconAccentText={isAmazon ? '⌣' : undefined}
       iconAccentColor={isAmazon ? colors.merchantLogoAccent : undefined}

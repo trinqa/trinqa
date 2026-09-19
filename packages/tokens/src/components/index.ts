@@ -1,3 +1,4 @@
+import { primitiveColor } from '../primitives/color';
 import { colors, componentTokens, homeTokens, radius, screenTokens } from '../product';
 
 export const button = {
@@ -6,7 +7,7 @@ export const button = {
     radius: componentTokens.actionButton.radius,
     highlightOpacity: componentTokens.actionButton.highlightOpacity,
     disabledOpacity: componentTokens.actionButton.disabledOpacity,
-    colors: [colors.actionPrimary, colors.actionPrimaryDark, colors.actionPrimaryDarker],
+    colors: [colors.action, colors.actionPrimaryDark, colors.actionPrimaryDarker],
   },
 } as const;
 
@@ -32,7 +33,7 @@ export const sheet = {
 } as const;
 
 export const walletCard = {
-  backgroundStart: colors.cardDark,
+  backgroundStart: primitiveColor.gray2B,
   width: homeTokens.layout.walletBaseWidth,
   height: homeTokens.layout.walletBaseHeight,
   outerRadius: homeTokens.wallet.outerRadius,

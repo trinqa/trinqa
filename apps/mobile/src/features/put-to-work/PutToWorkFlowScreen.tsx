@@ -384,10 +384,10 @@ function ReviewStep({
               <ZStack
                 modifiers={[
                   frame({ width: 36, height: 36 }),
-                  background(colors.earningMuted, shapes.circle()),
+                  background(colors.successMuted, shapes.circle()),
                 ]}
               >
-                <Image systemName="chart.line.uptrend.xyaxis" size={17} color={colors.earning} />
+                <Image systemName="chart.line.uptrend.xyaxis" size={17} color={colors.success} />
               </ZStack>
             </HStack>
 

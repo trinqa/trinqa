@@ -141,7 +141,7 @@ function RecipientRow({
         <ZStack
           modifiers={[
             frame({ width: row.iconSize, height: row.iconSize }),
-            background(colors.surfaceSecondary, shapes.circle()),
+            background(colors.surfaceLayer, shapes.circle()),
           ]}
         >
           <Image systemName={recipient.symbol} size={row.symbolSize} color={colors.textSecondary} />
@@ -440,7 +440,7 @@ function ReviewStep({
               <ZStack
                 modifiers={[
                   frame({ width: 36, height: 36 }),
-                  background(colors.selection, shapes.circle()),
+                  background(colors.surfaceLayer, shapes.circle()),
                 ]}
               >
                 <Image systemName="paperplane.fill" size={16} color={colors.action} />

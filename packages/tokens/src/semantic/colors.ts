@@ -7,7 +7,7 @@ export const semanticColor = {
   surface: {
     canvas: primitiveColor.grayF3,
     primary: primitiveColor.white,
-    secondary: primitiveColor.grayF5,
+    secondary: primitiveColor.grayF2,
     layer: primitiveColor.grayF2,
     inverse: primitiveColor.gray2B,
     splash: primitiveColor.grayF4F2,
@@ -21,7 +21,7 @@ export const semanticColor = {
     walletTertiary: primitiveColor.walletTextD4,
   },
   border: {
-    subtle: primitiveColor.grayE8E5,
+    subtle: primitiveColor.grayE5,
     strong: primitiveColor.grayE5,
   },
   action: {
@@ -36,15 +36,13 @@ export const semanticColor = {
     chartFill: primitiveColor.cyan08AFD31F,
   },
   status: {
-    earning: primitiveColor.green20AD2B,
-    earningMuted: primitiveColor.greenEDF8E8,
     success: primitiveColor.green20AD2B,
+    successMuted: primitiveColor.greenEDF8E8,
     danger: primitiveColor.redFF3B30,
     pending: primitiveColor.gray787,
-    notification: primitiveColor.redFF3B30,
   },
   brand: {
-    merchantLogo: primitiveColor.gray050,
+    merchantLogo: primitiveColor.gray111,
     merchantLogoAccent: primitiveColor.orangeFF9900,
   },
 } as const;

@@ -4,7 +4,7 @@
   --surface: #ffffff;
   --ink: #111111;
   --muted: #787878;
-  --line: #e8e8e5;
+  --line: #e5e5e5;
   --line-strong: #e5e5e5;
   --action: #08afd3;
   --earning: #20ad2b;
@@ -251,8 +251,8 @@ a {
 .cta-secondary {
   height: 48px;
   border-radius: 14px;
-  border: 0.5px solid var(--line-strong);
-  background: #f2f2f2;
+  border: 1px solid var(--muted);
+  background: var(--surface);
   font-size: 14px;
   font-weight: 600;
 }

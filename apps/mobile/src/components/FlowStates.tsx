@@ -29,7 +29,7 @@ export function FlowInlineState({
       modifiers={[
         padding({ horizontal: 14, vertical: 12 }),
         frame({ width: screenTokens.addMoney.contentWidth, minHeight: 72 }),
-        background(colors.surfaceSecondary, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius })),
+        background(colors.surfaceLayer, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius })),
         strokeBorder({
           content: colors.borderStrong,
           style: { lineWidth: componentTokens.surface.borderWidth },

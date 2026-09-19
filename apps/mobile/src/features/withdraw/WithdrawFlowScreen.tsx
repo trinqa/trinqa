@@ -148,7 +148,7 @@ function DestinationRow({
         <ZStack
           modifiers={[
             frame({ width: row.iconSize, height: row.iconSize }),
-            background(colors.surfaceSecondary, shapes.circle()),
+            background(colors.surfaceLayer, shapes.circle()),
           ]}
         >
           <Image systemName={destination.symbol} size={row.symbolSize} color={colors.textPrimary} />
@@ -447,7 +447,7 @@ function ReviewStep({
                 </Text>
               </VStack>
               <Spacer />
-              <ZStack modifiers={[frame({ width: 36, height: 36 }), background(colors.selection, shapes.circle())]}>
+              <ZStack modifiers={[frame({ width: 36, height: 36 }), background(colors.surfaceLayer, shapes.circle())]}>
                 <Image systemName="arrow.down.to.line" size={16} color={colors.action} />
               </ZStack>
             </HStack>

@@ -102,7 +102,7 @@ export function ScreenHeader({
                 font({ size: typography.micro, weight: 'bold' }),
                 foregroundStyle(colors.surface),
                 frame({ width: 16, height: 16 }),
-                background(colors.notificationBadge, shapes.circle()),
+                background(colors.danger, shapes.circle()),
               ]}
             >
               4

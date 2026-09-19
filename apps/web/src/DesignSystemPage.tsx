@@ -50,7 +50,6 @@ const COLOR_GROUPS = [
     items: [
       ['colors.background', colors.background, 'canvas'],
       ['colors.surface', colors.surface, 'surface'],
-      ['colors.surfaceSecondary', colors.surfaceSecondary, 'surfaceElevated'],
       ['colors.surfaceLayer', colors.surfaceLayer, 'surfaceLayer'],
       ['walletColors.bodyStart', walletColors.bodyStart, 'surfaceInverse'],
     ],
@@ -67,7 +66,6 @@ const COLOR_GROUPS = [
   {
     title: 'Borders',
     items: [
-      ['colors.border', colors.border, 'borderSubtle'],
       ['colors.borderStrong', colors.borderStrong, 'borderStrong'],
     ],
   },
@@ -85,9 +83,8 @@ const COLOR_GROUPS = [
   {
     title: 'Status',
     items: [
-      ['colors.earning', colors.earning, 'success / earn'],
-      ['colors.earningMuted', colors.earningMuted, 'success soft'],
-      ['colors.notificationBadge', colors.notificationBadge, 'danger'],
+      ['colors.successMuted', colors.successMuted, 'success soft'],
+      ['colors.selection', colors.selection, 'selection'],
     ],
   },
   {
@@ -95,8 +92,8 @@ const COLOR_GROUPS = [
     items: [
       ['walletColors.silver0', walletColors.silver0, 'card peek'],
       ['walletColors.pocket0', walletColors.pocket0, 'wallet pocket'],
+      ['colors.merchantLogo', colors.merchantLogo, 'merchant mark'],
       ['colors.merchantLogoAccent', colors.merchantLogoAccent, 'merchant mark'],
-      ['colors.cardSleeve', colors.cardSleeve, 'sleeve'],
     ],
   },
 ] as const;
@@ -386,8 +383,8 @@ function Borders() {
     <Section id="borders" title="05 Borders & Dividers">
       <div className="grid grid-2">
         <div className="card">
-          <div style={{ height: 48, border: `0.5px solid ${colors.border}` }} />
-          <p className="note">hairline 0.5 · {colors.border}</p>
+          <div style={{ height: 48, border: `0.5px solid ${colors.borderStrong}` }} />
+          <p className="note">hairline 0.5 · {colors.borderStrong}</p>
         </div>
         <div className="card">
           <div style={{ height: 48, border: `1px solid ${colors.borderStrong}` }} />
@@ -396,7 +393,7 @@ function Borders() {
         <div className="card">
           <div className="row" style={{ gap: 8 }}>
             <span className="note">Today</span>
-            <div style={{ flex: 1, height: 1, background: colors.border, opacity: 0.7 }} />
+            <div style={{ flex: 1, height: 1, background: colors.borderStrong, opacity: 0.7 }} />
           </div>
           <p className="note">date section divider · opacity 0.7</p>
         </div>
@@ -497,10 +494,10 @@ function Components() {
         </div>
         <div className="card">
           <div className="note">Sheet preview</div>
-          <div style={{ height: 88, borderRadius: 20, background: colors.surfaceSecondary, marginTop: 8 }} />
+          <div style={{ height: 88, borderRadius: 20, background: colors.surfaceLayer, marginTop: 8 }} />
         </div>
         <div className="card">
-          <div style={{ fontSize: 22, fontWeight: 700 }}>Money sent</div>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>Money sent</div>
           <p className="note">Success state · FlowSuccessState</p>
         </div>
         <div className="card">
@@ -516,16 +513,16 @@ function Financial() {
   const rows = [
     ['Money amount', '1,240.00', colors.textPrimary],
     ['Available balance', '2,480.50', colors.textPrimary],
-    ['Earning balance', '+12.40', colors.earning],
+    ['Earning balance', '+12.40', colors.success],
     ['Recipient', 'Maya Chen', colors.textPrimary],
     ['Fee', '0.40', colors.textPrimary],
     ['Arrival', 'Instant', colors.textPrimary],
-    ['Transaction status', 'Completed', colors.earning],
+    ['Transaction status', 'Completed', colors.success],
     ['Transaction metadata', 'Today · 14:22', colors.textSecondary],
     ['Deposit', '+200.00', colors.textPrimary],
     ['Withdraw', '−80.00', colors.textPrimary],
     ['Pay', '−24.90', colors.textPrimary],
-    ['Earn', '+1.12', colors.earning],
+    ['Earn', '+1.12', colors.success],
   ] as const;
   return (
     <Section id="financial" title="09 Financial Patterns">
@@ -702,7 +699,7 @@ function A11y() {
     [colors.textSecondary, colors.background, 'secondary on canvas'],
     [colors.surface, colors.action, 'white on CTA'],
     [colors.action, colors.surface, 'cyan on white'],
-    [colors.earning, colors.surface, 'earning on white'],
+    [colors.success, colors.surface, 'success on white'],
   ] as const;
   return (
     <Section id="a11y" title="13 Accessibility" kicker="Flags only. No automatic redesign.">
@@ -787,7 +784,7 @@ function Distribution() {
               title={`${slice.role} ${slice.percent}%`}
               style={{
                 width: `${slice.percent}%`,
-                background: slice.value.includes('/') ? colors.earning : slice.value,
+                background: slice.value.includes('/') ? colors.success : slice.value,
                 boxShadow: 'inset 0 0 0 0.5px rgb(17 17 17 / 0.12)',
               }}
             />

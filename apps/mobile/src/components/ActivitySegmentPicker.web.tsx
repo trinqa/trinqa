@@ -41,7 +41,7 @@ export function ActivitySegmentPicker({
 const styles = StyleSheet.create({
   track: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.surfaceLayer,
     borderRadius: radius.lg,
     padding: spacing.xs,
     width: '100%',

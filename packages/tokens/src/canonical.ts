@@ -47,14 +47,6 @@ export const typography = {
   footnote: typeRole.footnote.size,
   fine: typeRole.fine.size,
   micro: typeRole.micro.size,
-  activityTitle: typeRole.pageTitle.size,
-  balanceLarge: typeRole.amountHero.size,
-  balanceHero: typeRole.amountHero.size,
-  balanceMedium: typeRole.amountCurrency.size,
-  screenTitle: typeRole.pageTitle.size,
-  transactionTitle: typeRole.label.size,
-  transactionMeta: typeRole.caption.size,
-  transactionAction: typeRole.footnote.size,
 } as const;
 
 export const space = {

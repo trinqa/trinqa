@@ -10,7 +10,7 @@ export const colorDistribution = {
     { role: 'Supporting dark', token: 'walletColors.bodyStart', value: '#2B2D33', percent: 12 },
     { role: 'Accent', token: 'colors.action', value: '#08AFD3', percent: 6 },
     { role: 'Text / ink', token: 'colors.textPrimary', value: '#111111', percent: 5 },
-    { role: 'Status', token: 'earning + notificationBadge', value: '#20AD2B / #FF3B30', percent: 3 },
+    { role: 'Status', token: 'success + danger', value: '#20AD2B / #FF3B30', percent: 3 },
   ],
   targetModel: {
     60: { slot: 'Dominant surface', filled: false },

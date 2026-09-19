@@ -198,7 +198,7 @@ function ReviewStep({
               <ZStack
                 modifiers={[
                   frame({ width: 36, height: 36 }),
-                  background(colors.notificationBadge, shapes.circle()),
+                  background(colors.textPrimary, shapes.circle()),
                 ]}
               >
                 <Text modifiers={[font({ size: typography.caption, weight: 'bold' }), foregroundStyle(colors.surface)]}>

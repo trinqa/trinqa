@@ -52,7 +52,7 @@ export function LayeredTransactionRow({
   footerSymbol,
   onFooterPress,
   onPress,
-  iconBackgroundColor = colors.surfaceSecondary,
+  iconBackgroundColor = colors.surfaceLayer,
   iconColor = colors.textSecondary,
   iconLetterColor = colors.textSecondary,
   iconAccentText,

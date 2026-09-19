@@ -98,7 +98,7 @@ function TransactionDetailsContent({ transaction }: { transaction: Transaction }
         <ZStack
           modifiers={[
             frame({ width: 32, height: 32 }),
-            background(colors.surfaceSecondary, shapes.circle()),
+            background(colors.surfaceLayer, shapes.circle()),
           ]}
         >
           {details.symbol ? (

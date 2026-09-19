@@ -32,7 +32,7 @@ import {
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { colors, componentTokens, screenTokens, typography, spacing } from '@/theme';
+import { borders, colors, componentTokens, screenTokens, typography, spacing } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 
 interface FlowButtonProps {
@@ -46,7 +46,7 @@ export function PrimaryActionButton({ label, onPress, isDisabled = false }: Flow
   const linearGradient = {
     type: 'linearGradient' as const,
     colors: [
-      colors.actionPrimary,
+      colors.action,
       colors.actionPrimaryDark,
       colors.actionPrimaryDarker,
     ],
@@ -55,7 +55,7 @@ export function PrimaryActionButton({ label, onPress, isDisabled = false }: Flow
   };
   const highlightGradient = {
     type: 'radialGradient' as const,
-    colors: [colors.actionPrimaryHighlight, colors.actionPrimaryDark],
+    colors: [colors.action, colors.actionPrimaryDark],
     center: { x: 0.5, y: 0.15 },
     startRadius: 0,
     endRadius: screenTokens.addMoney.contentWidth * 0.62,
@@ -407,7 +407,7 @@ export function FlowSuccessState({
         <ZStack
           modifiers={[
             frame({ width: screenTokens.addMoney.successIconSize, height: screenTokens.addMoney.successIconSize }),
-            background(colors.surfaceSecondary, shapes.circle()),
+            background(colors.surfaceLayer, shapes.circle()),
             strokeBorder({ content: outcomeColor, style: { lineWidth: 1 }, shape: 'circle' }),
           ]}
         >
@@ -417,7 +417,7 @@ export function FlowSuccessState({
         <Text
           modifiers={[
             padding({ top: screenTokens.flowChrome.titleAmountGap }),
-            font({ size: typography.amountCurrency, weight: 'bold' }),
+            font({ size: typography.sectionTitle, weight: 'semibold' }),
             foregroundStyle(colors.textPrimary),
           ]}
         >
@@ -470,17 +470,17 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
         opacity(isDisabled ? action.disabledOpacity : 1),
         accessibilityLabel(label),
         frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
-        background(colors.surfaceLayer, shapes.roundedRectangle({ cornerRadius: action.radius })),
+        background(colors.surface, shapes.roundedRectangle({ cornerRadius: action.radius })),
         clipShape('roundedRectangle', action.radius),
         strokeBorder({
-          content: colors.borderStrong,
-          style: { lineWidth: componentTokens.surface.borderWidth },
+          content: colors.textSecondary,
+          style: { lineWidth: borders.standard },
           shape: 'roundedRectangle',
           cornerRadius: action.radius,
         }),
       ]}
     >
-      <Text modifiers={[font({ size: typography.body, weight: 'medium' }), foregroundStyle(colors.textPrimary)]}>
+      <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
         {label}
       </Text>
     </Button>
@@ -552,7 +552,7 @@ export function FlowNotice({ symbol, title, subtitle }: FlowNoticeProps) {
       modifiers={[
         padding({ horizontal: screenTokens.flowChrome.chipPaddingX, vertical: screenTokens.flowChrome.chipPaddingY }),
         frame({ width: screenTokens.addMoney.contentWidth, height: screenTokens.addMoney.noticeHeight }),
-        background(colors.surfaceSecondary, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius })),
+        background(colors.surfaceLayer, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius })),
         strokeBorder({
           content: colors.borderStrong,
           style: { lineWidth: componentTokens.surface.borderWidth },
