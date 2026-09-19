@@ -20,6 +20,8 @@ import type {
  */
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
+/** An unreachable anchor is re-probed sooner, so one network blip does not stick for the full TTL. */
+const FAILURE_TTL_MS = 30 * 1000;
 const FETCH_TIMEOUT_MS = 8000;
 
 type RawSep6AssetInfo = {
@@ -116,7 +118,7 @@ export class SepDiscoveryAnchorAdapter implements AnchorAdapter {
   }
 
   async snapshot(): Promise<AnchorSnapshot> {
-    if (this.snapshotCache && this.now() - this.snapshotCache.at < this.ttlMs) {
+    if (this.snapshotCache && this.now() - this.snapshotCache.at < this.cacheTtl(this.snapshotCache.value.healthy)) {
       return this.snapshotCache.value;
     }
     const value = await this.buildSnapshot();
@@ -160,13 +162,18 @@ export class SepDiscoveryAnchorAdapter implements AnchorAdapter {
     };
   }
 
+  private cacheTtl(ok: boolean): number {
+    return ok ? this.ttlMs : Math.min(this.ttlMs, FAILURE_TTL_MS);
+  }
+
   private async getToml(): Promise<ParsedToml | null> {
-    if (this.tomlCache && this.now() - this.tomlCache.at < this.ttlMs) {
+    if (this.tomlCache && this.now() - this.tomlCache.at < this.cacheTtl(this.tomlCache.value !== null)) {
       return this.tomlCache.value;
     }
     let value: ParsedToml | null;
     try {
-      const raw = await this.fetchText(this.tomlUrl());
+      // One retry: anchors' stellar.toml hosts occasionally drop a connection.
+      const raw = await this.fetchText(this.tomlUrl()).catch(() => this.fetchText(this.tomlUrl()));
       const parsed = TOML.parse(raw) as Record<string, unknown>;
       const documentation = parsed.DOCUMENTATION as Record<string, unknown> | undefined;
       value = {

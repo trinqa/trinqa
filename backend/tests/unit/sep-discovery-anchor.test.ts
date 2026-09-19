@@ -184,6 +184,43 @@ describe('SepDiscoveryAnchorAdapter', () => {
     expect(snapshot.seps).toEqual([]);
   });
 
+  it('retries a failed stellar.toml fetch once before declaring the anchor unreachable', async () => {
+    let tomlCalls = 0;
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.endsWith('/.well-known/stellar.toml')) {
+        tomlCalls += 1;
+        if (tomlCalls === 1) throw new Error('socket hang up');
+        return textResponse(SEP24_ONLY_TOML);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const adapter = new SepDiscoveryAnchorAdapter('sep24-only.test', { fetchFn: fetchFn as unknown as typeof fetch });
+    const snapshot = await adapter.snapshot();
+    expect(tomlCalls).toBe(2);
+    expect(snapshot.statusReason).toMatch(/SEP-24 only/);
+  });
+
+  it('keeps an unreachable result only briefly so a transient outage does not stick for the full TTL', async () => {
+    let now = 1_000_000;
+    let down = true;
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.endsWith('/.well-known/stellar.toml')) {
+        if (down) throw new Error('network unreachable');
+        return textResponse(SEP24_ONLY_TOML);
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const adapter = new SepDiscoveryAnchorAdapter('sep24-only.test', {
+      fetchFn: fetchFn as unknown as typeof fetch,
+      now: () => now,
+    });
+
+    expect((await adapter.snapshot()).statusReason).toBe('stellar.toml unreachable');
+    down = false;
+    now += 31_000; // past the failure TTL, well inside the 5-minute success TTL
+    expect((await adapter.snapshot()).statusReason).toMatch(/SEP-24 only/);
+  });
+
   it('caches the snapshot for the configured TTL and refetches once it expires', async () => {
     let now = 1_000_000;
     const fetchFn = vi.fn(async (url: string) => {
