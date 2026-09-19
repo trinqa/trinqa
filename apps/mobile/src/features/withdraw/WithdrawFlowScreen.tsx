@@ -195,13 +195,14 @@ function parseRouteDecision(payload: Record<string, unknown> | undefined): Quote
  */
 function routeDecisionSubtitle(decision: QuoteRouteDecision) {
   const considered = decision.eligible.length + decision.rejected.length;
-  const checked = `${considered} payout ${considered === 1 ? 'option' : 'options'} checked.`;
+  // The notice box is a fixed height, so every variant stays close to the copy it replaced.
+  const checked = `${considered} ${considered === 1 ? 'option' : 'options'} checked.`;
   const chosen = decision.chosenAnchor;
   if (!chosen) return `${checked} ${decision.executedVia} pays you out.`;
   // Jev is only named when it actually fed the scores; otherwise the pick was computed here.
-  const pick = decision.advisor.used ? `Jev helped pick ${chosen}` : `We computed the pick, ${chosen}`;
+  const pick = decision.advisor.used ? `Jev helped pick ${chosen}` : `We picked ${chosen}`;
   if (chosen === decision.executedVia) return `${checked} ${pick}, which pays you out.`;
-  return `${checked} ${pick}, but ${decision.executedVia} pays you out.`;
+  return `${checked} ${pick}, but ${decision.executedVia} pays out.`;
 }
 
 /**
