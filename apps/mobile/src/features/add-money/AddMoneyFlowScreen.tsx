@@ -133,7 +133,13 @@ function AmountStep({
               {formatMoney(quote.receivedAmount, quote.receivedCurrency, { code: true })}
             </Text>
             <Divider />
-            <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
+            <HStack
+              spacing={20}
+              modifiers={[
+                padding({ top: screenTokens.addMoney.summaryDividerToMetadata }),
+                frame({ maxWidth: Infinity }),
+              ]}
+            >
               <FlowInfoRow label="Fee" value={formatMoney(quote.fee, quote.currency)} />
               <FlowInfoRow label="Time" value={quote.estimatedTime} />
             </HStack>

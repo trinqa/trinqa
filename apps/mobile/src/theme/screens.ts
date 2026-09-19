@@ -51,6 +51,7 @@ export const screenTokens = {
     quickAmountHeight: 40,
     summaryTopGap: 18,
     summaryHeight: 120,
+    summaryDividerToMetadata: 4,
     cardPadding: 16,
     cardGap: 12,
     noticeHeight: 72,

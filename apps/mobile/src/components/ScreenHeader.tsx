@@ -24,6 +24,7 @@ import { colors, componentTokens } from '@/theme';
 
 interface ScreenHeaderProps {
   showBack?: boolean;
+  showProfile?: boolean;
   title?: string;
   showMenu?: boolean;
   onBackPress?: () => void;
@@ -84,6 +85,7 @@ function ProfileAvatar() {
 
 export function ScreenHeader({
   showBack = false,
+  showProfile = true,
   title,
   showMenu = false,
   onBackPress,
@@ -98,9 +100,9 @@ export function ScreenHeader({
     >
       {showBack ? (
         <HeaderIconButton label="Back" symbol="arrow.left" onPress={onBackPress} />
-      ) : (
+      ) : showProfile ? (
         <ProfileAvatar />
-      )}
+      ) : null}
 
       {title ? (
         <Text modifiers={[font({ size: 17, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>

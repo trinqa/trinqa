@@ -1,5 +1,6 @@
 import { Button, HStack, Image, Spacer, Text } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   buttonStyle,
   font,
   foregroundStyle,
@@ -34,7 +35,7 @@ export function LayeredInfoBar({
 }: LayeredInfoBarProps) {
   const resolvedTrailingColor = trailingColor ?? (onTrailingPress ? colors.action : colors.textSecondary);
 
-  return (
+  const content = (
     <HStack
       alignment="center"
       spacing={6}
@@ -55,33 +56,29 @@ export function LayeredInfoBar({
 
       <Spacer />
 
-      {onTrailingPress ? (
-        <Button
-          onPress={onTrailingPress}
-          modifiers={[
-            buttonStyle('plain'),
-            frame({ minWidth: 48, minHeight: 28, alignment: 'trailing' }),
-          ]}
-        >
-          <Text
-            modifiers={[
-              font({ size: textSize, weight: 'semibold' }),
-              foregroundStyle(resolvedTrailingColor),
-            ]}
-          >
-            {trailingText}
-          </Text>
-        </Button>
-      ) : (
-        <Text
-          modifiers={[
-            font({ size: textSize, weight: 'medium' }),
-            foregroundStyle(resolvedTrailingColor),
-          ]}
-        >
-          {trailingText}
-        </Text>
-      )}
+      <Text
+        modifiers={[
+          font({ size: textSize, weight: onTrailingPress ? 'semibold' : 'medium' }),
+          foregroundStyle(resolvedTrailingColor),
+        ]}
+      >
+        {trailingText}
+      </Text>
     </HStack>
+  );
+
+  if (!onTrailingPress) return content;
+
+  return (
+    <Button
+      onPress={onTrailingPress}
+      modifiers={[
+        buttonStyle('plain'),
+        accessibilityLabel(trailingText),
+        frame({ maxWidth: Infinity, height }),
+      ]}
+    >
+      {content}
+    </Button>
   );
 }

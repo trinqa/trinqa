@@ -5,36 +5,171 @@ import {
   DisclosureGroup,
   Divider,
   Group,
+  HStack,
+  Image,
+  Spacer,
   Text,
   VStack,
+  ZStack,
 } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
+  background,
   font,
   foregroundStyle,
+  frame,
+  layoutPriority,
+  lineLimit,
   padding,
-  presentationBackground,
-  presentationDetents,
   presentationDragIndicator,
+  shapes,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { FlowInfoRow, SecondaryActionButton } from '@/components/FlowControls';
-import { formatSignedMoney, formatMoney } from '@/domain/money';
-import { transactionStatusLabel, transactionTimestamp } from '@/domain/transactionPresentation';
+import { getTransactionDetails } from '@/domain/transactionPresentation';
 import { colors, typography } from '@/theme';
-import type { Transaction } from '@/types';
+import type { Transaction, TransactionStatus } from '@/types';
 
-function transactionTypeLabel(transaction: Transaction) {
-  const labels: Record<Transaction['type'], string> = {
-    payment: 'Payment',
-    received: 'Received',
-    deposit: 'Deposit',
-    withdrawal: 'Withdrawal',
-    'yield-earned': 'Yield earned',
-    'added-to-earning': 'Added to earning',
-    'returned-to-available': 'Returned to available',
-    rebalance: 'Strategy change',
-  };
-  return labels[transaction.type];
+function statusColor(status: TransactionStatus) {
+  if (status === 'failed') return 'red';
+  if (status === 'pending') return colors.textSecondary;
+  return 'green';
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <HStack alignment="firstTextBaseline" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
+      <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(colors.textSecondary)]}>
+        {label}
+      </Text>
+      <Spacer />
+      <Text
+        modifiers={[
+          layoutPriority(1),
+          font({ size: typography.transactionMeta, weight: 'medium' }),
+          foregroundStyle(colors.textPrimary),
+          lineLimit(1),
+        ]}
+      >
+        {value}
+      </Text>
+    </HStack>
+  );
+}
+
+function AdvancedDetails({ rows }: { rows: { label: string; value: string }[] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <DisclosureGroup isExpanded={isExpanded} onIsExpandedChange={setIsExpanded}>
+      <DisclosureGroup.Label>
+        <Text
+          modifiers={[
+            font({ size: typography.transactionMeta, weight: 'medium' }),
+            foregroundStyle(colors.action),
+          ]}
+        >
+          Advanced details
+        </Text>
+      </DisclosureGroup.Label>
+      <VStack alignment="leading" spacing={8} modifiers={[padding({ top: 6 }), frame({ maxWidth: Infinity })]}>
+        {rows.map((row) => (
+          <DetailRow key={row.label} label={row.label} value={row.value} />
+        ))}
+      </VStack>
+    </DisclosureGroup>
+  );
+}
+
+function TransactionDetailsContent({ transaction }: { transaction: Transaction }) {
+  const details = getTransactionDetails(transaction);
+  const color = statusColor(details.status);
+
+  return (
+    <VStack
+      alignment="leading"
+      spacing={0}
+      modifiers={[
+        padding({ top: 16, bottom: 18, horizontal: 22 }),
+        frame({ maxWidth: Infinity, alignment: 'leading' }),
+        accessibilityLabel(`${details.title}, ${details.amount}, ${details.statusLabel}`),
+      ]}
+    >
+      <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
+        <ZStack
+          modifiers={[
+            frame({ width: 32, height: 32 }),
+            background(colors.surfaceSecondary, shapes.circle()),
+          ]}
+        >
+          {details.symbol ? (
+            <Image systemName={details.symbol} size={14} color={colors.textSecondary} />
+          ) : (
+            <Text modifiers={[font({ size: 13, weight: 'semibold' }), foregroundStyle(colors.textSecondary)]}>
+              {details.title.charAt(0).toUpperCase()}
+            </Text>
+          )}
+        </ZStack>
+
+        <VStack alignment="leading" spacing={2} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+          <Text
+            modifiers={[
+              font({ size: typography.sectionTitle, weight: 'semibold' }),
+              foregroundStyle(colors.textPrimary),
+              lineLimit(1),
+            ]}
+          >
+            {details.title}
+          </Text>
+          {details.subtitle ? (
+            <Text
+              modifiers={[
+                font({ size: typography.transactionMeta }),
+                foregroundStyle(colors.textSecondary),
+                lineLimit(1),
+              ]}
+            >
+              {details.subtitle}
+            </Text>
+          ) : null}
+        </VStack>
+
+        <VStack alignment="trailing" spacing={2} modifiers={[layoutPriority(1)]}>
+          <Text
+            modifiers={[
+              font({ size: 21, weight: 'semibold' }),
+              foregroundStyle(colors.textPrimary),
+              lineLimit(1),
+            ]}
+          >
+            {details.amount}
+          </Text>
+          <HStack alignment="center" spacing={4}>
+            <Image systemName={details.statusSymbol} size={12} color={color} />
+            <Text modifiers={[font({ size: typography.transactionMeta }), foregroundStyle(color)]}>
+              {details.statusLabel}
+            </Text>
+          </HStack>
+        </VStack>
+      </HStack>
+
+      <Group modifiers={[padding({ top: 14, bottom: 10 })]}>
+        <Divider />
+      </Group>
+
+      <VStack alignment="leading" spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
+        {details.rows.map((row) => (
+          <DetailRow key={row.label} label={row.label} value={row.value} />
+        ))}
+      </VStack>
+
+      {details.advanced.length > 0 ? (
+        <VStack alignment="leading" spacing={10} modifiers={[padding({ top: 12 }), frame({ maxWidth: Infinity })]}>
+          <Divider />
+          <AdvancedDetails rows={details.advanced} />
+        </VStack>
+      ) : null}
+    </VStack>
+  );
 }
 
 export function TransactionDetailsSheet({
@@ -46,68 +181,27 @@ export function TransactionDetailsSheet({
   transaction: Transaction | null;
   onDismiss: () => void;
 }) {
-  const [advancedExpanded, setAdvancedExpanded] = useState(false);
+  const [presentedTransaction, setPresentedTransaction] = useState<Transaction | null>(null);
+
+  if (transaction && transaction.id !== presentedTransaction?.id) {
+    setPresentedTransaction(transaction);
+  }
+
+  const displayedTransaction = transaction ?? presentedTransaction;
 
   return (
     <BottomSheet
       isPresented={transaction !== null}
       onIsPresentedChange={(isPresented) => {
-        if (!isPresented) {
-          setAdvancedExpanded(false);
-          onDismiss();
-        }
+        if (!isPresented) onDismiss();
       }}
+      onDismiss={() => setPresentedTransaction(null)}
+      fitToContents
       anchor={anchor}
     >
-      <Group
-        modifiers={[
-          presentationDetents([{ height: 590 }]),
-          presentationDragIndicator('visible'),
-          presentationBackground(colors.surface),
-        ]}
-      >
-        {transaction ? (
-          <VStack alignment="leading" spacing={12} modifiers={[padding({ top: 18, bottom: 14, horizontal: 18 })]}>
-            <VStack alignment="leading" spacing={4}>
-              <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
-                Transaction Details
-              </Text>
-              <Text modifiers={[font({ size: typography.caption }), foregroundStyle(colors.textSecondary)]}>
-                {transaction.title}
-              </Text>
-            </VStack>
-
-            <Divider />
-            <FlowInfoRow label="Type" value={transactionTypeLabel(transaction)} />
-            <FlowInfoRow
-              label="Amount"
-              value={formatSignedMoney(transaction.amount, transaction.currency, transaction.direction)}
-              emphasized
-            />
-            <FlowInfoRow label="Status" value={transactionStatusLabel(transaction.status)} />
-            <FlowInfoRow label="Date / time" value={transactionTimestamp(transaction)} />
-            {transaction.recipient ? <FlowInfoRow label="Recipient" value={transaction.recipient} /> : null}
-            {transaction.source ? <FlowInfoRow label="Source" value={transaction.source} /> : null}
-            {transaction.fee ? (
-              <FlowInfoRow label="Fee" value={formatMoney(transaction.fee.amount, transaction.fee.currency)} />
-            ) : null}
-            {transaction.arrival ? <FlowInfoRow label="Arrival" value={transaction.arrival} /> : null}
-
-            <Divider />
-            <DisclosureGroup
-              label="Advanced details"
-              isExpanded={advancedExpanded}
-              onIsExpandedChange={setAdvancedExpanded}
-            >
-              <VStack alignment="leading" spacing={10} modifiers={[padding({ top: 8 })]}>
-                <FlowInfoRow label="Network" value={transaction.routeDetails?.network ?? 'Not available'} />
-                <FlowInfoRow label="Transaction hash" value={transaction.routeDetails?.transactionHash ?? 'Pending backend'} />
-                <FlowInfoRow label="Provider / route" value={transaction.routeDetails?.provider ?? 'Automatic'} />
-              </VStack>
-            </DisclosureGroup>
-
-            <SecondaryActionButton label="Close" onPress={onDismiss} />
-          </VStack>
+      <Group modifiers={[presentationDragIndicator('visible')]}>
+        {displayedTransaction ? (
+          <TransactionDetailsContent key={displayedTransaction.id} transaction={displayedTransaction} />
         ) : null}
       </Group>
     </BottomSheet>
