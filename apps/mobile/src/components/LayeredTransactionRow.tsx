@@ -8,6 +8,7 @@ import {
   foregroundStyle,
   frame,
   layoutPriority,
+  lineLimit,
   padding,
   offset,
   shadow,
@@ -38,6 +39,8 @@ interface LayeredTransactionRowProps {
   iconAccentColor?: string;
   footerLeadingColor?: string;
   footerTrailingColor?: string;
+  /** Override the amount text color; defaults to textPrimary. Pass colors.success for yield rows. */
+  amountColor?: string;
 }
 
 /** Shared Home-quality transaction card with a surface body and muted lower layer. */
@@ -60,6 +63,7 @@ export function LayeredTransactionRow({
   iconAccentColor = colors.textSecondary,
   footerLeadingColor,
   footerTrailingColor,
+  amountColor = colors.textPrimary,
 }: LayeredTransactionRowProps) {
   const initial = iconLetter ?? title.charAt(0).toUpperCase();
   const row = componentTokens.transactionRow;
@@ -116,12 +120,17 @@ export function LayeredTransactionRow({
         </Text>
       </VStack>
 
+      {/* trailing money column: trailing-aligned so meta sits centered under the amount */}
       <VStack alignment="trailing" spacing={row.textGap} modifiers={[layoutPriority(1), frame({ alignment: 'trailing' })]}>
-        <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+        <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(amountColor)]}>
           {amount}
         </Text>
         {meta ? (
-          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[
+            font({ size: typography.footnote, weight: 'medium' }),
+            foregroundStyle(colors.textSecondary),
+            lineLimit(1),
+          ]}>
             {meta}
           </Text>
         ) : null}

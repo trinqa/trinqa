@@ -1,213 +1,355 @@
-import { Chart, HStack, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import React, { useMemo, useRef, useState } from 'react';
 import {
-  background,
-  clipped,
-  font,
-  foregroundStyle,
-  frame,
-  offset,
-  opacity,
-  padding,
-  scaleEffect,
-  shadow,
-  shapes,
-  strokeBorder,
-} from '@expo/ui/swift-ui/modifiers';
+  PanResponder,
+  StyleSheet,
+  Text as RNText,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { HStack, RNHostView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { font, foregroundStyle, frame, offset, padding } from '@expo/ui/swift-ui/modifiers';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 
-import { chartTokens, colors, componentTokens, typography } from '@/theme';
+import {
+  chartTokens,
+  colors,
+  componentTokens,
+  screenTokens,
+  spacing,
+  typography,
+  typeWeightRn,
+} from '@/theme';
 import type { ChartPoint } from '@/types';
 
-const CHART_BLUE = chartTokens.line;
-const AREA_FILL = chartTokens.areaFill;
-const OUTER_WIDTH = chartTokens.width;
-const OUTER_PLOT_HEIGHT = chartTokens.plotHeight;
-const LABEL_TOP_PADDING = 8;
-const SELECTED_INDEX = 6;
+// ─── Chart layout constants (all from tokens) ─────────────────────────────────
+const PLOT_HEIGHT = chartTokens.plotHeight; // 181
+const PAD_X = 20; // horizontal point margin (keeps first/last markers off edge)
+const PAD_TOP = 20; // top padding so line never touches top edge
+const PAD_BOTTOM = 16; // bottom padding so line never touches bottom edge
+const GRID_COUNT = 7; // vertical grid columns (matches current design)
 
-/** Tunable visual transform — iterate from screenshots. */
-const SCALE_X = chartTokens.scaleX;
-const SCALE_Y = chartTokens.scaleY;
-const CHART_X_OFFSET = chartTokens.offsetX;
-const CHART_Y_OFFSET = chartTokens.offsetY;
+// Marker sizes
+const ACTIVE_RADIUS = 5; // selected point
+const INACTIVE_RADIUS = 3; // resting points
 
-const CHART_STYLE = { width: OUTER_WIDTH, height: OUTER_PLOT_HEIGHT } as const;
+// Tooltip layout
+const TOOLTIP_W = 96;
+const TOOLTIP_MIN_H = 40;
+const TOOLTIP_H = 48; // estimated rendered height used for y-positioning
 
-const CHART_MODIFIERS = [
-  frame({ width: OUTER_WIDTH, height: OUTER_PLOT_HEIGHT }),
-  scaleEffect({ x: SCALE_X, y: SCALE_Y }),
-  offset({ x: CHART_X_OFFSET, y: CHART_Y_OFFSET }),
-];
+// Vertical guide opacity
+const GUIDE_OPACITY = 0.35;
 
-/** Overlay coords in outer 366×185 plot frame (screen origin x18, y203). */
-const GUIDE_X = 295;
-const GUIDE_Y = 49;
-const GUIDE_HEIGHT = 132;
-const TOOLTIP_X = 199;
-const TOOLTIP_Y = 24;
+// Default selected index — last point in earnChartPoints (index 12, Sep 23, 2026)
+const DEFAULT_SELECTED_INDEX = 12;
 
-/** Reference 7-point profile — category x ≈ [18,79,140,201,261,322,383] screen. */
-const DISPLAY_Y_PROFILE = [0.12, 0.325, 0.325, 0.603, 0.603, 0.789, 0.789] as const;
+// Bottom of SVG where area fill terminates
+const AREA_BOTTOM = PLOT_HEIGHT;
 
-/** Turning-point marker centers in outer plot frame (screen target − origin 18,203). */
-const TURNING_MARKERS = [
-  { x: 67, y: 135, size: 6 },
-  { x: 124, y: 135, size: 6 },
-  { x: 181, y: 83, size: 6 },
-  { x: 238, y: 83, size: 6 },
-  { x: 295, y: 49, size: 9 },
-] as const;
+// Axis label row insets ─ matches current OUTER_WIDTH - 24 / offset(x: 12)
+const LABEL_ROW_INSET = spacing.xxxl; // 24
+const LABEL_ROW_OFFSET_X = spacing.md; // 12
+const LABEL_TOP_PAD = 8;
 
-/** Subtle vertical grid x positions inside outer plot (relative). */
-const GRID_XS = [0, 58, 116, 175, 233, 292, 349];
-
-interface ActivityChartProps {
-  points: ChartPoint[];
-}
-
-function formatCurrency(value: number) {
+// ─── Formatting (same function as original ActivityChart) ─────────────────────
+function formatCurrency(value: number): string {
   return `${value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} $`;
 }
 
-function buildChartDisplayData(points: ChartPoint[]) {
-  return DISPLAY_Y_PROFILE.map((y, index) => ({
-    x: points[index]?.label ?? `point-${index}`,
-    y,
+// ─── Geometry helpers ─────────────────────────────────────────────────────────
+/** Map data-point index → SVG x coordinate, with horizontal padding. */
+function getX(index: number, total: number, width: number): number {
+  if (total <= 1) return width / 2;
+  return PAD_X + (index / (total - 1)) * (width - PAD_X * 2);
+}
+
+/** Map value in [min, max] → SVG y coordinate (top = high value). */
+function getY(value: number, min: number, max: number): number {
+  const range = max - min || 1; // guard identical-value edge case
+  const normalised = (value - min) / range;
+  return PLOT_HEIGHT - PAD_BOTTOM - normalised * (PLOT_HEIGHT - PAD_TOP - PAD_BOTTOM);
+}
+
+function buildCoords(
+  points: ChartPoint[],
+  width: number,
+): Array<{ x: number; y: number }> {
+  const values = points.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return points.map((p, i) => ({
+    x: getX(i, points.length, width),
+    y: getY(p.value, min, max),
   }));
 }
 
-function markerOffset(centerX: number, centerY: number, size: number) {
-  const inset = size / 2;
-  return { x: centerX - inset, y: centerY - inset };
+/**
+ * Build an SVG line path from coordinate array.
+ * Equal-value neighbours produce flat horizontal segments naturally (step/plateau).
+ */
+function buildLinePath(coords: Array<{ x: number; y: number }>): string {
+  return coords
+    .map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(2)} ${c.y.toFixed(2)}`)
+    .join(' ');
 }
 
-/** Native SwiftUI Charts line + area for Activity (iOS). */
+/**
+ * Build a closed SVG area path: line → bottom-right → bottom-left → close.
+ * Fills the region under the chart line down to AREA_BOTTOM.
+ */
+function buildAreaPath(coords: Array<{ x: number; y: number }>): string {
+  const linePath = buildLinePath(coords);
+  const last = coords[coords.length - 1]!;
+  const first = coords[0]!;
+  return (
+    `${linePath}` +
+    ` L ${last.x.toFixed(2)} ${AREA_BOTTOM}` +
+    ` L ${first.x.toFixed(2)} ${AREA_BOTTOM} Z`
+  );
+}
+
+/** Snap x position to nearest data point index. */
+function nearestIndex(x: number, coords: Array<{ x: number }>): number {
+  let best = 0;
+  let bestDist = Math.abs(coords[0].x - x);
+  for (let i = 1; i < coords.length; i++) {
+    const dist = Math.abs(coords[i].x - x);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * Compute tooltip left offset: centred on selected point x, clamped to chart bounds.
+ * Near left/right edges the tooltip shifts inward automatically.
+ */
+function calcTooltipLeft(pointX: number, chartWidth: number): number {
+  return Math.max(0, Math.min(chartWidth - TOOLTIP_W, pointX - TOOLTIP_W / 2));
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+interface ActivityChartProps {
+  points: ChartPoint[];
+}
+
+/**
+ * EarnGrowthChart — functional interactive SVG chart for the Earn screen.
+ *
+ * • Tap or drag horizontally → snaps to nearest data point.
+ * • Vertical page scroll is unaffected (onPanResponderTerminationRequest: true).
+ * • Embedded in SwiftUI layout via RNHostView.
+ * • All visual constants come from design tokens; no raw hex values.
+ */
 export function ActivityChart({ points }: ActivityChartProps) {
-  const data = buildChartDisplayData(points);
-  const selected = points[Math.min(SELECTED_INDEX, points.length - 1)];
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Responsive chart width: device content area, capped at the Earn token width.
+  const chartWidth = Math.min(
+    windowWidth - spacing.screenHorizontal * 2,
+    screenTokens.earn.contentWidth,
+  );
+
+  // Default selection: last point (Sep 23, 2026).
+  const [selectedIndex, setSelectedIndex] = useState(() =>
+    Math.min(DEFAULT_SELECTED_INDEX, points.length - 1),
+  );
+
+  // Tooltip visibility: true on first render (approved default look).
+  // Tapping the active point again dismisses; dragging to a new point re-shows.
+  const [tooltipVisible, setTooltipVisible] = useState(true);
+
+  // Recompute coordinates when points or width change.
+  const coords = useMemo(() => buildCoords(points, chartWidth), [points, chartWidth]);
+
+  // Live refs so PanResponder closures always read current values without recreation.
+  const coordsRef = useRef(coords);
+  coordsRef.current = coords;
+
+  const selectedIndexRef = useRef(selectedIndex);
+  selectedIndexRef.current = selectedIndex;
+
+  const tooltipVisibleRef = useRef(tooltipVisible);
+  tooltipVisibleRef.current = tooltipVisible;
+
+  // Whether the current gesture started on the already-active point (dismiss intent).
+  // Cleared on any move to a different point, committed on release.
+  const grantedAtSameIndex = useRef(false);
+
+  // PanResponder: claim taps and horizontal drags.
+  // Dismiss logic:
+  //   • Tap active point (no drag away) → hide tooltip on release.
+  //   • Drag away from active point mid-gesture → cancel dismiss, show on new point.
+  //   • Tap a different point → move + show.
+  // onPanResponderTerminationRequest: true lets SwiftUI ScrollView reclaim vertical gestures.
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const newIndex = nearestIndex(evt.nativeEvent.locationX, coordsRef.current);
+        if (newIndex === selectedIndexRef.current && tooltipVisibleRef.current) {
+          // Potential dismiss — confirm on release unless user drags away first.
+          grantedAtSameIndex.current = true;
+        } else {
+          grantedAtSameIndex.current = false;
+          setSelectedIndex(newIndex);
+          setTooltipVisible(true);
+        }
+      },
+      onPanResponderMove: (evt) => {
+        const newIndex = nearestIndex(evt.nativeEvent.locationX, coordsRef.current);
+        if (newIndex !== selectedIndexRef.current) {
+          // Dragged to a new point — cancel any pending dismiss, show tooltip.
+          grantedAtSameIndex.current = false;
+          setSelectedIndex(newIndex);
+          setTooltipVisible(true);
+        }
+      },
+      onPanResponderRelease: () => {
+        if (grantedAtSameIndex.current) {
+          // Pure tap on active point with no drag away → dismiss.
+          setTooltipVisible(false);
+        }
+        grantedAtSameIndex.current = false;
+      },
+      onPanResponderTerminate: () => {
+        grantedAtSameIndex.current = false;
+      },
+      onPanResponderTerminationRequest: () => true,
+      onShouldBlockNativeResponder: () => false,
+    }),
+  ).current;
+
+  // Guard: need at least two points to draw a line.
+  if (points.length < 2) return null;
+
+  const selected = points[selectedIndex];
+  if (!selected) return null;
+
+  const selCoord = coords[selectedIndex] ?? { x: chartWidth / 2, y: PLOT_HEIGHT / 2 };
+  const linePath = buildLinePath(coords);
+  const areaPath = buildAreaPath(coords);
+  const tooltipLeft = calcTooltipLeft(selCoord.x, chartWidth);
+  // Tooltip bottom aligns with the top of the active marker circle; clamp so it never clips above chart.
+  const tooltipTop = Math.max(0, selCoord.y - ACTIVE_RADIUS - TOOLTIP_H);
+
+  // Seven evenly-spaced vertical grid x-positions.
+  const gridXs = Array.from(
+    { length: GRID_COUNT },
+    (_, i) => (i / (GRID_COUNT - 1)) * chartWidth,
+  );
 
   return (
-    <VStack alignment="leading" spacing={0} modifiers={[frame({ width: OUTER_WIDTH, maxWidth: Infinity })]}>
-      <ZStack
-        alignment="topLeading"
-        modifiers={[frame({ width: OUTER_WIDTH, height: OUTER_PLOT_HEIGHT }), clipped()]}
-      >
-        {GRID_XS.map((gridX) => (
-          <Text
-            key={gridX}
-            modifiers={[
-              frame({ width: 1, height: OUTER_PLOT_HEIGHT }),
-              background(chartTokens.gridLine),
-              offset({ x: gridX, y: 0 }),
-            ]}
-          >
-            {' '}
-          </Text>
-        ))}
-
-        <Chart
-          type="area"
-          data={data}
-          showGrid={false}
-          animate={false}
-          areaStyle={{ color: AREA_FILL }}
-          style={CHART_STYLE}
-          modifiers={CHART_MODIFIERS}
-        />
-        <Chart
-          type="line"
-          data={data}
-          showGrid={false}
-          animate={false}
-          lineStyle={{
-            color: CHART_BLUE,
-            width: 2,
-          }}
-          style={CHART_STYLE}
-          modifiers={CHART_MODIFIERS}
-        />
-
-        <Text
-          modifiers={[
-            frame({ width: 1, height: GUIDE_HEIGHT }),
-            background(CHART_BLUE),
-            opacity(0.35),
-            offset({ x: GUIDE_X, y: GUIDE_Y }),
-          ]}
+    <VStack
+      alignment="leading"
+      spacing={0}
+      modifiers={[frame({ width: chartWidth, maxWidth: Infinity })]}
+    >
+      {/* ── Chart plot area ─────────────────────────────────────────────── */}
+      <RNHostView matchContents>
+        <View
+          style={[styles.chartArea, { width: chartWidth, height: PLOT_HEIGHT }]}
+          {...panResponder.panHandlers}
+          accessible
+          accessibilityRole="adjustable"
+          accessibilityLabel={`Earnings growth chart. Selected: ${selected.displayValue ?? formatCurrency(selected.value)} on ${selected.label}. Drag left or right to navigate.`}
+          accessibilityHint="Drag horizontally to explore data points"
         >
-          {' '}
-        </Text>
+          <Svg width={chartWidth} height={PLOT_HEIGHT}>
+            {/* 1. Vertical grid lines — rendered behind everything */}
+            {gridXs.map((gx, i) => (
+              <Line
+                key={i}
+                x1={gx.toFixed(2)}
+                y1={0}
+                x2={gx.toFixed(2)}
+                y2={PLOT_HEIGHT}
+                stroke={chartTokens.gridLine}
+                strokeWidth={1}
+              />
+            ))}
 
-        <VStack
-          alignment="leading"
-          spacing={2}
-          modifiers={[
-            padding({ horizontal: 10, vertical: 7 }),
-            frame({ width: 94, height: 38 }),
-            background(colors.surface, shapes.roundedRectangle({ cornerRadius: chartTokens.tooltipRadius })),
-            strokeBorder({
-              content: colors.borderStrong,
-              style: { lineWidth: componentTokens.surface.borderWidth },
-              shape: 'roundedRectangle',
-              cornerRadius: chartTokens.tooltipRadius,
-            }),
-            shadow({
-              radius: componentTokens.surface.shadowRadius,
-              y: componentTokens.surface.shadowY,
-              color: chartTokens.tooltipShadow,
-            }),
-            offset({ x: TOOLTIP_X, y: TOOLTIP_Y }),
-          ]}
-        >
-          <Text
-            modifiers={[
-              font({ size: typography.caption, weight: 'semibold' }),
-              foregroundStyle(colors.textPrimary),
-            ]}
-          >
-            {selected.displayValue ?? formatCurrency(selected.value)}
-          </Text>
-          <Text
-            modifiers={[
-              font({ size: typography.micro, weight: 'medium' }),
-              foregroundStyle(colors.textSecondary),
-            ]}
-          >
-            {selected?.label}
-          </Text>
-        </VStack>
+            {/* 2. Area fill — subtle pale-cyan under the line */}
+            <Path d={areaPath} fill={chartTokens.areaFill} />
 
-        {TURNING_MARKERS.map((marker) => {
-          const { x, y } = markerOffset(marker.x, marker.y, marker.size);
-          return (
-            <ZStack
-              key={`${marker.x}-${marker.y}`}
-              modifiers={[
-                frame({ width: marker.size, height: marker.size }),
-                background(CHART_BLUE, shapes.circle()),
-                offset({ x, y }),
-              ]}
+            {/* 3. Line — thin cyan, step/plateau shape from data */}
+            <Path
+              d={linePath}
+              stroke={chartTokens.line}
+              strokeWidth={2}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* 4. Selected vertical guide — rendered above area/line, behind markers */}
+            <Line
+              x1={selCoord.x.toFixed(2)}
+              y1={0}
+              x2={selCoord.x.toFixed(2)}
+              y2={PLOT_HEIGHT}
+              stroke={chartTokens.line}
+              strokeWidth={1}
+              strokeOpacity={GUIDE_OPACITY}
+            />
+
+            {/* 5. Inactive markers — small, outlined, white centre */}
+            {coords.map((c, i) => {
+              if (i === selectedIndex) return null;
+              return (
+                <Circle
+                  key={i}
+                  cx={c.x.toFixed(2)}
+                  cy={c.y.toFixed(2)}
+                  r={INACTIVE_RADIUS}
+                  fill={colors.surface}
+                  stroke={chartTokens.line}
+                  strokeWidth={2}
+                />
+              );
+            })}
+
+            {/* 6. Active marker — larger, on top of inactive markers */}
+            <Circle
+              cx={selCoord.x.toFixed(2)}
+              cy={selCoord.y.toFixed(2)}
+              r={ACTIVE_RADIUS}
+              fill={colors.surface}
+              stroke={chartTokens.line}
+              strokeWidth={2}
+            />
+          </Svg>
+
+          {/* 7. Floating tooltip — React Native View, absolutely positioned over SVG.
+               Rendered only when tooltipVisible; bottom edge aligns with active marker tip. */}
+          {tooltipVisible && (
+            <View
+              style={[styles.tooltip, { left: tooltipLeft, top: tooltipTop }]}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
             >
-              <Text
-                modifiers={[
-                  frame({ width: marker.size >= 9 ? 4 : 3, height: marker.size >= 9 ? 4 : 3 }),
-                  background(colors.surface, shapes.circle()),
-                ]}
-              >
-                {' '}
-              </Text>
-            </ZStack>
-          );
-        })}
-      </ZStack>
+              <RNText style={styles.tooltipAmount} numberOfLines={1}>
+                {selected.displayValue ?? formatCurrency(selected.value)}
+              </RNText>
+              <RNText style={styles.tooltipDate} numberOfLines={1}>
+                {selected.label}
+              </RNText>
+            </View>
+          )}
+        </View>
+      </RNHostView>
 
+      {/* ── X-axis date labels ───────────────────────────────────────────── */}
       <HStack
         modifiers={[
-          frame({ width: OUTER_WIDTH - 24 }),
-          offset({ x: 12 }),
-          padding({ top: LABEL_TOP_PADDING }),
+          frame({ width: chartWidth - LABEL_ROW_INSET }),
+          offset({ x: LABEL_ROW_OFFSET_X }),
+          padding({ top: LABEL_TOP_PAD }),
         ]}
       >
         <Text
@@ -216,7 +358,7 @@ export function ActivityChart({ points }: ActivityChartProps) {
             foregroundStyle(colors.textSecondary),
           ]}
         >
-          {points[0]?.label}
+          {points[0]?.label ?? ''}
         </Text>
         <Spacer />
         <Text
@@ -225,9 +367,47 @@ export function ActivityChart({ points }: ActivityChartProps) {
             foregroundStyle(colors.textSecondary),
           ]}
         >
-          {points[points.length - 1]?.label}
+          {points[points.length - 1]?.label ?? ''}
         </Text>
       </HStack>
     </VStack>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  chartArea: {
+    // Explicit dimensions required by RNHostView matchContents.
+    // overflow: 'visible' lets the tooltip shadow render outside the SVG bounds.
+    overflow: 'visible',
+  },
+  tooltip: {
+    position: 'absolute',
+    width: TOOLTIP_W,
+    minHeight: TOOLTIP_MIN_H,
+    paddingHorizontal: spacing.sm + 2, // 10 — matches current padding({ horizontal: 10 })
+    paddingVertical: spacing.sm - 1, // 7 — matches current padding({ vertical: 7 })
+    backgroundColor: colors.surface,
+    borderRadius: chartTokens.tooltipRadius,
+    borderWidth: componentTokens.surface.borderWidth,
+    borderColor: colors.borderStrong,
+    // Shadow — values from chartTooltip primitive shadow token.
+    shadowColor: chartTokens.tooltipShadow,
+    shadowOffset: { width: 0, height: componentTokens.surface.shadowY },
+    shadowRadius: componentTokens.surface.shadowRadius,
+    shadowOpacity: 1,
+    elevation: 3,
+  },
+  tooltipAmount: {
+    fontSize: typography.caption, // 13
+    fontWeight: typeWeightRn.semibold, // '600'
+    color: colors.textPrimary,
+    lineHeight: 16,
+  },
+  tooltipDate: {
+    fontSize: typography.micro, // 10
+    fontWeight: typeWeightRn.medium, // '500'
+    color: colors.textSecondary,
+    lineHeight: 13,
+  },
+});

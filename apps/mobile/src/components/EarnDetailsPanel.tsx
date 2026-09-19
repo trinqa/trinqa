@@ -58,6 +58,7 @@ export function EarnDetailsPanel({
                 symbol={item.symbol}
                 iconBackgroundColor={isEarning ? colors.successMuted : undefined}
                 iconColor={isEarning ? colors.success : undefined}
+                amountColor={isEarning ? colors.success : undefined}
                 footerLeadingText={item.footerLeadingText}
                 footerTrailingText={item.footerTrailingText}
                 footerSymbol={

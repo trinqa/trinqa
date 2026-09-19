@@ -8,12 +8,12 @@ import {
   VStack,
 } from '@expo/ui/swift-ui';
 import {
+  fixedSize,
   font,
   foregroundStyle,
   frame,
   keyboardType,
   monospacedDigit,
-  multilineTextAlignment,
   padding,
   textFieldStyle,
 } from '@expo/ui/swift-ui/modifiers';
@@ -82,12 +82,15 @@ export function FlowAmountEntry({
       >
         <FlowSelectionBadge title={selectionTitle} symbol={selectionSymbol} />
 
+        {/* HStack has no fixed width so the VStack's center alignment clusters
+            number + symbol tightly together. fixedSize shrinks the TextField
+            to its content width, matching the Home wallet currencyGap pattern. */}
         <HStack
           alignment="firstTextBaseline"
           spacing={4}
           modifiers={[
             padding({ top: flow.amountTopGap }),
-            frame({ width: flow.contentWidth, height: flow.amountFieldHeight }),
+            frame({ height: flow.amountFieldHeight }),
           ]}
         >
           <TextField
@@ -98,11 +101,11 @@ export function FlowAmountEntry({
             modifiers={[
               textFieldStyle('plain'),
               keyboardType('numeric'),
-              multilineTextAlignment('center'),
               monospacedDigit(),
               font({ size: typography.amountHero, weight: 'bold' }),
               foregroundStyle(colors.textPrimary),
-              frame({ width: 270, height: flow.amountFieldHeight }),
+              frame({ height: flow.amountFieldHeight }),
+              fixedSize({ horizontal: true }),
             ]}
           />
           <Text

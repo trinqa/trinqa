@@ -81,10 +81,10 @@ export function EarnScreen() {
           You've earned
         </Text>
         <HStack alignment="firstTextBaseline" spacing={4}>
-          <Text modifiers={[font({ size: typography.label, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
+          <Text modifiers={[font({ size: typography.label, weight: 'medium' }), foregroundStyle(colors.success)]}>
             +
           </Text>
-          <Text modifiers={[font({ size: typography.amountCurrency, weight: 'bold' }), foregroundStyle(colors.textPrimary)]}>
+          <Text modifiers={[font({ size: typography.amountCurrency, weight: 'bold' }), foregroundStyle(colors.success)]}>
             {headline}
           </Text>
         </HStack>

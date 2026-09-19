@@ -24,6 +24,7 @@ import {
   padding,
   progressViewStyle,
   scaleEffect,
+  shadow,
   shapes,
   strokeBorder,
   tint,
@@ -32,7 +33,7 @@ import {
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { borders, colors, componentTokens, screenTokens, typography, spacing } from '@/theme';
+import { colors, componentTokens, screenTokens, shortcutShadow, typography, spacing } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 
 interface FlowButtonProps {
@@ -152,8 +153,9 @@ export function FlowQuickAmountButton({
         buttonStyle('plain'),
         accessibilityLabel(`Set amount to ${label}`),
         frame({ width: buttonWidth, height: flow.quickAmountHeight }),
+        // Selected = cyan border on white surface only; no blue fill.
         background(
-          selected ? colors.selection : colors.surface,
+          colors.surface,
           shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius }),
         ),
         clipShape('roundedRectangle', componentTokens.surface.controlRadius),
@@ -472,11 +474,11 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
         frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
         background(colors.surface, shapes.roundedRectangle({ cornerRadius: action.radius })),
         clipShape('roundedRectangle', action.radius),
-        strokeBorder({
-          content: colors.textSecondary,
-          style: { lineWidth: borders.standard },
-          shape: 'roundedRectangle',
-          cornerRadius: action.radius,
+        // Shadow matches Home shortcut buttons (Add Money / Pay / More) — shortcutShadow token.
+        shadow({
+          radius: shortcutShadow.radius,
+          y: shortcutShadow.y,
+          color: shortcutShadow.color,
         }),
       ]}
     >

@@ -46,12 +46,13 @@ const NAV = [
 
 const COLOR_GROUPS = [
   {
-    title: 'Surfaces',
+    title: 'Surfaces — 4-layer stack',
     items: [
-      ['colors.background', colors.background, 'canvas'],
-      ['colors.surface', colors.surface, 'surface'],
-      ['colors.surfaceLayer', colors.surfaceLayer, 'surfaceLayer'],
-      ['walletColors.bodyStart', walletColors.bodyStart, 'surfaceInverse'],
+      ['colors.background', colors.background, 'canvas #F3F3F3'],
+      ['colors.surface', colors.surface, 'surface (elevated) #FFFFFF'],
+      ['colors.surfaceSecondary', colors.surfaceSecondary, 'surfaceSecondary (muted) #F5F5F5'],
+      ['colors.surfaceLayer', colors.surfaceLayer, 'surfaceLayer (inset) #F2F2F2'],
+      ['walletColors.bodyStart', walletColors.bodyStart, 'wallet surface (inverse)'],
     ],
   },
   {
@@ -70,21 +71,12 @@ const COLOR_GROUPS = [
     ],
   },
   {
-    title: 'Actions',
+    title: 'Action (CTA cyan — excluded from palette reduction)',
     items: [
-      ['colors.action', colors.action, 'action.primary'],
+      ['colors.action', colors.action, 'action.primary #08AFD3'],
       ['colors.actionPrimaryDark', colors.actionPrimaryDark, 'action.primaryDark'],
       ['colors.actionPrimaryDarker', colors.actionPrimaryDarker, 'action.primaryDarker'],
-      ['colors.success', colors.success, 'status.success'],
-      ['colors.danger', colors.danger, 'status.danger'],
-      ['colors.pending', colors.pending, 'status.pending'],
-    ],
-  },
-  {
-    title: 'Status',
-    items: [
-      ['colors.successMuted', colors.successMuted, 'success soft'],
-      ['colors.selection', colors.selection, 'selection'],
+      ['colors.selection', colors.selection, 'selection fill'],
     ],
   },
   {
@@ -320,15 +312,15 @@ function Color() {
 
 function Type() {
   return (
-    <Section id="type" title="02 Typography" kicker="system-ui / San Francisco. Sizes from actual usage.">
+    <Section id="type" title="02 Typography" kicker="system-ui / San Francisco. Roles with px sizes and weights (medium/semibold/bold only — no regular/400 in product).">
       {TYPE_SAMPLES.map(([token, sample]) => {
         const spec = semanticTypography[token];
         return (
           <div className="type-row" key={token}>
             <div className="type-meta">
-              {token}
+              <strong>{token}</strong>
               <br />
-              {primitiveType.family} {spec.size}/{spec.lineHeight} w{spec.weight}
+              {primitiveType.family} {spec.size}px/{spec.lineHeight}px w{spec.weight}
             </div>
             <div style={{ fontSize: spec.size, fontWeight: Number(spec.weight), lineHeight: `${spec.lineHeight}px` }}>
               {sample}
@@ -403,21 +395,66 @@ function Borders() {
 }
 
 function Elevation() {
+  // Helper: alpha-hex shadows (shortcut, rowLift, seam, surface)
+  const alphaBox = (s: { offsetY: number; radius: number; color: string }) =>
+    `0 ${s.offsetY}px ${s.radius}px ${s.color}`;
+  // Helper: opacity-based shadows (card, wallet)
+  const opacityBox = (s: { offsetY: number; radius: number; opacity: number }) =>
+    `0 ${s.offsetY}px ${s.radius}px rgba(17,17,17,${s.opacity})`;
+
+  const elevRows = [
+    {
+      label: 'primitiveShadow.surface',
+      desc: 'Inline cards · sheet chrome',
+      token: `y${primitiveShadow.surface.offsetY} r${primitiveShadow.surface.radius} ${primitiveShadow.surface.color}`,
+      shadow: alphaBox(primitiveShadow.surface),
+    },
+    {
+      label: 'primitiveShadow.shortcut',
+      desc: 'Home shortcuts · secondary buttons',
+      token: `y${primitiveShadow.shortcut.offsetY} r${primitiveShadow.shortcut.radius} ${primitiveShadow.shortcut.color}`,
+      shadow: alphaBox(primitiveShadow.shortcut),
+    },
+    {
+      label: 'primitiveShadow.rowLift',
+      desc: 'Recent inner-card lift',
+      token: `y${primitiveShadow.rowLift.offsetY} r${primitiveShadow.rowLift.radius} ${primitiveShadow.rowLift.color}`,
+      shadow: alphaBox(primitiveShadow.rowLift),
+    },
+    {
+      label: 'primitiveShadow.seam',
+      desc: 'Layer seam · card edge',
+      token: `y${primitiveShadow.seam.offsetY} r${primitiveShadow.seam.radius} ${primitiveShadow.seam.color}`,
+      shadow: alphaBox(primitiveShadow.seam),
+    },
+    {
+      label: 'primitiveShadow.card',
+      desc: 'Card ambient elevation',
+      token: `y${primitiveShadow.card.offsetY} r${primitiveShadow.card.radius} opacity ${primitiveShadow.card.opacity}`,
+      shadow: opacityBox(primitiveShadow.card),
+    },
+    {
+      label: 'primitiveShadow.wallet',
+      desc: 'AccountCardStack',
+      token: `y${primitiveShadow.wallet.offsetY} r${primitiveShadow.wallet.radius} opacity ${primitiveShadow.wallet.opacity}`,
+      shadow: opacityBox(primitiveShadow.wallet),
+    },
+  ] as const;
+
   return (
-    <Section id="elevation" title="06 Elevation" kicker="Most of the product is flat. Elevation is local.">
+    <Section id="elevation" title="06 Elevation" kicker="Most of the product is flat. Elevation is local. Shortcut ≈ rowLift — same geometry, different alpha.">
       <div className="grid grid-3">
         <div className="card" style={{ boxShadow: 'none' }}>
           Flat surface
           <p className="note">Default lists, tabs, forms</p>
         </div>
-        <div className="card" style={{ boxShadow: '0 2px 8px #1111110A' }}>
-          Surface 2 / 8
-          <p className="note">{primitiveShadow.surface.color}</p>
-        </div>
-        <div className="card" style={{ boxShadow: '0 4px 14px rgb(0 0 0 / 0.06)' }}>
-          Card 0 / 4 / 0.06 / 14
-        </div>
-        <div className="wallet">Wallet 0 / 4 / 0.1 / 7</div>
+        {elevRows.map((row) => (
+          <div className="card" key={row.label} style={{ boxShadow: row.shadow }}>
+            <strong style={{ fontSize: 12 }}>{row.label}</strong>
+            <p className="note" style={{ marginTop: 4 }}>{row.desc}</p>
+            <p className="note" style={{ fontVariantNumeric: 'tabular-nums' }}>{row.token}</p>
+          </div>
+        ))}
       </div>
     </Section>
   );
@@ -454,7 +491,7 @@ function Components() {
           <span className="note" style={{ color: walletColors.textTertiary }}>
             Everyday
           </span>
-          <div style={{ fontSize: 25.5, fontWeight: 700, letterSpacing: -0.5 }}>USD 1,240.00</div>
+          <div style={{ fontSize: 25, fontWeight: 700, letterSpacing: -0.5 }}>1,240.00 USD</div>
         </div>
         <div className="card" style={{ padding: 0 }}>
           <div className="tx">
@@ -510,19 +547,18 @@ function Components() {
 }
 
 function Financial() {
+  // Money format in product: {amount} {symbol} — symbol after
   const rows = [
-    ['Money amount', '1,240.00', colors.textPrimary],
-    ['Available balance', '2,480.50', colors.textPrimary],
-    ['Earning balance', '+12.40', colors.success],
+    ['Wallet balance', '1,240.00 USD', colors.textPrimary],
     ['Recipient', 'Maya Chen', colors.textPrimary],
-    ['Fee', '0.40', colors.textPrimary],
+    ['Fee', '0.40 USD', colors.textPrimary],
     ['Arrival', 'Instant', colors.textPrimary],
     ['Transaction status', 'Completed', colors.success],
     ['Transaction metadata', 'Today · 14:22', colors.textSecondary],
-    ['Deposit', '+200.00', colors.textPrimary],
-    ['Withdraw', '−80.00', colors.textPrimary],
-    ['Pay', '−24.90', colors.textPrimary],
-    ['Earn', '+1.12', colors.success],
+    ['Deposit', '+200.00 USD', colors.textPrimary],
+    ['Withdraw', '−80.00 USD', colors.textPrimary],
+    ['Pay', '−24.90 USD', colors.textPrimary],
+    ['Earn', '+1.12 USD', colors.success],
   ] as const;
   return (
     <Section id="financial" title="09 Financial Patterns">

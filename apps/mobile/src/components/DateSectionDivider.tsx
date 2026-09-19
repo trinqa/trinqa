@@ -1,6 +1,7 @@
 import { Divider, HStack, Text } from '@expo/ui/swift-ui';
 import {
   background,
+  fixedSize,
   font,
   foregroundStyle,
   frame,
@@ -12,6 +13,7 @@ import {
 import { colors, componentTokens, typography } from '@/theme';
 
 interface DateSectionDividerProps {
+  /** Retained for API compat — layout is now flexible (text natural width, divider fills rest). */
   contentWidth: number;
   label: string;
   modifiers?: ViewModifier[];
@@ -19,18 +21,10 @@ interface DateSectionDividerProps {
 
 /** Shared date label and cyan rule used by Wallet and Activity timelines. */
 export function DateSectionDivider({
-  contentWidth,
   label,
   modifiers = [],
 }: DateSectionDividerProps) {
   const divider = componentTokens.dateSectionDivider;
-  const labelWidth =
-    label === 'Today'
-      ? divider.labelWidths.today
-      : label === 'Yesterday'
-        ? divider.labelWidths.yesterday
-        : divider.labelWidths.dated;
-  const lineWidth = contentWidth - labelWidth - divider.labelToLineGap;
 
   return (
     <HStack
@@ -38,11 +32,16 @@ export function DateSectionDivider({
       spacing={divider.labelToLineGap}
       modifiers={[frame({ maxWidth: Infinity }), ...modifiers]}
     >
+      {/*
+        fixedSize() tells SwiftUI to use the text's intrinsic width so it never
+        bleeds into the divider column. lineLimit(1) ensures a single line even
+        for long locale dates like "Sep 12, 2026".
+      */}
       <Text
         modifiers={[
           font({ size: typography.footnote, weight: 'medium' }),
           lineLimit(1),
-          frame({ width: labelWidth, alignment: 'leading' }),
+          fixedSize(),
           foregroundStyle(colors.textSecondary),
         ]}
       >
@@ -50,7 +49,7 @@ export function DateSectionDivider({
       </Text>
       <Divider
         modifiers={[
-          frame({ width: lineWidth, height: divider.lineHeight }),
+          frame({ maxWidth: Infinity, height: divider.lineHeight }),
           background(colors.action),
           opacity(divider.lineOpacity),
         ]}

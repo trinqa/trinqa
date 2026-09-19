@@ -108,42 +108,17 @@ function AmountStep({
       selectionTitle={sourceTitle}
       title="Add Money"
       summary={
-        <FlowCard height={screenTokens.addMoney.summaryHeight}>
+        /* No fee, no “You’ll receive” — just the estimated transfer time. */
+        <FlowCard>
           <VStack
             alignment="leading"
-            spacing={9}
+            spacing={0}
             modifiers={[
               padding({ horizontal: screenTokens.addMoney.cardPadding, vertical: 13 }),
-              frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
+              frame({ maxWidth: Infinity, alignment: 'leading' }),
             ]}
           >
-            <Text
-              modifiers={[
-                font({ size: typography.footnote, weight: 'medium' }),
-                foregroundStyle(colors.textSecondary),
-              ]}
-            >
-              You’ll receive
-            </Text>
-            <Text
-              modifiers={[
-                font({ size: typography.sectionTitle, weight: 'semibold' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
-            >
-              {formatMoney(quote.receivedAmount, quote.receivedCurrency, { code: true })}
-            </Text>
-            <Divider />
-            <HStack
-              spacing={20}
-              modifiers={[
-                padding({ top: screenTokens.addMoney.summaryDividerToMetadata }),
-                frame({ maxWidth: Infinity }),
-              ]}
-            >
-              <FlowInfoRow label="Fee" value={formatMoney(quote.fee, quote.currency)} />
-              <FlowInfoRow label="Time" value={quote.estimatedTime} />
-            </HStack>
+            <FlowInfoRow label="Time" value={quote.estimatedTime} />
           </VStack>
         </FlowCard>
       }

@@ -195,7 +195,8 @@ export function toActivityListItem(transaction: Transaction): ActivityListItem {
     title: transaction.title,
     subtitle: transaction.subtitle,
     amount: formatSignedMoney(transaction.amount, transaction.currency, transaction.direction),
-    timestamp: transactionTimestamp(transaction),
+    // Section headers already show the calendar day; show time only to stay on one line.
+    timestamp: transactionTime(transaction),
     category: transactionCategory(transaction),
     group: transactionSection(transaction).id,
     symbol: transaction.symbol,
@@ -211,7 +212,8 @@ export function toEarnListItem(transaction: Transaction): EarnListItem {
     title: transaction.title,
     subtitle: transaction.subtitle,
     amount: formatSignedMoney(transaction.amount, transaction.currency, transaction.direction),
-    meta: transactionTimestamp(transaction),
+    // Section headers already show the calendar day; show time only to stay on one line.
+    meta: transactionTime(transaction),
     footerLeadingText: transactionStatusLabel(transaction.status),
     footerTrailingText: 'Details',
     symbol: transaction.symbol ?? 'chart.line.uptrend.xyaxis',

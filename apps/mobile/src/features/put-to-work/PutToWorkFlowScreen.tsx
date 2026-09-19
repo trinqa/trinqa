@@ -155,6 +155,7 @@ function StrategyOption({
 }
 
 function StrategyStep({
+  amount,
   horizon,
   onBack,
   onContinue,
@@ -163,8 +164,8 @@ function StrategyStep({
   profile,
   targetDate,
   onTargetDateChange,
-  availableAmount,
 }: {
+  amount: number;
   horizon: PutToWorkHorizon;
   onBack: () => void;
   onContinue: () => void;
@@ -173,7 +174,6 @@ function StrategyStep({
   profile: PutToWorkRiskProfile;
   targetDate: Date;
   onTargetDateChange: (date: Date) => void;
-  availableAmount: number;
 }) {
   const flow = screenTokens.putToWork;
 
@@ -190,37 +190,17 @@ function StrategyStep({
         modifiers={[padding({ top: flow.headerToContent }), frame({ width: flow.contentWidth })]}
       >
         <Text modifiers={[font({ size: typography.body, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-          Choose how your available money should earn.
+          Choose how this money should grow.
         </Text>
-
-        <Group modifiers={[padding({ top: 12 })]}>
-          <FlowCard height={flow.availableHeight}>
-            <HStack
-              alignment="center"
-              spacing={12}
-              modifiers={[
-                padding({ horizontal: flow.cardPadding }),
-                frame({ maxWidth: Infinity, maxHeight: Infinity }),
-              ]}
-            >
-              <VStack alignment="leading" spacing={3}>
-                <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-                  Ready to move
-                </Text>
-                <Text
-                  modifiers={[
-                    font({ size: typography.amountCurrency, weight: 'bold' }),
-                    foregroundStyle(colors.textPrimary),
-                  ]}
-                >
-                  {formatUsd(availableAmount)}
-                </Text>
-              </VStack>
-              <Spacer />
-              <Image systemName="wallet.bifold.fill" size={20} color={colors.textPrimary} />
-            </HStack>
-          </FlowCard>
-        </Group>
+        <Text
+          modifiers={[
+            padding({ top: 4 }),
+            font({ size: typography.footnote, weight: 'medium' }),
+            foregroundStyle(colors.textSecondary),
+          ]}
+        >
+          Setting aside {formatUsd(amount)}
+        </Text>
 
         <Text
           modifiers={[
@@ -286,42 +266,48 @@ function StrategyStep({
   );
 }
 
-function AmountSummary({
-  horizon,
-  quote,
-}: {
-  horizon: PutToWorkHorizon;
-  quote: PutToWorkQuote;
-}) {
+/** Caption shown on the amount step (first step). Horizon is not chosen yet so
+ *  no yield estimates — just the spendable ceiling and an "already growing" hint. */
+function AvailableCaption({ available, earning }: { available: number; earning: number }) {
   return (
-    <FlowCard height={screenTokens.putToWork.summaryHeight}>
+    <FlowCard>
       <VStack
         alignment="leading"
-        spacing={9}
+        spacing={5}
         modifiers={[
-          padding({ horizontal: screenTokens.putToWork.cardPadding, vertical: 13 }),
-          frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'leading' }),
+          padding({ horizontal: screenTokens.putToWork.cardPadding, vertical: 11 }),
+          frame({ maxWidth: Infinity }),
         ]}
       >
-        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-          This amount will grow
-        </Text>
-        <Text
-          modifiers={[
-            font({ size: typography.amountCurrency, weight: 'bold' }),
-            foregroundStyle(colors.textPrimary),
-          ]}
-        >
-          ≈ {formatUsd(quote.amount)}
-        </Text>
-        <Divider />
-        <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
-          <FlowInfoRow
-            label="Yearly estimate"
-            value={`~${formatUsd(quote.estimatedYearlyReturn)}`}
-          />
-          <FlowInfoRow label="When you can use it" value={horizon.accessLabel} />
+        <HStack alignment="center" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
+          <Text
+            modifiers={[
+              font({ size: typography.footnote, weight: 'medium' }),
+              foregroundStyle(colors.textSecondary),
+            ]}
+          >
+            Ready to use
+          </Text>
+          <Spacer />
+          <Text
+            modifiers={[
+              font({ size: typography.label, weight: 'semibold' }),
+              foregroundStyle(colors.textPrimary),
+            ]}
+          >
+            {formatUsd(available)}
+          </Text>
         </HStack>
+        {earning > 0 ? (
+          <Text
+            modifiers={[
+              font({ size: typography.footnote, weight: 'medium' }),
+              foregroundStyle(colors.textSecondary),
+            ]}
+          >
+            {formatUsd(earning)} already growing · this adds more
+          </Text>
+        ) : null}
       </VStack>
     </FlowCard>
   );
@@ -369,7 +355,7 @@ function ReviewStep({
             >
               <VStack alignment="leading" spacing={4}>
                 <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-                  You’re allocating
+                  Setting aside
                 </Text>
                 <Text
                   modifiers={[
@@ -446,7 +432,7 @@ export function PutToWorkFlowScreen() {
   const origin: PutToWorkOrigin =
     originParam === 'add-money' || originParam === 'earn' ? originParam : 'wallet';
 
-  const [step, setStep] = useState<PutToWorkStep>('strategy');
+  const [step, setStep] = useState<PutToWorkStep>('amount');
   const [profileId, setProfileId] = useState<PutToWorkRiskId>('balanced');
   const [horizonId, setHorizonId] = useState<PutToWorkHorizonId>('anytime');
   const [amount, setAmount] = useState(1);
@@ -477,12 +463,12 @@ export function PutToWorkFlowScreen() {
   };
 
   const goBack = () => {
-    if (step === 'strategy') {
+    if (step === 'amount') {
       router.back();
       return;
     }
-    if (step === 'amount') setStep('strategy');
-    if (step === 'review') setStep('amount');
+    if (step === 'strategy') setStep('amount');
+    if (step === 'review') setStep('strategy');
   };
 
   const finish = () => router.replace(origin === 'earn' ? '/earn' : '/pay');
@@ -490,20 +476,6 @@ export function PutToWorkFlowScreen() {
 
   return (
     <FlowScreenShell>
-      {step === 'strategy' ? (
-        <StrategyStep
-          horizon={horizon}
-          onBack={goBack}
-          onContinue={() => setStep('amount')}
-          onHorizonChange={setHorizonId}
-          onProfileChange={setProfileId}
-          profile={profile}
-          targetDate={targetDate}
-          onTargetDateChange={setTargetDate}
-          availableAmount={balances.available}
-        />
-      ) : null}
-
       {step === 'amount' ? (
         <FlowAmountEntry
           amount={amount}
@@ -513,13 +485,27 @@ export function PutToWorkFlowScreen() {
           isContinueDisabled={amount <= 0 || amount > balances.available}
           onAmountChange={updateAmount}
           onBack={goBack}
-          onContinue={() => setStep('review')}
+          onContinue={() => setStep('strategy')}
           onQuickAmount={chooseQuickAmount}
           quickAmounts={quickPutToWorkAmounts}
-          selectionSymbol="chart.line.uptrend.xyaxis"
-          selectionTitle={profile.title}
-          summary={<AmountSummary horizon={horizon} quote={quote} />}
+          selectionSymbol="wallet.bifold.fill"
+          selectionTitle="From ready to use"
+          summary={<AvailableCaption available={balances.available} earning={balances.earning} />}
           title="Grow money"
+        />
+      ) : null}
+
+      {step === 'strategy' ? (
+        <StrategyStep
+          amount={amount}
+          horizon={horizon}
+          onBack={goBack}
+          onContinue={() => setStep('review')}
+          onHorizonChange={setHorizonId}
+          onProfileChange={setProfileId}
+          profile={profile}
+          targetDate={targetDate}
+          onTargetDateChange={setTargetDate}
         />
       ) : null}
 
