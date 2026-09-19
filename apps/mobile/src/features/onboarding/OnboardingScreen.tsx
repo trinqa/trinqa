@@ -15,9 +15,10 @@ import {
 import { useRouter } from 'expo-router';
 
 import { PrimaryActionButton, SecondaryActionButton } from '@/components/FlowControls';
+import { FlowErrorState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
-import { colors, motion, screenTokens, spacing, typography } from '@/theme';
+import { bootstrapAccount, setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
+import { colors, screenTokens, spacing, typography } from '@/theme';
 
 export function OnboardingScreen() {
   const router = useRouter();
@@ -25,12 +26,35 @@ export function OnboardingScreen() {
 
   useEffect(() => {
     if (accountBootstrap !== 'creating') return;
-    const timer = setTimeout(() => {
-      setAccountBootstrap('ready');
-      router.replace('/');
-    }, motion.duration.onboardingReady);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    void (async () => {
+      try {
+        await bootstrapAccount();
+        if (!cancelled) {
+          setAccountBootstrap('ready');
+          router.replace('/');
+        }
+      } catch {
+        if (!cancelled) setAccountBootstrap('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [accountBootstrap, router]);
+
+  if (accountBootstrap === 'error') {
+    return (
+      <FlowScreenShell>
+        <FlowErrorState
+          title="Account couldn't be prepared"
+          subtitle="Could not reach the Trinqa backend or resolve a Stellar account."
+          onRetry={() => setAccountBootstrap('creating')}
+          onCancel={() => setAccountBootstrap('new')}
+        />
+      </FlowScreenShell>
+    );
+  }
 
   return (
     <FlowScreenShell>

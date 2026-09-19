@@ -2,6 +2,7 @@ import { getApiBaseUrl, getDemoAccessToken } from '@/config/env';
 import { BackendApiError } from '@/services/apiErrors';
 import type {
   ActivityItem,
+  AnchorQuote,
   BackendCapabilities,
   BackendHealth,
   BalanceLine,
@@ -19,7 +20,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/json',
+      // Fastify rejects an empty body declared as JSON, so only bodied requests carry it.
+      ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(demoToken ? { 'x-demo-token': demoToken } : {}),
       ...(init?.headers ?? {}),
     },
@@ -127,10 +129,12 @@ export const api = {
     }),
 
   anchorQuotes: (body: { sessionId: string; sellAsset: string; sellAmount: string; buyAsset?: string }) =>
-    request<{ quote: { id: string; buy_amount: string; sell_amount: string; price: string } }>(
-      '/api/v1/anchor/quotes',
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
+    request<{ quote: AnchorQuote }>('/api/v1/anchor/quotes', { method: 'POST', body: JSON.stringify(body) }),
+  anchorCustomerPut: (sessionId: string, fields: Record<string, string> = {}) =>
+    request<{ result: unknown }>('/api/v1/anchor/customer', {
+      method: 'PUT',
+      body: JSON.stringify({ sessionId, fields }),
+    }),
   anchorDeposits: (body: { sessionId: string; account: string; amount?: string; quoteId?: string }) =>
     request<{ session: { id?: string }; operationId: string }>('/api/v1/anchor/deposits', {
       method: 'POST',

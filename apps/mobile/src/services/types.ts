@@ -61,6 +61,18 @@ export interface ActivityItem {
   txHash: string | null;
 }
 
+/** SEP-38 firm quote as relayed by the BFF. */
+export interface AnchorQuote {
+  id: string;
+  price: string;
+  sell_asset: string;
+  sell_amount: string;
+  buy_asset: string;
+  buy_amount: string;
+  expires_at: string;
+  fee?: { total: string; asset: string };
+}
+
 export interface PaymentQuoteResponse {
   quoteId: string;
   routeType: string;
@@ -70,6 +82,7 @@ export interface PaymentQuoteResponse {
   debitAsset: string;
   fee: { assetCode: string; amount: string };
   estimatedArrivalMinutes: number;
+  expiresAt: string;
   funding?: {
     availableContribution: string;
     earnContribution: string;

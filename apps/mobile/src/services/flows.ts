@@ -11,61 +11,92 @@ import {
   signXdr,
   stellarAmount,
 } from '@/services/session';
-import type { BackendCapabilities } from '@/services/types';
+import type { AnchorQuote, BackendCapabilities, PaymentQuoteResponse } from '@/services/types';
 import { refreshLedger } from '@/state/mockAppState';
 import type { PutToWorkHorizonId, PutToWorkRiskId } from '@/types';
 
-export async function executeAddMoney(params: {
-  accountId: string;
-  amount: number;
-  currency: string;
-  sourceId: string;
-}) {
-  if (params.sourceId === 'card') {
+/** Live SEP-38 TRY→USDC quote for the Add Money review; `executeAddMoney` deposits against it. */
+export interface AddMoneyLiveQuote {
+  sessionId: string;
+  quote: AnchorQuote;
+}
+
+function assertTryBankDeposit(sourceId: string, currency: string) {
+  if (sourceId === 'card') {
     throw new BackendApiError('ROUTE_UNAVAILABLE', 'Card deposits are not available.', 422);
   }
-  if (params.sourceId === 'wallet') {
+  if (sourceId === 'wallet') {
     throw new BackendApiError(
       'ROUTE_UNAVAILABLE',
       'Only Stellar / TRY bank deposits are available.',
       422,
     );
   }
-  if (params.currency !== 'TRY') {
+  if (currency !== 'TRY') {
     throw new BackendApiError(
       'ROUTE_UNAVAILABLE',
-      `${params.currency} deposits are not available. TRY on-ramp is the supported rail.`,
+      `${currency} deposits are not available. TRY on-ramp is the supported rail.`,
       422,
     );
   }
+}
+
+export async function quoteAddMoney(params: {
+  amount: number;
+  currency: string;
+  sourceId: string;
+}): Promise<AddMoneyLiveQuote> {
+  assertTryBankDeposit(params.sourceId, params.currency);
   const sessionId = await ensureAnchorSession();
-  const sellAmount = String(params.amount);
   const { quote } = await api.anchorQuotes({
     sessionId,
     sellAsset: 'iso4217:TRY',
-    sellAmount,
+    sellAmount: String(params.amount),
   });
+  return { sessionId, quote };
+}
+
+function isExpiring(expiresAt: string | undefined, marginMs = 30_000) {
+  const t = expiresAt ? Date.parse(expiresAt) : NaN;
+  return Number.isFinite(t) && Date.now() > t - marginMs;
+}
+
+export async function executeAddMoney(params: {
+  accountId: string;
+  live: AddMoneyLiveQuote;
+  amount: number;
+  currency: string;
+  sourceId: string;
+}) {
+  // The anchor rejects expired quotes; refresh rather than failing the deposit.
+  const live = isExpiring(params.live.quote.expires_at)
+    ? await quoteAddMoney({ amount: params.amount, currency: params.currency, sourceId: params.sourceId })
+    : params.live;
   const deposit = await api.anchorDeposits({
-    sessionId,
+    sessionId: live.sessionId,
     account: params.accountId,
-    amount: sellAmount,
-    quoteId: quote.id,
+    amount: live.quote.sell_amount,
+    quoteId: live.quote.id,
   });
   const transferId = deposit.session.id;
   if (!transferId) {
     throw new BackendApiError('ADAPTER_UNAVAILABLE', 'Deposit did not return a transfer id', 502);
   }
-  await api.demoSimulateBank(sessionId, transferId);
-  await pollTransfer(sessionId, transferId, deposit.operationId);
+  await api.demoSimulateBank(live.sessionId, transferId);
+  await pollTransfer(live.sessionId, transferId, deposit.operationId);
   await refreshLedger();
 }
 
-export async function executePay(params: {
+/** Live USDC payment quote for the Pay review; `executePay` builds against the same quote. */
+export interface PayLiveQuote {
+  quote: PaymentQuoteResponse;
+}
+
+export async function quotePay(params: {
   accountId: string;
   amount: number;
   currency: string;
-  approveEarnUnwind: boolean;
-}) {
+}): Promise<PayLiveQuote> {
   if (params.currency === 'BRL') {
     throw new BackendApiError(
       'NO_SUPPORTED_PAYOUT_RAIL',
@@ -88,7 +119,20 @@ export async function executePay(params: {
     receiveCurrency,
     balanceSource: 'available',
   });
-  const built = await api.paymentsBuild(quote.quoteId, params.accountId, params.approveEarnUnwind);
+  return { quote };
+}
+
+export async function executePay(params: {
+  accountId: string;
+  live: PayLiveQuote;
+  amount: number;
+  currency: string;
+  approveEarnUnwind: boolean;
+}) {
+  const live = isExpiring(params.live.quote.expiresAt)
+    ? await quotePay({ accountId: params.accountId, amount: params.amount, currency: params.currency })
+    : params.live;
+  const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
   const result = await executeBuiltPayment(built);
   if ('successful' in result && result.successful === false) {
     throw new BackendApiError('PAYMENT_FAILED', 'Payment submission failed', 502);
@@ -96,13 +140,18 @@ export async function executePay(params: {
   await refreshLedger();
 }
 
-export async function executeWithdrawTry(params: {
+/** Live TRY cash-out quote: `tryAmount` is what lands in the bank; the BFF prices the USDC debit and fee. */
+export interface WithdrawLiveQuote {
+  sessionId: string;
+  quote: PaymentQuoteResponse;
+}
+
+export async function quoteWithdrawTry(params: {
   accountId: string;
-  usdcAmount: number;
+  tryAmount: number;
   currency: string;
   dest?: string;
-  approveEarnUnwind: boolean;
-}) {
+}): Promise<WithdrawLiveQuote> {
   if (params.currency !== 'TRY') {
     throw new BackendApiError(
       params.currency === 'BRL' ? 'NO_SUPPORTED_PAYOUT_RAIL' : 'ROUTE_UNAVAILABLE',
@@ -111,17 +160,39 @@ export async function executeWithdrawTry(params: {
     );
   }
   const sessionId = await ensureAnchorSession();
-  const { quote } = await api.paymentsWithdrawQuote({
+  const { quote } = await api.paymentsQuote({
     fromAccount: params.accountId,
-    usdcAmount: stellarAmount(params.usdcAmount),
+    recipient: params.accountId,
+    receiveAmount: params.tryAmount.toFixed(2),
+    receiveCurrency: 'TRY',
     anchorSessionId: sessionId,
     withdrawDest: params.dest ?? TRY_WITHDRAW_DEST,
   });
-  const built = await api.paymentsBuild(quote.quoteId, params.accountId, params.approveEarnUnwind);
+  return { sessionId, quote };
+}
+
+export async function executeWithdrawTry(params: {
+  accountId: string;
+  live: WithdrawLiveQuote;
+  tryAmount: number;
+  currency: string;
+  dest?: string;
+  approveEarnUnwind: boolean;
+}) {
+  // Quotes are single-use and expire after a few minutes; refresh a stale one instead of failing.
+  const live = isExpiring(params.live.quote.expiresAt)
+    ? await quoteWithdrawTry({
+        accountId: params.accountId,
+        tryAmount: params.tryAmount,
+        currency: params.currency,
+        dest: params.dest,
+      })
+    : params.live;
+  const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
   await executeBuiltPayment(built);
   const transferId = built.anchorSession?.transferId;
   if (transferId) {
-    await pollTransfer(sessionId, transferId, built.operationId);
+    await pollTransfer(live.sessionId, transferId, built.operationId);
   }
   await refreshLedger();
 }
