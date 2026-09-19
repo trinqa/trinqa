@@ -265,6 +265,34 @@ describe('PaymentRouter', () => {
     });
   });
 
+  it('reports an unreadable Horizon balance as unavailable, not as insufficient funds', async () => {
+    const { router, stellar } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockRejectedValue(new Error('socket hang up'));
+    await expect(
+      router.quote({
+        fromAccount: 'G'.repeat(56),
+        recipient: 'H'.repeat(56),
+        receiveAmount: '1.0000000',
+        receiveCurrency: 'USDC',
+      }),
+    ).rejects.toMatchObject({ code: 'ADAPTER_UNAVAILABLE', statusCode: 503 });
+  });
+
+  it('treats an unfunded (404) account as a zero balance', async () => {
+    const { router, stellar } = makeRouter();
+    vi.spyOn(stellar, 'getBalances').mockRejectedValue(
+      Object.assign(new Error('Not Found'), { name: 'NotFoundError', response: { status: 404 } }),
+    );
+    await expect(
+      router.quote({
+        fromAccount: 'G'.repeat(56),
+        recipient: 'H'.repeat(56),
+        receiveAmount: '1.0000000',
+        receiveCurrency: 'USDC',
+      }),
+    ).rejects.toMatchObject({ code: 'INSUFFICIENT_BALANCE' });
+  });
+
   it('returns ROUTE_UNAVAILABLE for XLM when Soroswap is not configured', async () => {
     const { router, stellar } = makeRouter();
     vi.spyOn(stellar, 'getBalances').mockResolvedValue([
