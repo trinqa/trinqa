@@ -1,6 +1,7 @@
-import { getOptionalAccountId, getPayRecipient } from '@/config/env';
+import { getPayRecipient } from '@/config/env';
 import { api } from '@/services/api';
 import { BackendApiError } from '@/services/apiErrors';
+import { currentSigner } from '@/services/signer';
 import type { BackendCapabilities, ExecuteStepResponse } from '@/services/types';
 
 let cachedAnchor:
@@ -18,20 +19,6 @@ export function parseAmount(value: string | undefined): number {
 
 export function payRecipientOrSelf(accountId: string): string {
   return getPayRecipient() ?? accountId;
-}
-
-export async function resolveAccountId(capabilities: BackendCapabilities): Promise<string> {
-  const fromEnv = getOptionalAccountId();
-  if (fromEnv) return fromEnv;
-  if (capabilities.features.demoSigner) {
-    const demo = await api.demoAccount();
-    return demo.account;
-  }
-  throw new BackendApiError(
-    'ACCOUNT_UNCONFIGURED',
-    'Set EXPO_PUBLIC_ACCOUNT_ID or enable the backend demo signer.',
-    503,
-  );
 }
 
 export async function ensureAnchorSession(): Promise<string> {
@@ -53,8 +40,7 @@ export function clearAnchorSession() {
 }
 
 export async function signXdr(unsignedXdr: string): Promise<string> {
-  const { signedXdr } = await api.demoSign(unsignedXdr);
-  return signedXdr;
+  return currentSigner().signXdr(unsignedXdr);
 }
 
 export async function pollTransfer(

@@ -5,6 +5,8 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import type { AppConfig } from '../config/env.js';
+import type { AnchorAdapter, AnchorAssetRail, AnchorSep, AnchorSnapshot, RailDirection } from '../domain/anchor.js';
+import type { DecimalString } from '../domain/money.js';
 
 export type AnchorToml = {
   domain: string;
@@ -16,6 +18,8 @@ export type AnchorToml = {
   kycServer?: string;
   anchorQuoteServer?: string;
   usdcIssuer?: string;
+  /** DOCUMENTATION.ORG_NAME, when the anchor publishes one. */
+  orgName?: string;
 };
 
 export type Sep10Token = {
@@ -65,12 +69,53 @@ export class AnchorRequestError extends Error {
   }
 }
 
-type Sep6AssetInfo = { enabled?: boolean; min_amount?: number | string; max_amount?: number | string };
+type Sep6AssetInfo = {
+  enabled?: boolean;
+  min_amount?: number | string;
+  max_amount?: number | string;
+  fee_fixed?: number | string;
+  fee_percent?: number | string;
+  funding_methods?: string[];
+  types?: Record<string, unknown>;
+  fields?: { type?: { choices?: string[] } };
+};
 
 /** Anchor metadata (stellar.toml, /info) changes rarely; cache it instead of refetching per call. */
 const METADATA_TTL_MS = 5 * 60 * 1000;
 
-export class TrMockAnchorAdapter {
+function toDecimalStringOrUndefined(value: number | string | undefined): DecimalString | undefined {
+  if (value === undefined || value === null) return undefined;
+  return String(value);
+}
+
+/** Normalize SEP-6 /info deposit/withdraw maps into AnchorAssetRail[], same shape the SEP discovery adapter produces. */
+function buildAssetRails(sep6Info: unknown, fiat: string[], assetIssuer?: string): AnchorAssetRail[] {
+  const info = sep6Info as { deposit?: Record<string, Sep6AssetInfo>; withdraw?: Record<string, Sep6AssetInfo> };
+  const rails: AnchorAssetRail[] = [];
+  const directions: RailDirection[] = ['deposit', 'withdraw'];
+  for (const direction of directions) {
+    const entries = info[direction] ?? {};
+    for (const [assetCode, raw] of Object.entries(entries)) {
+      const methods =
+        raw?.funding_methods ?? (raw?.types ? Object.keys(raw.types) : undefined) ?? raw?.fields?.type?.choices ?? [];
+      rails.push({
+        assetCode,
+        assetIssuer,
+        direction,
+        enabled: Boolean(raw?.enabled),
+        fiat,
+        min: toDecimalStringOrUndefined(raw?.min_amount),
+        max: toDecimalStringOrUndefined(raw?.max_amount),
+        feeFixed: toDecimalStringOrUndefined(raw?.fee_fixed),
+        feePercent: toDecimalStringOrUndefined(raw?.fee_percent),
+        methods,
+      });
+    }
+  }
+  return rails;
+}
+
+export class TrMockAnchorAdapter implements AnchorAdapter {
   private tomlCache?: { value: AnchorToml; at: number };
   private sep6InfoCache?: { value: unknown; at: number };
 
@@ -79,8 +124,73 @@ export class TrMockAnchorAdapter {
     private readonly networkPassphrase: string,
   ) {}
 
+  get id(): string {
+    return this.config.TR_ANCHOR_DOMAIN;
+  }
+
   get domain(): string {
     return this.config.TR_ANCHOR_DOMAIN;
+  }
+
+  /**
+   * Executable snapshot for the anchor directory: this is the only adapter Trinqa can move
+   * money through, so status is EXECUTABLE whenever discovery + SEP-6 info both succeed.
+   * Never throws — failures degrade to an UNAVAILABLE snapshot.
+   */
+  async snapshot(): Promise<AnchorSnapshot> {
+    const fetchedAt = new Date().toISOString();
+    try {
+      const toml = await this.discover();
+      const sep6Info = await this.sep6Info();
+
+      const seps: AnchorSep[] = ['sep1'];
+      if (toml.transferServer) seps.push('sep6');
+      if (toml.webAuthEndpoint) seps.push('sep10');
+      if (toml.kycServer) seps.push('sep12');
+      if (toml.anchorQuoteServer) seps.push('sep38');
+
+      let fiat = ['TRY'];
+      if (toml.anchorQuoteServer) {
+        try {
+          const sep38Info = (await this.sep38Info()) as { assets?: Array<{ asset?: string }> };
+          const isoAssets = (sep38Info.assets ?? [])
+            .map((a) => a.asset)
+            .filter((a): a is string => typeof a === 'string' && a.startsWith('iso4217:'))
+            .map((a) => a.slice('iso4217:'.length));
+          if (isoAssets.length > 0) fiat = isoAssets;
+        } catch {
+          // fall back to the known TRY rail
+        }
+      }
+
+      const rails = buildAssetRails(sep6Info, fiat, toml.usdcIssuer);
+      const network = toml.networkPassphrase?.includes('Test SDF') ? 'testnet' : 'mainnet';
+
+      return {
+        id: this.id,
+        domain: this.domain,
+        name: toml.orgName ?? this.domain,
+        status: 'EXECUTABLE',
+        seps,
+        rails,
+        healthy: true,
+        network,
+        fetchedAt,
+      };
+    } catch (err) {
+      return {
+        id: this.id,
+        domain: this.domain,
+        name: this.domain,
+        status: 'UNAVAILABLE',
+        statusReason: err instanceof Error ? err.message : 'TR mock anchor unreachable',
+        seps: [],
+        rails: [],
+        healthy: false,
+        network: 'testnet',
+        fetchedAt,
+      };
+    }
   }
 
   tomlUrl(): string {
@@ -105,6 +215,7 @@ export class TrMockAnchorAdapter {
     const parsed = TOML.parse(raw) as Record<string, unknown>;
     const currencies = parsed.CURRENCIES as Array<{ code?: string; issuer?: string }> | undefined;
     const usdc = currencies?.find((c) => c.code === 'USDC');
+    const documentation = parsed.DOCUMENTATION as Record<string, unknown> | undefined;
 
     return {
       domain: this.domain,
@@ -116,6 +227,7 @@ export class TrMockAnchorAdapter {
       kycServer: parsed.KYC_SERVER as string | undefined,
       anchorQuoteServer: parsed.ANCHOR_QUOTE_SERVER as string | undefined,
       usdcIssuer: usdc?.issuer,
+      orgName: documentation?.ORG_NAME as string | undefined,
     };
   }
 
