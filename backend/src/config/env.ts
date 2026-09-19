@@ -46,6 +46,13 @@ const envSchema = z.object({
   POLICY_WASM_HASH: optionalString,
 
   OPERATIONS_DATA_DIR: optionalString,
+
+  /** Jev route advisor (Phase 2, workstream C) — reached via OpenRouter's alpha Decisions API. */
+  OPENROUTER_API_KEY: optionalString,
+  JEV_MODEL: optionalString,
+  JEV_ENABLED: z.preprocess(emptyToUndefined, z.enum(['true', 'false']).optional()),
+  JEV_TIMEOUT_MS: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().optional()),
+  JEV_MIN_CONFIDENCE: z.preprocess(emptyToUndefined, z.coerce.number().min(0).max(1).optional()),
 });
 
 export type AppConfig = z.infer<typeof envSchema> & {
