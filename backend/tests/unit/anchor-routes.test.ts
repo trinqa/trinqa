@@ -37,4 +37,35 @@ describe('anchor routes (sessionId only)', () => {
 
     await app.close();
   });
+
+  it('reads and submits SEP-12 customer info through the session', async () => {
+    const sessions = new AnchorSessionStore();
+    const account = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+    const { sessionId } = sessions.create('anchor-jwt', account);
+    const anchor = {
+      sep12Customer: vi.fn().mockResolvedValue({ status: 'NEEDS_INFO' }),
+      sep12PutCustomer: vi.fn().mockResolvedValue({ id: 'cust-1' }),
+    } as unknown as TrMockAnchorAdapter;
+    const app = Fastify();
+    registerAnchorRoutes(app, anchor, sessions, new MemoryOperationStore());
+
+    const read = await app.inject({
+      method: 'GET',
+      url: `/api/v1/anchor/customer?sessionId=${sessionId}`,
+    });
+    expect(read.statusCode).toBe(200);
+    expect(read.json()).toEqual({ status: 'NEEDS_INFO', customer: { status: 'NEEDS_INFO' } });
+    expect(anchor.sep12Customer).toHaveBeenCalledWith('anchor-jwt', account);
+
+    const put = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/anchor/customer',
+      payload: { sessionId, fields: { first_name: 'Ada' } },
+    });
+    expect(put.statusCode).toBe(200);
+    expect(anchor.sep12PutCustomer).toHaveBeenCalledWith('anchor-jwt', account, { first_name: 'Ada' });
+    expect(JSON.stringify(put.json())).not.toContain('anchor-jwt');
+
+    await app.close();
+  });
 });

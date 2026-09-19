@@ -70,7 +70,7 @@ export async function buildApp() {
   registerDemoRoutes(app, stellar, anchor, anchorSessions);
   registerPolicyRoutes(app, policy);
   registerYieldRoutes(app, yieldSvc);
-  registerPaymentRoutes(app, paymentRouter, paymentExecution, stellar, operations);
+  registerPaymentRoutes(app, paymentRouter, paymentExecution);
   registerOperationRoutes(app, operations);
   registerActivityRoutes(app, operations);
   registerAnchorRoutes(app, anchor, anchorSessions, operations);

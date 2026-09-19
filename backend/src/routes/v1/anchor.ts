@@ -75,6 +75,35 @@ export function registerAnchorRoutes(
     }
   });
 
+  app.get('/api/v1/anchor/customer', async (req, reply) => {
+    try {
+      const { sessionId } = z.object({ sessionId: sessionIdSchema }).parse(req.query);
+      const jwt = jwtFromSession(sessions, sessionId);
+      const customer = (await anchor.sep12Customer(jwt, sessions.accountFor(sessionId))) as {
+        status?: string;
+      };
+      return { status: customer.status ?? 'UNKNOWN', customer };
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
+
+  app.put('/api/v1/anchor/customer', async (req, reply) => {
+    try {
+      const body = z
+        .object({
+          sessionId: sessionIdSchema,
+          fields: z.record(z.string().max(200)).default({}),
+        })
+        .parse(req.body);
+      const jwt = jwtFromSession(sessions, body.sessionId);
+      const result = await anchor.sep12PutCustomer(jwt, sessions.accountFor(body.sessionId), body.fields);
+      return { result };
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
+
   app.post('/api/v1/anchor/quotes', async (req, reply) => {
     try {
       const body = z
@@ -103,12 +132,12 @@ export function registerAnchorRoutes(
         .object({
           sessionId: sessionIdSchema,
           account: z.string().min(56).max(56),
-          amount: z.string().optional(),
+          amount: z.string().min(1),
           quoteId: z.string().optional(),
         })
         .parse(req.body);
       const jwt = jwtFromSession(sessions, body.sessionId, body.account);
-      const session = await anchor.sep6DepositInteractive(jwt, {
+      const session = await anchor.sep6Deposit(jwt, {
         asset_code: 'USDC',
         account: body.account,
         amount: body.amount,
@@ -120,7 +149,7 @@ export function registerAnchorRoutes(
         status: 'pending',
         accountId: body.account,
         title: 'Anchor deposit',
-        amount: body.amount ? { assetCode: 'USDC', amount: body.amount } : undefined,
+        amount: { assetCode: 'USDC', amount: body.amount },
         externalRefs: { quoteId: body.quoteId, anchorTransferId: transferId },
         metadata: { provider: 'tr_mock_anchor' },
       });

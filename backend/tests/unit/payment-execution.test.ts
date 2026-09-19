@@ -77,7 +77,17 @@ describe('PaymentExecutionService', () => {
 
     vi.spyOn(defindex, 'isConfigured', 'get').mockReturnValue(true);
     vi.spyOn(defindex, 'sendSignedXdr').mockResolvedValue({ success: true, hash: 'withdraw-hash' });
-    const sep6 = vi.spyOn(anchor, 'sep6Withdraw').mockResolvedValue({ id: 'transfer-1' } as never);
+    const treasury = 'GCLCZEQZ2THTEDAOFI66LACNPLY4OBKN7VKLEZFMBIHYKYQOW2W7T3Z6';
+    const sep6 = vi.spyOn(anchor, 'sep6Withdraw').mockResolvedValue({
+      id: 'transfer-1',
+      account_id: treasury,
+      memo: '12345',
+      memo_type: 'id',
+    } as never);
+    const funding = vi
+      .spyOn(stellar, 'buildUsdcPaymentWithMemoIdXdr')
+      .mockResolvedValue('funding-xdr');
+    vi.spyOn(stellar, 'transactionHash').mockReturnValue('funding-hash');
     vi.spyOn(stellar, 'networkPassphrase', 'get').mockReturnValue('Test SDF Network ; September 2015');
 
     const result = await execution.executeStep(op.id, 'yield_withdraw', 'signed-xdr');
@@ -92,5 +102,11 @@ describe('PaymentExecutionService', () => {
     );
     expect(result.nextStep).toBe('anchor_withdraw');
     expect((result as { anchorSession?: { dest?: string } }).anchorSession?.dest).toBe(userDest);
+    // After the earn unwind the client still needs the USDC funding payment to the anchor treasury.
+    expect(funding).toHaveBeenCalledWith(account, treasury, '5.0000000', '12345');
+    expect((result as { unsignedXdr?: string }).unsignedXdr).toBe('funding-xdr');
+    const updated = await ops.get(op.id);
+    expect(updated?.status).toBe('awaiting_signature');
+    expect(updated?.metadata).toMatchObject({ currentStep: 'anchor_withdraw', expectedTxHash: 'funding-hash' });
   });
 });

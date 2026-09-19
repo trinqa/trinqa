@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from '@/config/env';
+import { getApiBaseUrl, getDemoAccessToken } from '@/config/env';
 import { BackendApiError } from '@/services/apiErrors';
 import type {
   ActivityItem,
@@ -14,11 +14,13 @@ import type {
 } from '@/services/types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const demoToken = path.startsWith('/api/v1/demo/') ? getDemoAccessToken() : undefined;
   const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      ...(demoToken ? { 'x-demo-token': demoToken } : {}),
       ...(init?.headers ?? {}),
     },
   });

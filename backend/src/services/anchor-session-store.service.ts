@@ -31,4 +31,10 @@ export class AnchorSessionStore {
     }
     return rec.jwt;
   }
+
+  /** Account the session was authenticated for (validates expiry like resolve). */
+  accountFor(sessionId: string): string {
+    this.resolve(sessionId);
+    return this.sessions.get(sessionId)!.accountId;
+  }
 }

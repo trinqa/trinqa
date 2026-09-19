@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { AppConfig } from '../config/env.js';
 import { ApiError } from '../domain/api-errors.js';
 import type { PaymentQuoteRequest, PaymentRouteQuote } from '../domain/payment.js';
@@ -82,7 +83,14 @@ export class PaymentRouter {
     anchorSessionId: string,
     fromAccount: string,
     tryReceiveAmount: string,
-  ): Promise<{ buyAmount: string; sellAmount: string; quoteId: string; expiresAt: string; price: string }> {
+  ): Promise<{
+    buyAmount: string;
+    sellAmount: string;
+    quoteId: string;
+    expiresAt: string;
+    price: string;
+    feeUsdc?: string;
+  }> {
     const jwt = this.anchorSessions.resolve(anchorSessionId, fromAccount);
     const sellAsset = `stellar:USDC:${this.config.USDC_ISSUER}`;
     const buyAsset = 'iso4217:TRY';
@@ -97,7 +105,22 @@ export class PaymentRouter {
       quoteId: quote.id,
       expiresAt: quote.expires_at,
       price: quote.price,
+      // SEP-38 fee is already inside the price; surface it so the UI does not claim "no fee".
+      feeUsdc: quote.fee?.asset === sellAsset ? quote.fee.total : undefined,
     };
+  }
+
+  private async assertWithinWithdrawLimits(usdcAmount: string): Promise<void> {
+    const { min, max } = await this.anchor.withdrawLimits('USDC');
+    const amount = new Decimal(usdcAmount);
+    if ((min && amount.lt(min)) || (max && amount.gt(max))) {
+      throw new ApiError('AMOUNT_OUT_OF_RANGE', `Cash-out must be between ${min ?? '0'} and ${max ?? '∞'} USDC`, 422, {
+        min,
+        max,
+        assetCode: 'USDC',
+        requested: usdcAmount,
+      });
+    }
   }
 
   async quote(req: PaymentQuoteRequest): Promise<PaymentRouteQuote> {
@@ -164,6 +187,7 @@ export class PaymentRouter {
         formatTryAmount(receiveAmount),
       );
       debitUsdc = formatStellarAmount(trySep38.sellAmount);
+      await this.assertWithinWithdrawLimits(debitUsdc);
     }
 
     const { available, earning } = await this.resolveBalances(req.fromAccount);
@@ -274,7 +298,7 @@ export class PaymentRouter {
       receiveCurrency: dest,
       debitAmount: debitUsdc,
       debitAsset: 'USDC',
-      fee: { assetCode: 'USDC', amount: '0.0000000' },
+      fee: { assetCode: 'USDC', amount: formatStellarAmount(trySep38?.feeUsdc ?? '0') },
       estimatedArrivalMinutes: chosen.estimatedMinutes,
       expiresAt,
       funding: providerPayload.funding as PaymentRouteQuote['funding'],
@@ -303,6 +327,8 @@ export class PaymentRouter {
         earnContribution: quote.funding?.earnContribution,
       });
     }
+    // Claim synchronously (before any await) so concurrent builds cannot both fund from one quote.
+    this.quotes.claim(quoteId, randomUUID());
 
     const op = await recordOperation(this.operations, {
       kind: 'payment',
@@ -355,7 +381,12 @@ export class PaymentRouter {
       const unsignedXdr = await this.stellar.buildPaymentXdr(fromAccount, payload.recipient, amount);
       await this.operations.update(op.id, {
         status: 'awaiting_signature',
-        metadata: { routeType: quote.routeType, currentStep: 'stellar_payment', quoteId },
+        metadata: {
+          routeType: quote.routeType,
+          currentStep: 'stellar_payment',
+          quoteId,
+          ...this.execution.expectTx(unsignedXdr),
+        },
       });
       return {
         operationId: op.id,
@@ -393,28 +424,18 @@ export class PaymentRouter {
         }
         throw err;
       }
-      const withdrawSession = (await this.anchor.sep6Withdraw(jwt, {
+      const withdrawSession = await this.anchor.sep6Withdraw(jwt, {
         asset_code: 'USDC',
         account: fromAccount,
         amount: quote.source.amount,
         dest: withdrawPayload.withdrawDest,
         dest_extra: withdrawPayload.withdrawDestExtra,
         quote_id: withdrawPayload.anchorQuoteId,
-      })) as { id?: string; account_id?: string; memo?: string; memo_type?: string };
-      const transferId = withdrawSession.id;
-      const treasury = withdrawSession.account_id;
-      const memo = withdrawSession.memo;
-      if (!transferId || !treasury || !memo) {
-        throw new ApiError('ADAPTER_UNAVAILABLE', 'Anchor withdraw session missing treasury or memo', 502);
-      }
-      if (withdrawSession.memo_type && withdrawSession.memo_type !== 'id') {
-        throw new ApiError('VALIDATION_ERROR', `Expected memo_type id, got ${withdrawSession.memo_type}`, 502);
-      }
-      const unsignedXdr = await this.stellar.buildUsdcPaymentWithMemoIdXdr(
+      });
+      const { transferId, memo, unsignedXdr } = await this.execution.buildAnchorFunding(
         fromAccount,
-        treasury,
+        withdrawSession,
         quote.source.amount,
-        memo,
       );
       await this.operations.update(op.id, {
         status: 'awaiting_signature',
@@ -430,6 +451,7 @@ export class PaymentRouter {
           withdrawDest: withdrawPayload.withdrawDest,
           withdrawDestExtra: withdrawPayload.withdrawDestExtra,
           anchorQuoteId: withdrawPayload.anchorQuoteId,
+          ...this.execution.expectTx(unsignedXdr),
         },
       });
       return {
@@ -464,6 +486,8 @@ export class PaymentRouter {
         fromAccount,
         payload.recipient,
       );
+      const unsignedXdr =
+        (built as { xdr?: string }).xdr ?? (built as { transactionXdr?: string }).transactionXdr;
       await this.operations.update(op.id, {
         status: 'awaiting_signature',
         metadata: {
@@ -471,11 +495,12 @@ export class PaymentRouter {
           currentStep: 'soroswap_swap',
           quoteId,
           soroswapQuote: swapQuote,
+          ...this.execution.expectTx(unsignedXdr),
         },
       });
       return {
         operationId: op.id,
-        unsignedXdr: (built as { xdr?: string }).xdr ?? (built as { transactionXdr?: string }).transactionXdr,
+        unsignedXdr,
         currentStep: 'soroswap_swap',
         networkPassphrase: this.stellar.networkPassphrase,
         steps: [{ type: 'soroswap_swap', description: 'Sign Soroswap swap transaction' }],

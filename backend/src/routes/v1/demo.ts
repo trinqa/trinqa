@@ -106,20 +106,28 @@ export function registerDemoRoutes(
     '/api/v1/demo/trustline/usdc',
     { preHandler: demoSignerGuard },
     async (request, reply) => {
-      const body = trustlineBody.parse(request.body);
-      const secret = env.DEMO_SIGNER_SECRET!;
-      const signer = Keypair.fromSecret(secret);
-      if (signer.publicKey() !== body.account) {
-        return reply.status(400).send({
-          error: 'account_mismatch',
-          message: 'Demo signer public key must match account',
-          expected: signer.publicKey(),
-        });
+      try {
+        const body = trustlineBody.parse(request.body);
+        const secret = env.DEMO_SIGNER_SECRET!;
+        const signer = Keypair.fromSecret(secret);
+        if (signer.publicKey() !== body.account) {
+          return reply.status(400).send({
+            error: 'account_mismatch',
+            message: 'Demo signer public key must match account',
+            expected: signer.publicKey(),
+          });
+        }
+        const unsigned = await stellar.buildUsdcTrustlineXdr(body.account);
+        const signed = stellar.signXdr(unsigned, secret);
+        const result = await stellar.submitSignedXdr(signed);
+        return { hash: result.hash, successful: result.successful };
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.status(400).send({ error: 'VALIDATION_ERROR', message: 'Invalid trustline payload' });
+        }
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.status(502).send({ error: 'ADAPTER_UNAVAILABLE', message });
       }
-      const unsigned = await stellar.buildUsdcTrustlineXdr(body.account);
-      const signed = stellar.signXdr(unsigned, secret);
-      const result = await stellar.submitSignedXdr(signed);
-      return { hash: result.hash, successful: result.successful };
     },
   );
 
