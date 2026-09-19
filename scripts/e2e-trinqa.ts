@@ -42,7 +42,7 @@ async function main() {
   log('policy contract', { policyId: env.POLICY_CONTRACT_ID ?? deployment.contractId, wasmHash: deployment.wasmHash });
 
   const { PolicyService } = await import('../backend/src/services/policy.service.js');
-  const { app, stellar, anchor, defindex, paymentRouter, anchorSessions, execution } = await buildApp();
+  const { app, stellar, anchor, defindex, paymentRouter, anchorSessions, paymentExecution: execution } = await buildApp();
   const policySvc = new PolicyService(env, stellar);
 
   const defindexConfigured = Boolean(env.DEFINDEX_API_KEY && env.DEFINDEX_VAULT_ADDRESS);
@@ -144,9 +144,10 @@ async function main() {
 
     const withdrawDest = process.env.E2E_TRY_WITHDRAW_DEST ?? 'TR890009903460061605055303';
     try {
+      // Must sit inside the anchor's SEP-6 withdraw limits (0.5–300 USDC on the TR mock anchor).
       await paymentRouter.quoteWithdrawToTry(
         publicKey,
-        '0.0500000',
+        '1.0000000',
         session.sessionId,
         withdrawDest,
       );
