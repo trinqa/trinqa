@@ -201,7 +201,9 @@ export class DefindexYieldAdapter {
     let name = `DeFindex vault ${vault.slice(0, 8)}…`;
     let symbol: string | undefined;
     let assets: string[] | undefined;
-    let apy = 0;
+    const fixedAprBps = this.config.DEFINDEX_FIXED_APR_BPS;
+    const apySource = fixedAprBps === undefined ? 'provider' : 'fixed_apr';
+    let apy = fixedAprBps === undefined ? 0 : fixedAprBps / 100;
     if (this.isConfigured) {
       try {
         const info = await this.getVaultInfo();
@@ -211,7 +213,8 @@ export class DefindexYieldAdapter {
         if (rawAssets?.length) {
           assets = rawAssets.map((a) => a.code ?? a.symbol ?? 'asset').filter(Boolean);
         }
-        apy = await this.getVaultAPY();
+        // The API derives APY from share-price drift, which is wildly off for a young, tiny vault.
+        if (apySource === 'provider') apy = await this.getVaultAPY();
       } catch {
         // keep minimal metadata
       }
@@ -222,6 +225,7 @@ export class DefindexYieldAdapter {
       name,
       risk,
       estimatedApy: apy,
+      apySource,
       withdrawalAvailability: 'flexible',
       vaultAddress: vault,
       symbol,

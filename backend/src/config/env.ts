@@ -35,6 +35,8 @@ const envSchema = z.object({
   DEFINDEX_API_KEY: optionalString,
   DEFINDEX_API_URL: optionalUrl.default('https://api.defindex.io'),
   DEFINDEX_VAULT_ADDRESS: optionalString,
+  /** Vault backed by a fixed-APR strategy (e.g. our testnet vault): report this rate, not the API's noisy APY. */
+  DEFINDEX_FIXED_APR_BPS: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(10_000).optional()),
 
   SOROSWAP_API_KEY: optionalString,
   SOROSWAP_API_URL: optionalUrl.default('https://api.soroswap.finance'),

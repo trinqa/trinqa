@@ -28,6 +28,37 @@ describe('DefindexYieldAdapter.normalizeStrategy', () => {
   });
 });
 
+describe('DefindexYieldAdapter.normalizeStrategy APY source', () => {
+  const vault = 'CVAULT1234567890123456789012345678901234567890123456789012';
+
+  function adapter(fixedAprBps?: number) {
+    const a = new DefindexYieldAdapter({
+      ...env,
+      DEFINDEX_API_KEY: 'test-key',
+      DEFINDEX_VAULT_ADDRESS: vault,
+      DEFINDEX_FIXED_APR_BPS: fixedAprBps,
+    });
+    vi.spyOn(a, 'getVaultInfo').mockResolvedValue({ name: 'Trinqa USDC Testnet', assets: [{ code: 'USDC' }] } as never);
+    const providerApy = vi.spyOn(a, 'getVaultAPY').mockResolvedValue(15.88);
+    return { a, providerApy };
+  }
+
+  it('reports the configured fixed APR instead of the noisy provider APY', async () => {
+    const { a, providerApy } = adapter(500);
+    const strategy = await a.normalizeStrategy();
+    expect(strategy?.estimatedApy).toBe(5);
+    expect(strategy?.apySource).toBe('fixed_apr');
+    expect(providerApy).not.toHaveBeenCalled();
+  });
+
+  it('uses the provider APY when no fixed APR is configured', async () => {
+    const { a } = adapter(undefined);
+    const strategy = await a.normalizeStrategy();
+    expect(strategy?.estimatedApy).toBe(15.88);
+    expect(strategy?.apySource).toBe('provider');
+  });
+});
+
 describe('DefindexYieldAdapter.normalizePosition', () => {
   const vault = 'CVAULT1234567890123456789012345678901234567890123456789012';
 
