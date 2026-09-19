@@ -1,16 +1,25 @@
 # Mobile wiring (BFF v1, testnet)
 
-Base: `http://localhost:8787` · Mobile signs classic/Soroban XDR locally; backend stores anchor JWT as opaque `sessionId`.
+Base: `EXPO_PUBLIC_API_BASE_URL` (dev fallback `http://127.0.0.1:8787`).
 
-## Flow order
+Mobile never holds `DEMO_SIGNER_SECRET`, SEP-10 JWTs, DeFindex keys, or Soroswap keys.
 
-1. `GET /api/v1/health` · `GET /api/v1/capabilities`
-2. `GET /api/v1/accounts/:id/balances`
-3. `GET /api/v1/anchor/session` → SEP-10 challenge/complete → `{ sessionId }`
-4. `POST /api/v1/anchor/quotes` (SEP-38 TRY→USDC on-ramp)
-5. `POST /api/v1/anchor/deposits` → poll `GET /api/v1/anchor/transfers/:id?sessionId=`
-6. `GET /api/v1/yield/strategies` · `POST /api/v1/yield/deposits/build` · `POST /api/v1/yield/execute`
-7. **Pay (recipient-first)**
+## Bootstrap
+
+1. `GET /api/v1/health` and `GET /api/v1/capabilities`
+2. If `features.demoSigner`, `GET /api/v1/demo/account` for the session G-address (or `EXPO_PUBLIC_ACCOUNT_ID`)
+3. `GET /api/v1/accounts/:id/balances` and `GET /api/v1/activity/:id`
+
+Empty balances and an empty activity list are honest until ledger operations exist.
+
+## Add money (TRY → USDC)
+
+1. `POST /api/v1/demo/sep10` (or SEP-10 challenge/complete)
+2. `POST /api/v1/anchor/quotes` then `POST /api/v1/anchor/deposits`
+3. `POST /api/v1/demo/anchor/simulate-bank-transfer` in demo
+4. Poll `GET /api/v1/anchor/transfers/:id?sessionId=`
+
+## Pay (USDC)
 
 ```json
 POST /api/v1/payments/quote
@@ -23,43 +32,29 @@ POST /api/v1/payments/quote
 }
 ```
 
-Response `quote`: `receiveAmount`, `receiveCurrency`, `debitAmount`, `debitAsset` (`USDC`), `source.amount` (= USDC debit), `destination` (= recipient receives), `funding`, `routeType`, `quoteId`.
+Then `POST /api/v1/payments/build` → `POST /api/v1/demo/sign` → `POST /api/v1/payments/submit` (or `execute-step` for multi-step).
 
-```json
-POST /api/v1/payments/build
-{ "quoteId": "…", "fromAccount": "G…", "approveEarnUnwind": true }
-```
+BRL quotes fail with `NO_SUPPORTED_PAYOUT_RAIL`.
 
-Returns `unsignedXdr`, `currentStep`, `operationId` when classic signing needed.
+## Withdraw (USDC → TRY)
 
-```json
-POST /api/v1/payments/execute-step
-{ "operationId": "…", "step": "yield_withdraw|stellar_payment|soroswap_swap|anchor_withdraw", "signedXdr": "…" }
-```
+Quote with `receiveCurrency: "TRY"`, `anchorSessionId`, `withdrawDest`. Build returns `unsignedXdr` + `currentStep: "anchor_withdraw"`. Sign and `execute-step`.
 
-8. TRY off-ramp: `POST /api/v1/payments/withdraw/quote` or pay quote with `receiveCurrency: "TRY"`, `anchorSessionId`, `withdrawDest` · SEP-6 withdraw + Memo.id USDC payment
-9. `GET /api/v1/activity/:accountId`
-10. Policy: `GET /api/v1/policy/:id` · `POST /api/v1/policy/build` · `POST /api/v1/policy/submit`
+## Put money to work
 
-## Errors mobile should surface
+Policy `build` + `submit` always. Yield deposit only if capabilities say DeFindex is ready; otherwise the UI shows unavailable — no fake deposit.
 
-`INSUFFICIENT_BALANCE`, `EARN_UNWIND_APPROVAL_REQUIRED`, `ROUTE_UNAVAILABLE`, `QUOTE_EXPIRED`, `NO_SUPPORTED_PAYOUT_RAIL`, `ALREADY_COMPLETED`, `DEFINDEX_VAULT_ASSET_MISMATCH`
+## Demo signer
 
-## Testnet demo signer (backend-only)
+When `GET /api/v1/capabilities` → `features.demoSigner`:
 
-Mobile never holds `DEMO_SIGNER_SECRET`, anchor JWTs, DeFindex keys, or Soroswap keys.
-
-When `GET /api/v1/capabilities` → `features.demoSigner` is true:
-
-- `GET /api/v1/demo/account` → `{ account }` (G-address only)
+- `GET /api/v1/demo/account` → `{ account }`
 - `POST /api/v1/demo/sep10` → `{ sessionId, expiresAt }`
 - `POST /api/v1/demo/sign` `{ unsignedXdr }` → `{ signedXdr }`
-- `POST /api/v1/demo/anchor/simulate-bank-transfer` `{ sessionId, transferId }`
+- `POST /api/v1/demo/anchor/simulate-bank-transfer`
 
-If the demo signer is off those routes return `403`. Production wallets sign locally instead.
+Production wallets sign locally instead.
 
-TRY off-ramp `POST /api/v1/payments/build` returns `unsignedXdr` + `currentStep: "anchor_withdraw"` so mobile can `execute-step` the USDC funding payment.
+## Errors to surface
 
-## CLI fallback
-
-`npm run e2e:core` — full demo without partner keys.
+`INSUFFICIENT_BALANCE`, `EARN_UNWIND_APPROVAL_REQUIRED`, `ROUTE_UNAVAILABLE`, `QUOTE_EXPIRED`, `NO_SUPPORTED_PAYOUT_RAIL`, `ADAPTER_UNAVAILABLE`, `ALREADY_COMPLETED`, `DEFINDEX_VAULT_ASSET_MISMATCH`

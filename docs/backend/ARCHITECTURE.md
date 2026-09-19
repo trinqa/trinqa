@@ -1,38 +1,23 @@
-# Backend Architecture (testnet)
+# Backend architecture (testnet)
 
 ## Layers
 
 | Layer | Role |
 |-------|------|
 | `routes/v1/*` | HTTP API (Fastify), Zod validation |
-| `services/*` | Orchestration (Stellar, anchor, policy) |
-| `adapters/*` | External systems (TR mock anchor, Soroban policy contract) |
-| `domain/*` | Pure types and validation |
-| `config/*` | Env + committed testnet deployment metadata |
+| `services/*` | Orchestration (Stellar, anchor, policy, payments, yield, swaps) |
+| `adapters/*` | TR mock anchor, DeFindex, Soroswap, Soroban policy contract |
+| `domain/*` | Money, policy, route types and validation |
+| `config/*` | Env + committed `deployments/testnet.json` |
 
-## Policy flow (M2)
-
-1. Mobile calls `GET /api/v1/policy/:accountId` → `PolicyService` → `TrinqaPolicyAdapter` simulates `get_policy` on Soroban.
-2. Mobile calls `POST /api/v1/policy/build` with a typed action → unsigned XDR for wallet signing.
-3. Mobile (or demo signer) submits `POST /api/v1/policy/submit` with signed XDR → Soroban RPC.
-
-Contract source: `contracts/trinqa-policy/contracts/trinqa-allocation-policy`.  
-Deployed metadata: `deployments/testnet.json` (no secrets).
-
-## Security boundaries
-
-- Testnet only (`STELLAR_NETWORK=testnet` enforced at boot).
-- Partner keys and demo signer secrets stay in env, never in git.
-- Demo signer routes and auto-sign helpers are env-gated.
-
-## Request flow (M3–M4)
+## Request flow
 
 ```mermaid
 flowchart LR
   subgraph Mobile
     M[Expo app]
   end
-  subgraph BFF["backend/ Fastify"]
+  subgraph BFF["backend Fastify"]
     R[routes/v1]
     S[services]
     A[adapters]
@@ -54,11 +39,27 @@ flowchart LR
   A --> DF
   A --> SW
   A --> SB
-  S -->|OperationStore| OS[(.data operations)]
+  S -->|OperationStore| OS[(local .data operations)]
 ```
 
-## Yield & routing
+## Policy
 
-- **Recommendations:** `GET /api/v1/yield/recommendations/:accountId` — deterministic risk engine + on-chain policy `target_timestamp` (unix seconds) or query `targetDate` / `daysToTarget`.
-- **Payments:** `PaymentRouter` scores route candidates; quotes expose `candidateCount` and `routeScore` (TRY fiat payout typically `candidateCount: 1`).
-- **Activity:** `OperationStore` entries normalized for mobile transaction feed (`operationId`, `txHash`, anchor refs).
+1. `GET /api/v1/policy/:accountId` → `PolicyService` → simulate `get_policy`.
+2. `POST /api/v1/policy/build` → unsigned XDR.
+3. Wallet or testnet demo signer → `POST /api/v1/policy/submit`.
+
+Contract source: `contracts/trinqa-policy`. Deployed id/hash: `deployments/testnet.json`.
+
+## Payments
+
+- Recipient-first quotes: USDC debit derived from receive amount/currency.
+- TRY on-ramp/off-ramp via TR mock (SEP-10/6/38).
+- BRL → `NO_SUPPORTED_PAYOUT_RAIL`.
+- Earn-funded pay requires an explicit unwind; blocked if DeFindex is unconfigured.
+
+## Security
+
+- Boot fails unless `STELLAR_NETWORK=testnet`.
+- Partner keys and `DEMO_SIGNER_SECRET` stay in env, never in git, never on mobile.
+- Demo signer routes are env-gated and refuse to sign for any account except the demo public key.
+- Anchor JWTs stay on the server; mobile stores `sessionId` only.

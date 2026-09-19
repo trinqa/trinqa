@@ -1,23 +1,24 @@
-# Partner key fallback (contingency only)
+# Partner keys
 
-## DeFindex without API key
+These stay on the backend only. They are not required for the core demo (`pnpm e2e:core`).
 
-| Verdict | **RISKY** |
-|---------|-----------|
-| Why | Vault deposit/withdraw needs unsigned XDR from DeFindex API or exact contract invocation; SDK documents HTTP-only flows. |
-| Workshop pattern | `paltalabs/stellar-workshop` uses SDK + API key — not a keyless path. |
-| Recommendation | Obtain `DEFINDEX_API_KEY` + compatible vault; use `hackathon:compat` before deposit. |
+| Name | Used by | Core demo | Full demo |
+|------|---------|-----------|-----------|
+| `DEFINDEX_API_KEY` | `DefindexYieldAdapter` | No | Yes |
+| `DEFINDEX_VAULT_ADDRESS` | Yield deposit/withdraw; vault must be Trinqa USDC SAC `CBIELTK6…` | No | Yes |
+| `SOROSWAP_API_KEY` | `SoroswapAdapter` | No | XLM / swap routes |
+| `DEMO_SIGNER_SECRET` | Optional fixed test account (`DEMO_SIGNER_ENABLED=true`) | No | Mobile demo |
 
-## Soroswap without API key
+Verify after insert: `pnpm hackathon:doctor`, `pnpm hackathon:compat`, `pnpm e2e:defindex`, `pnpm e2e:soroswap`.
 
-| Verdict | **NOT RECOMMENDED** for hackathon day |
-|---------|----------------------------------------|
-| Why | Quote/build endpoints require Bearer auth; direct router invocation needs verified testnet router addresses + auth semantics. |
-| Standalone | Faucet + API key remains the supported test path. |
-| Core product | Unaffected — direct USDC pay + anchor rails do not need Soroswap. |
+## Without DeFindex keys
 
-## Direct Soroban contract calls
+Yield routes return `ADAPTER_UNAVAILABLE`. There is no keyless vault deposit path in the current SDK flow. Do not fake yield success in the app.
 
-| Verdict | **FEASIBLE** only for **Trinqa policy** (already deployed); **RISKY** for DeFindex/Soroswap routers without verified IDs/interfaces. |
+## Without Soroswap keys
 
-Do not add new direct-contract adapters without verified addresses and live tests.
+Swap quote/build need Bearer auth. Direct USDC pay and TRY rails do not need Soroswap.
+
+## Direct contract calls
+
+Feasible for the deployed Trinqa policy. Risky for DeFindex/Soroswap without verified testnet ids and live tests.

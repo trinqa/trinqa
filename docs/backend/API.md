@@ -1,13 +1,13 @@
 # Trinqa Backend API (v1, testnet)
 
-Base URL: `http://localhost:8787` (default)
+Base URL: `http://127.0.0.1:8787` (default)
 
 ## Health & capabilities
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/health` | Horizon, anchor, DeFindex, Soroswap, policy contract |
-| GET | `/api/v1/capabilities` | Truthful rails (TRY anchor, BRL blocked) |
+| GET | `/api/v1/health` | Horizon, anchor, DeFindex, Soroswap, policy contract, demo signer |
+| GET | `/api/v1/capabilities` | Truthful rails (TRY via TR mock; BRL blocked; earn/swap flags) |
 
 ## Accounts
 
@@ -26,6 +26,8 @@ Base URL: `http://localhost:8787` (default)
 
 ## Yield (DeFindex)
 
+Returns `ADAPTER_UNAVAILABLE` when `DEFINDEX_API_KEY` or `DEFINDEX_VAULT_ADDRESS` is missing.
+
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/v1/yield/recommendations/:accountId` | Ranked strategies + target-date horizon (`?targetDate=` or `?daysToTarget=`) |
@@ -37,6 +39,8 @@ Base URL: `http://localhost:8787` (default)
 
 ## Swaps (Soroswap)
 
+Returns `ADAPTER_UNAVAILABLE` when `SOROSWAP_API_KEY` is missing.
+
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/v1/swaps/assets` | Testnet asset discovery |
@@ -47,10 +51,10 @@ Base URL: `http://localhost:8787` (default)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/payments/quote` | Recipient-first quote (`receiveAmount`, `receiveCurrency`); USDC debit derived; optional `anchorSessionId` for TRY; returns `funding` + `debitAmount` |
+| POST | `/api/v1/payments/quote` | Recipient-first quote (`receiveAmount`, `receiveCurrency`); USDC debit derived; optional `anchorSessionId` for TRY |
 | POST | `/api/v1/payments/withdraw/quote` | USDC→TRY via live SEP-38 (`anchorSessionId` required) |
 | POST | `/api/v1/payments/build` | Build payment; `approveEarnUnwind: true` when quote requires earn unwind |
-| POST | `/api/v1/payments/execute-step` | Continue multi-step pay (`yield_withdraw` → `stellar_payment` / `soroswap_swap`) |
+| POST | `/api/v1/payments/execute-step` | Continue multi-step pay (`yield_withdraw` → `stellar_payment` / `soroswap_swap` / `anchor_withdraw`) |
 | POST | `/api/v1/payments/submit` | Submit signed classic tx |
 
 ## Anchor (TR mock, SEP-6)
@@ -70,14 +74,16 @@ Base URL: `http://localhost:8787` (default)
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/v1/operations/:id` | Normalized operation |
-| GET | `/api/v1/activity/:accountId` | Activity stub from operation store |
+| GET | `/api/v1/activity/:accountId` | Activity from the operation store |
 
-## Demo signer (testnet only, never expose secrets)
+## Demo signer (testnet only)
+
+Never returns secrets. Disabled routes return `403`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/demo/account` | Demo G-address (`403` if signer disabled) |
-| POST | `/api/v1/demo/sign` | Sign classic/Soroban XDR with server demo key |
+| GET | `/api/v1/demo/account` | Demo G-address |
+| POST | `/api/v1/demo/sign` | Sign classic/Soroban XDR with the server demo key |
 | POST | `/api/v1/demo/sep10` | SEP-10 + opaque `sessionId` |
 | POST | `/api/v1/demo/anchor/simulate-bank-transfer` | Mock bank credit for SEP-6 deposit |
 | POST | `/api/v1/demo/trustline/usdc` | Add USDC trustline for the demo account |

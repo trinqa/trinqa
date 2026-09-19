@@ -58,7 +58,7 @@ function parseEnv(): AppConfig {
   }
 
   if (parsed.data.STELLAR_NETWORK !== 'testnet') {
-    throw new Error('Trinqa backend Phase 1 is testnet-only');
+    throw new Error('Trinqa backend is testnet-only');
   }
 
   const data = parsed.data;
