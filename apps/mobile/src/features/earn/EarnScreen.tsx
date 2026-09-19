@@ -20,7 +20,6 @@ import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, spacing, typography } from '@/theme';
 import type { EarnSegment, Transaction } from '@/types';
 
-const METRIC_WIDTHS = [112, 112, 112] as const;
 
 export function EarnScreen() {
   const router = useRouter();
@@ -58,6 +57,8 @@ export function EarnScreen() {
     { id: 'risk', label: 'How risky', value: profile.riskLabel },
   ];
   const earn = screenTokens.earn;
+  // Three equal cards that fill the (device-scaled) content width.
+  const metricWidth = Math.floor((earn.contentWidth - earn.metricGap * 2) / 3);
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
@@ -118,12 +119,12 @@ export function EarnScreen() {
           frame({ width: earn.contentWidth }),
         ]}
       >
-        {metrics.map((metric, index) => (
+        {metrics.map((metric) => (
           <MetricCard
             key={metric.id}
             label={metric.label}
             value={metric.value}
-            width={METRIC_WIDTHS[index] ?? 117}
+            width={metricWidth}
           />
         ))}
       </HStack>
