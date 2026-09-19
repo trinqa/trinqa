@@ -25,11 +25,28 @@ import { AnchorSessionStore } from './services/anchor-session-store.service.js';
 import { registerAccountRoutes } from './routes/v1/accounts.js';
 import { registerTransactionRoutes } from './routes/v1/transactions.js';
 import { registerSwapRoutes } from './routes/v1/swaps.js';
+import { registerWaitlistRoutes } from './routes/v1/waitlist.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: env.NODE_ENV !== 'test' });
 
-  await app.register(cors, { origin: true });
+  await app.register(cors, {
+    origin: [
+      'http://127.0.0.1:4180',
+      'http://localhost:4180',
+      'http://127.0.0.1:4173',
+      'http://localhost:4173',
+      'http://127.0.0.1:8080',
+      'http://localhost:8080',
+      'http://127.0.0.1:3000',
+      'http://localhost:3000',
+      // fallback: allow any localhost/127.0.0.1 port in dev
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
+  });
 
   const stellar = new StellarService(env);
   const anchor = new TrMockAnchorAdapter(env, stellar.networkPassphrase);
@@ -77,6 +94,7 @@ export async function buildApp() {
   registerAccountRoutes(app, stellar);
   registerTransactionRoutes(app, stellar);
   registerSwapRoutes(app, soroswap);
+  registerWaitlistRoutes(app, resolveOperationsDataDir());
 
   app.get('/', async () => ({ service: 'trinqa-backend', api: '/api/v1/health' }));
 

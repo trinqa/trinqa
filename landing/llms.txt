@@ -1,0 +1,27 @@
+# Trinqa
+
+> Trinqa is a self-driving portfolio that keeps money ready when users need it and puts eligible idle funds to work when they do not.
+
+Trinqa is not positioned as a crypto wallet, exchange, bank account, or trading platform.
+
+Users define risk preference, time horizon, liquidity needs, and intent. Trinqa coordinates supported portfolio strategies, liquidity, and money movement in the background.
+
+The product experience is centered on:
+- total portfolio
+- ready-to-use liquidity
+- growing balance
+- strategy
+- risk
+- time horizon
+- earnings
+- portfolio activity
+
+Blockchain, Stellar, anchors, DeFi protocols, swaps, and settlement infrastructure are implementation rails rather than the primary product identity.
+
+Returns are not guaranteed.
+
+## Product
+
+- [Trinqa](https://www.trinqa.com/): Official product website
+- [Product overview](https://www.trinqa.com/product.md): Machine-readable product definition
+- [FAQ](https://www.trinqa.com/faq.md): Machine-readable product FAQ
