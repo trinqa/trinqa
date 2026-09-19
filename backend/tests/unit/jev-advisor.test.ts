@@ -124,7 +124,7 @@ describe('JevAdvisor request shape', () => {
 });
 
 describe('JevAdvisor answer mapping', () => {
-  it('maps a successful response to 0-100 factors, min confidence across factors, and rationale', async () => {
+  it('maps a successful response to 0-100 factors, drops low-confidence factors, and averages the rest', async () => {
     const answers = {
       r0_reliability: scoreAnswer(4, 0.9), // 4/4 -> 100
       r0_liquidity: scoreAnswer(2, 0.7), // 2/4 -> 50
@@ -145,8 +145,9 @@ describe('JevAdvisor answer mapping', () => {
     expect(r0Advice!.factors.liquidity).toBe(50);
     expect(r0Advice!.factors.horizonFit).toBe(75);
     expect(r0Advice!.factors.riskFit).toBe(0);
-    expect(r0Advice!.factors.yieldImpact).toBe(100);
-    expect(r0Advice!.confidence).toBeCloseTo(0.5, 5); // min across its own factor confidences
+    // yieldImpact came back at 0.5 confidence, below the default 0.6 gate, so it is not passed on.
+    expect(r0Advice!.factors.yieldImpact).toBeUndefined();
+    expect(r0Advice!.confidence).toBeCloseTo((0.9 + 0.7 + 0.6 + 0.95) / 4, 5); // mean of kept factors
     expect(r0Advice!.rationale).toMatch(/highest/i);
   });
 

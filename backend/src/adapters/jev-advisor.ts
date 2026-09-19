@@ -7,7 +7,7 @@ import type {
   RouteFactorKey,
   RouteFactors,
 } from '../domain/route.js';
-import { ADVISOR_FACTORS } from '../domain/route.js';
+import { ADVISOR_FACTORS, DEFAULT_ADVISOR_MIN_CONFIDENCE } from '../domain/route.js';
 
 /**
  * Adapter for Jev, TypeSafe's structured decision model, reached through OpenRouter's
@@ -53,6 +53,8 @@ export interface JevAdvisorOptions {
   timeoutMs?: number;
   endpoint?: string;
   fetch?: typeof fetch;
+  /** Factor answers below this confidence are dropped; defaults to DEFAULT_ADVISOR_MIN_CONFIDENCE. */
+  minFactorConfidence?: number;
 }
 
 /** The subset of RouteFactorKey that ADVISOR_FACTORS actually contains (netCost/speed excluded). */
@@ -293,6 +295,7 @@ function mapAnswersToAdvice(
   response: JevDecisionsResponse,
   routes: RouteCandidate[],
   aliasByRouteId: Map<string, string>,
+  minFactorConfidence: number,
 ): RouteAdvice[] {
   const answers = response.answers;
   const bestAlias = extractBestRouteAlias(answers);
@@ -313,6 +316,9 @@ function mapAnswersToAdvice(
         complete = false;
         break;
       }
+      // Gate per factor: one uncertain judgment should not discard the confident ones,
+      // and must not be passed on either.
+      if (normalized.confidence < minFactorConfidence) continue;
       factors[factor as RouteFactorKey] = normalized.value;
       confidences.push(normalized.confidence);
     }
@@ -322,7 +328,9 @@ function mapAnswersToAdvice(
     advice.push({
       routeId: route.routeId,
       factors,
-      confidence: Math.min(...confidences),
+      // Mean over the factors that passed the gate, so the scorer's route-level threshold
+      // reflects the advice actually being handed over.
+      confidence: confidences.reduce((sum, c) => sum + c, 0) / confidences.length,
       rationale: alias === bestAlias ? 'Jev ranked this route highest among the candidates considered.' : undefined,
     });
   }
@@ -402,7 +410,12 @@ export class JevAdvisor implements RouteAdvisor {
     try {
       const result = await queryJevDecisions(this.options, input);
       if (!result) return [];
-      return mapAnswersToAdvice(result.response, input.routes, result.aliasByRouteId);
+      return mapAnswersToAdvice(
+        result.response,
+        input.routes,
+        result.aliasByRouteId,
+        this.options.minFactorConfidence ?? DEFAULT_ADVISOR_MIN_CONFIDENCE,
+      );
     } catch {
       return [];
     }
@@ -416,6 +429,7 @@ export interface JevEnvConfig {
   JEV_ENABLED?: 'true' | 'false';
   JEV_MODEL?: string;
   JEV_TIMEOUT_MS?: number;
+  JEV_MIN_CONFIDENCE?: number;
 }
 
 export function createRouteAdvisorFromEnv(config: JevEnvConfig): JevAdvisor | null {
@@ -425,5 +439,6 @@ export function createRouteAdvisorFromEnv(config: JevEnvConfig): JevAdvisor | nu
     apiKey: config.OPENROUTER_API_KEY,
     model: config.JEV_MODEL,
     timeoutMs: config.JEV_TIMEOUT_MS,
+    minFactorConfidence: config.JEV_MIN_CONFIDENCE,
   });
 }
