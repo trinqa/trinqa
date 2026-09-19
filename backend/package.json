@@ -23,6 +23,7 @@
     "e2e:soroswap": "tsx ../scripts/e2e-soroswap.ts",
     "e2e:trinqa": "tsx ../scripts/e2e-trinqa.ts",
     "e2e:core": "tsx ../scripts/e2e-core.ts",
+    "smoke:remote": "tsx ../scripts/smoke-remote.ts",
     "hackathon:compat": "tsx ../scripts/hackathon-compat.ts",
     "hackathon:doctor": "tsx ../scripts/hackathon-doctor.ts",
     "hackathon:preflight": "tsx ../scripts/hackathon-preflight.ts",

@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import { registerAnchorRoutes } from '../../src/routes/v1/anchor.js';
 import { AnchorSessionStore } from '../../src/services/anchor-session-store.service.js';
 import { MemoryOperationStore } from '../../src/services/operation-store.js';
-import type { TrMockAnchorAdapter } from '../../src/adapters/tr-mock-anchor.adapter.js';
+import { AnchorRequestError, type TrMockAnchorAdapter } from '../../src/adapters/tr-mock-anchor.adapter.js';
 
 describe('anchor routes (sessionId only)', () => {
   it('quotes reject raw jwt and accept sessionId', async () => {
@@ -35,6 +35,26 @@ describe('anchor routes (sessionId only)', () => {
     expect(anchor.sep38Quote).toHaveBeenCalledWith('anchor-jwt', expect.any(Object));
     expect(JSON.stringify(ok.json())).not.toContain('anchor-jwt');
 
+    await app.close();
+  });
+
+  it('turns an anchor 4xx rejection into a 422 with the anchor reason', async () => {
+    const sessions = new AnchorSessionStore();
+    const { sessionId } = sessions.create('anchor-jwt', 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF');
+    const anchor = {
+      sep38Quote: vi
+        .fn()
+        .mockRejectedValue(new AnchorRequestError('SEP-38 quote', 400, '{"error":"Minimum off-ramp is 1.0000000 USDC"}')),
+    } as unknown as TrMockAnchorAdapter;
+    const app = Fastify();
+    registerAnchorRoutes(app, anchor, sessions, new MemoryOperationStore());
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/anchor/quotes',
+      payload: { sessionId, sellAsset: 'iso4217:TRY', sellAmount: '1' },
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json()).toMatchObject({ error: 'ANCHOR_REJECTED', message: 'Minimum off-ramp is 1.0000000 USDC' });
     await app.close();
   });
 
