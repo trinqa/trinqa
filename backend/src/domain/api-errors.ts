@@ -13,7 +13,8 @@ export type ApiErrorCode =
   | 'DEFINDEX_VAULT_ASSET_MISMATCH'
   | 'QUOTE_ALREADY_USED'
   | 'SIGNED_TX_MISMATCH'
-  | 'AMOUNT_OUT_OF_RANGE';
+  | 'AMOUNT_OUT_OF_RANGE'
+  | 'POLICY_DENIED';
 
 export type RouteUnavailableReason =
   | 'ROUTE_UNAVAILABLE'
