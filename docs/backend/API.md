@@ -69,6 +69,18 @@ Returns `ADAPTER_UNAVAILABLE` when `SOROSWAP_API_KEY` is missing.
 | POST | `/api/v1/anchor/withdrawals` | SEP-6 withdraw (`sessionId`, optional `quoteId`) |
 | GET | `/api/v1/anchor/transfers/:id?sessionId=` | SEP-6 transaction status |
 
+## Anchor directory & routing (Phase 2)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/anchors` | Every discovered anchor with its SEPs, rails and status (`EXECUTABLE`/`QUOTE_ONLY`/`DISCOVERY_ONLY`/`UNAVAILABLE`) |
+| GET | `/api/v1/routes/preview` | Scored route candidates: `direction`, `currency`, `amount`, optional `riskProfile`+`daysToTarget`, `requireExecutable`, `kycStatus` |
+
+`routes/preview` returns eligible routes with a 0-100 score per factor and, per factor,
+whether the value was computed or came from the Jev advisor (`factorSources`). `netCost`
+and `speed` are always computed. Rejected anchors come back with their reasons.
+TRY payment quotes carry the same decision, compacted, under `providerPayload.routeDecision`.
+
 ## Operations & activity
 
 | Method | Path | Description |
@@ -80,13 +92,19 @@ Returns `ADAPTER_UNAVAILABLE` when `SOROSWAP_API_KEY` is missing.
 
 Never returns secrets. Disabled routes return `403`.
 
+Requests may carry `x-wallet-key`: the device's custodial wallet. The signer then
+acts as that wallet instead of the env demo account. Wallet keys are not stored —
+each account's seed is `HMAC(master, walletKey)`, so accounts survive redeploys.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/demo/account` | Demo G-address |
-| POST | `/api/v1/demo/sign` | Sign classic/Soroban XDR with the server demo key |
+| POST | `/api/v1/demo/wallets` | Create or restore a device wallet: funds it and adds the USDC trustline (idempotent) |
+| GET | `/api/v1/demo/account` | G-address of the calling wallet, or the env demo account |
+| POST | `/api/v1/demo/sign` | Sign classic/Soroban XDR as the calling wallet |
 | POST | `/api/v1/demo/sep10` | SEP-10 + opaque `sessionId` |
 | POST | `/api/v1/demo/anchor/simulate-bank-transfer` | Mock bank credit for SEP-6 deposit |
 | POST | `/api/v1/demo/trustline/usdc` | Add USDC trustline for the demo account |
+| POST | `/api/v1/demo/contacts` | Accounts for the seeded demo contacts (`{ ids }` → funded account per id, idempotent) |
 
 ## Transactions
 

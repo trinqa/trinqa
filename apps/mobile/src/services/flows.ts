@@ -6,7 +6,6 @@ import {
   earnUnavailableReason,
   ensureAnchorSession,
   executeBuiltPayment,
-  payRecipientOrSelf,
   pollTransfer,
   signXdr,
   stellarAmount,
@@ -94,9 +93,26 @@ export interface PayLiveQuote {
 
 export async function quotePay(params: {
   accountId: string;
+  /** The recipient's Stellar account. Resolve it with `recipientAccount` before quoting. */
+  recipientAccount: string;
   amount: number;
   currency: string;
 }): Promise<PayLiveQuote> {
+  if (!params.recipientAccount) {
+    throw new BackendApiError(
+      'RECIPIENT_UNRESOLVED',
+      'We could not prepare this contact’s account, so the payment cannot be sent.',
+      422,
+    );
+  }
+  // Paying yourself is never what the user asked for; refuse instead of moving money in a circle.
+  if (params.recipientAccount === params.accountId) {
+    throw new BackendApiError(
+      'RECIPIENT_IS_SENDER',
+      'This payment would go back to your own account, so it was stopped.',
+      422,
+    );
+  }
   if (params.currency === 'BRL') {
     throw new BackendApiError(
       'NO_SUPPORTED_PAYOUT_RAIL',
@@ -114,7 +130,7 @@ export async function quotePay(params: {
   const receiveCurrency = params.currency === 'USD' ? 'USDC' : params.currency;
   const { quote } = await api.paymentsQuote({
     fromAccount: params.accountId,
-    recipient: payRecipientOrSelf(params.accountId),
+    recipient: params.recipientAccount,
     receiveAmount: stellarAmount(params.amount),
     receiveCurrency,
     balanceSource: 'available',
@@ -124,13 +140,19 @@ export async function quotePay(params: {
 
 export async function executePay(params: {
   accountId: string;
+  recipientAccount: string;
   live: PayLiveQuote;
   amount: number;
   currency: string;
   approveEarnUnwind: boolean;
 }) {
   const live = isExpiring(params.live.quote.expiresAt)
-    ? await quotePay({ accountId: params.accountId, amount: params.amount, currency: params.currency })
+    ? await quotePay({
+        accountId: params.accountId,
+        recipientAccount: params.recipientAccount,
+        amount: params.amount,
+        currency: params.currency,
+      })
     : params.live;
   const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
   const result = await executeBuiltPayment(built);
@@ -197,6 +219,26 @@ export async function executeWithdrawTry(params: {
   await refreshLedger();
 }
 
+/**
+ * Plain wording for the allocation policy contract's refusal reasons, keyed by the `reason`
+ * the backend puts in `details`. Reasons that are not listed keep the backend's own message:
+ * we only restate what we can describe accurately.
+ */
+const POLICY_DENIED_COPY: Record<string, string> = {
+  AutomationPaused: 'Growing money is paused on your account, so this money was not moved.',
+  StrategyNotAllowed:
+    'Your saved plan does not allow this way of growing money, so this money was not moved.',
+};
+
+function rethrowPolicyDenied(err: unknown): never {
+  if (err instanceof BackendApiError && err.code === 'POLICY_DENIED') {
+    const reason = (err.details as { reason?: string } | undefined)?.reason;
+    const copy = reason ? POLICY_DENIED_COPY[reason] : undefined;
+    if (copy) throw new BackendApiError(err.code, copy, err.status, err.details);
+  }
+  throw err;
+}
+
 function riskProfile(id: PutToWorkRiskId) {
   if (id === 'stable') return 0;
   if (id === 'growth') return 2;
@@ -250,11 +292,14 @@ export async function executePutToWork(params: {
       503,
     );
   }
-  const builtDeposit = await api.yieldDepositBuild({
-    accountId: params.accountId,
-    strategyId: strategy.id,
-    amount: stellarAmount(params.amount),
-  });
+  // The build simulates the policy contract, so the user's own policy can refuse it here.
+  const builtDeposit = await api
+    .yieldDepositBuild({
+      accountId: params.accountId,
+      strategyId: strategy.id,
+      amount: stellarAmount(params.amount),
+    })
+    .catch(rethrowPolicyDenied);
   const signedDeposit = await signXdr(builtDeposit.unsignedXdr);
   const executed = await api.yieldExecute(builtDeposit.operationId, signedDeposit);
   if (!executed.successful) {

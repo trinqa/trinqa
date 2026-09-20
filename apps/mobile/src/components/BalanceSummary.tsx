@@ -70,6 +70,8 @@ export function BalanceSummary({
   const [balanceVisible, setBalanceVisible] = useState(true);
   const displayValue = balanceVisible ? totalValue : '••••••';
   const wallet = screenTokens.wallet;
+  // Two tiles filling the panel: 159pt each on the 402pt design canvas, wider on larger phones.
+  const tileWidth = Math.floor((wallet.contentWidth - wallet.balancePaddingHorizontal * 2 - 16) / 2);
 
   return (
     <SurfacePanel
@@ -149,8 +151,8 @@ export function BalanceSummary({
             axis="horizontal"
             height={wallet.metricLayerHeight}
           >
-            <MetricTile label={leftLabel} value={leftValue} width={159} currencySymbol={currencySymbol} />
-            <MetricTile label={rightLabel} value={rightValue} width={159} currencySymbol={currencySymbol} />
+            <MetricTile label={leftLabel} value={leftValue} width={tileWidth} currencySymbol={currencySymbol} />
+            <MetricTile label={rightLabel} value={rightValue} width={tileWidth} currencySymbol={currencySymbol} />
           </InsetLayer>
         </Group>
       </VStack>

@@ -24,6 +24,8 @@ const envSchema = z.object({
   USDC_ISSUER: z
     .string()
     .default('GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'),
+  /** Comma-separated home domains for read-only SEP anchor discovery (Phase 2 anchor directory). */
+  ANCHOR_DISCOVERY_DOMAINS: optionalString,
 
   DEMO_SIGNER_ENABLED: z
     .preprocess((v) => emptyToUndefined(v) ?? 'false', z.enum(['true', 'false']))
@@ -31,6 +33,8 @@ const envSchema = z.object({
   DEMO_SIGNER_SECRET: optionalString,
   /** Shared secret for /api/v1/demo/* (header x-demo-token). Required in production when the demo signer is on. */
   DEMO_ACCESS_TOKEN: optionalString,
+  /** Master secret for per-device custodial testnet wallets; derived from DEMO_SIGNER_SECRET when unset. */
+  WALLET_MASTER_SECRET: optionalString,
 
   DEFINDEX_API_KEY: optionalString,
   DEFINDEX_API_URL: optionalUrl.default('https://api.defindex.io'),
@@ -46,6 +50,13 @@ const envSchema = z.object({
   POLICY_WASM_HASH: optionalString,
 
   OPERATIONS_DATA_DIR: optionalString,
+
+  /** Jev route advisor (Phase 2, workstream C) — reached via OpenRouter's alpha Decisions API. */
+  OPENROUTER_API_KEY: optionalString,
+  JEV_MODEL: optionalString,
+  JEV_ENABLED: z.preprocess(emptyToUndefined, z.enum(['true', 'false']).optional()),
+  JEV_TIMEOUT_MS: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().optional()),
+  JEV_MIN_CONFIDENCE: z.preprocess(emptyToUndefined, z.coerce.number().min(0).max(1).optional()),
 });
 
 export type AppConfig = z.infer<typeof envSchema> & {

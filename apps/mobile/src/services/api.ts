@@ -3,10 +3,13 @@ import { BackendApiError } from '@/services/apiErrors';
 import type {
   ActivityItem,
   AnchorQuote,
+  AnchorSnapshot,
+  RouteDecision,
   BackendCapabilities,
   BackendHealth,
   BalanceLine,
   BuiltPaymentResponse,
+  DemoContact,
   ExecuteStepResponse,
   PaymentQuoteResponse,
   PolicyView,
@@ -14,8 +17,16 @@ import type {
   YieldStrategy,
 } from '@/services/types';
 
+/** The device's custodial wallet key; demo routes act as that wallet when it is set. */
+let walletKey: string | null = null;
+
+export function setWalletKey(key: string | null) {
+  walletKey = key;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const demoToken = path.startsWith('/api/v1/demo/') ? getDemoAccessToken() : undefined;
+  const isDemo = path.startsWith('/api/v1/demo/');
+  const demoToken = isDemo ? getDemoAccessToken() : undefined;
   const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     headers: {
@@ -23,6 +34,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       // Fastify rejects an empty body declared as JSON, so only bodied requests carry it.
       ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(demoToken ? { 'x-demo-token': demoToken } : {}),
+      ...(isDemo && walletKey ? { 'x-wallet-key': walletKey } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -51,6 +63,17 @@ export const api = {
   capabilities: () => request<BackendCapabilities>('/api/v1/capabilities'),
 
   demoAccount: () => request<{ account: string; network: string }>('/api/v1/demo/account'),
+  demoWallet: (existingKey?: string) =>
+    request<{ walletKey: string; account: string; created: boolean; network: string }>(
+      '/api/v1/demo/wallets',
+      { method: 'POST', body: JSON.stringify(existingKey ? { walletKey: existingKey } : {}) },
+    ),
+  /** Resolves the seeded contacts to real testnet accounts; funds them on the first call. */
+  demoContacts: (ids: string[]) =>
+    request<{ contacts: DemoContact[]; network: string }>('/api/v1/demo/contacts', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
   demoSep10: () =>
     request<{ sessionId: string; expiresAt: string }>('/api/v1/demo/sep10', { method: 'POST' }),
   demoSign: (unsignedXdr: string) =>
@@ -71,6 +94,30 @@ export const api = {
   activity: (accountId: string) =>
     request<{ accountId: string; items: ActivityItem[] }>(`/api/v1/activity/${accountId}`),
   policy: (accountId: string) => request<PolicyView>(`/api/v1/policy/${accountId}`),
+
+  /** Phase 2 anchor directory: every discovered anchor with its rails and status. */
+  anchors: () => request<{ anchors: AnchorSnapshot[] }>('/api/v1/anchors'),
+  /** Phase 2 route planner: scored candidates for a fiat leg, before any quote exists. */
+  routesPreview: (params: {
+    direction: 'withdraw' | 'deposit';
+    currency: string;
+    amount: string;
+    riskProfile?: number;
+    daysToTarget?: number;
+    requireExecutable?: boolean;
+  }) => {
+    const query = new URLSearchParams({
+      direction: params.direction,
+      currency: params.currency,
+      amount: params.amount,
+    });
+    if (params.riskProfile !== undefined) query.set('riskProfile', String(params.riskProfile));
+    if (params.daysToTarget !== undefined) query.set('daysToTarget', String(params.daysToTarget));
+    if (params.requireExecutable !== undefined) {
+      query.set('requireExecutable', params.requireExecutable ? 'true' : 'false');
+    }
+    return request<RouteDecision>(`/api/v1/routes/preview?${query.toString()}`);
+  },
 
   yieldStrategies: () => request<{ strategies: YieldStrategy[] }>('/api/v1/yield/strategies'),
   yieldPositions: (accountId: string) =>
