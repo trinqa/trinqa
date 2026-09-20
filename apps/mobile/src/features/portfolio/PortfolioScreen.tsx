@@ -368,6 +368,14 @@ export function PortfolioScreen() {
         </InsetLayer>
       </Section>
 
+      {/* Below the numbers it comments on, and folded away until asked for. */}
+      <PortfolioRead
+        notes={notes}
+        width={contentWidth}
+        isExpanded={isReadExpanded}
+        onExpandedChange={setReadExpanded}
+      />
+
       <Section title="What changed" width={contentWidth}>
         <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
           {changes.length === 0 ? (
