@@ -6,14 +6,21 @@ import {
   font,
   foregroundStyle,
   frame,
+  symbolEffect,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, screenTokens, typography } from '@/theme';
+import { colors, motion, screenTokens, typography } from '@/theme';
 
 /**
  * The pull gesture is the nice way into Portfolio, but a gesture nobody is told
  * about is a feature nobody has. This says the gesture out loud and also works as
  * a plain button, so the screen is usable by someone who never discovers the drag.
+ *
+ * The chevron carries a periodic SF Symbol wiggle — the system's own animation, so
+ * it runs on the UI thread and costs no re-renders. `wiggle` rather than `bounce`
+ * because bounce scales the glyph, and the gesture being suggested is downward
+ * travel, not emphasis. It is deliberately slow and spaced out: enough to suggest
+ * the screen can be dragged, not enough to pull the eye off the balance below it.
  */
 export function PortfolioPullHint({ onPress }: { onPress: () => void }) {
   return (
@@ -32,7 +39,22 @@ export function PortfolioPullHint({ onPress }: { onPress: () => void }) {
           frame({ maxWidth: Infinity, height: screenTokens.portfolio.pullHintHeight }),
         ]}
       >
-        <Image systemName="arrow.down" size={typography.fine} color={colors.textSecondary} />
+        <Image
+          systemName="chevron.down"
+          size={typography.fine}
+          color={colors.action}
+          modifiers={[
+            symbolEffect(
+              { effect: 'wiggle', direction: 'down' },
+              {
+                options: {
+                  repeat: { delay: motion.pullHint.repeatDelay },
+                  speed: motion.pullHint.speed,
+                },
+              },
+            ),
+          ]}
+        />
         <Text
           modifiers={[
             font({ size: typography.footnote, weight: 'medium' }),
