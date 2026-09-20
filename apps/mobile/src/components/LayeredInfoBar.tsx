@@ -1,10 +1,12 @@
 import { Button, HStack, Image, Spacer, Text } from '@expo/ui/swift-ui';
 import {
   buttonStyle,
+  contentShape,
   font,
   foregroundStyle,
   frame,
   padding,
+  shapes,
 } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
@@ -58,6 +60,9 @@ export function LayeredInfoBar({
       modifiers={[
         padding({ horizontal: horizontalPadding }),
         frame({ maxWidth: Infinity, height }),
+        // The bar has no background of its own and a Spacer in the middle, so without a
+        // content shape only the two text runs would answer the Button's taps.
+        contentShape(shapes.rectangle()),
       ]}
     >
       <Image systemName={leadingSymbol} size={11} color={resolvedLeadingColor} />

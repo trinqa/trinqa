@@ -5,6 +5,7 @@ import {
   background,
   buttonStyle,
   clipShape,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -64,6 +65,9 @@ function SourceSelectionRow({
         modifiers={[
           padding({ horizontal: row.horizontalPadding }),
           frame({ width: screenTokens.addMoney.contentWidth, height: row.height }),
+          // The card chrome sits on the Button, not on this stack, so without a content shape
+          // the Spacer and the padding swallow taps and only the text/icons are hit-tested.
+          contentShape(shapes.roundedRectangle({ cornerRadius: row.radius })),
         ]}
       >
         <ZStack

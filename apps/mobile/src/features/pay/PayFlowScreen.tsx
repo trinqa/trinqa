@@ -16,6 +16,7 @@ import {
 import {
   background,
   buttonStyle,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -194,6 +195,9 @@ function RecipientRow({
         modifiers={[
           padding({ horizontal: row.horizontalPadding }),
           frame({ width: screenTokens.paymentFlow.contentWidth, height: row.height }),
+          // The card chrome sits on the Button, not on this stack, so without a content shape
+          // the Spacer and the padding swallow taps and only the text/icons are hit-tested.
+          contentShape(shapes.roundedRectangle({ cornerRadius: row.radius })),
         ]}
       >
         <ZStack
@@ -251,7 +255,16 @@ function PaymentMethodButton({
         ...cardChromeModifiers(componentTokens.surface.controlRadius),
       ]}
     >
-      <VStack alignment="center" spacing={7} modifiers={[frame({ width, height: payment.methodHeight })]}>
+      <VStack
+        alignment="center"
+        spacing={7}
+        modifiers={[
+          frame({ width, height: payment.methodHeight }),
+          // The card chrome is on the Button, so the gap around the icon and label is
+          // transparent to hit-testing until the tile declares its own content shape.
+          contentShape(shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius })),
+        ]}
+      >
         <Image systemName={symbol} size={19} color={colors.textPrimary} />
         <Text
           modifiers={[

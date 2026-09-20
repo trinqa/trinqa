@@ -30,6 +30,14 @@
       "./plugins/withSceneLifecycle",
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#08AFD3",
+          "defaultChannel": "default"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
@@ -41,6 +49,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bca104c4-e984-41ed-a256-51afd2b3faa6"
+      }
+    },
+    "owner": "cengizhankose"
   }
 }

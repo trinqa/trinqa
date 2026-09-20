@@ -145,25 +145,30 @@ export async function refreshLedger() {
   });
 }
 
-export async function bootstrapAccount() {
-  // Design/offline mode short-circuits the backend so screens render from fixtures.
-  // Capabilities are seeded as healthy too, otherwise every screen shows a provider
-  // warning that is about the missing backend rather than about the design.
+/**
+ * Resolves the device's account, then returns its id so callers can act on it.
+ *
+ * Design/offline mode short-circuits the backend so screens render from fixtures.
+ * Capabilities are seeded as healthy too, otherwise every screen shows a provider
+ * warning that is about the missing backend rather than about the design.
+ */
+export async function bootstrapAccount(): Promise<string> {
   if (isOfflineDemo()) {
+    // Matches what a real bootstrap produces. The flow screens present the USDC
+    // ledger as USD, so an offline account on TRY would show one currency on the
+    // tabs and another inside the flows — a mismatch belonging to the seed, not
+    // to the design.
+    const account = { ...mockAccountIdentity, displayCurrency: 'USD' as const, ledgerAsset: 'USDC' as const };
     emit({
       ...state,
-      // Matches what a real bootstrap produces. The flow screens present the USDC
-      // ledger as USD, so an offline account on TRY would show one currency on the
-      // tabs and another inside the flows — a mismatch belonging to the seed, not
-      // to the design.
-      account: { ...mockAccountIdentity, displayCurrency: 'USD', ledgerAsset: 'USDC' },
+      account,
       balances: mockInitialBalances,
       strategy: mockInitialStrategy,
       transactions: mockInitialTransactions,
       capabilities: offlineCapabilities,
       backendError: null,
     });
-    return;
+    return account.id;
   }
 
   const health = await api.health();
@@ -190,6 +195,7 @@ export async function bootstrapAccount() {
     backendError: null,
   });
   await refreshLedger();
+  return accountId;
 }
 
 function addTransaction(transaction: Transaction) {

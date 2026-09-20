@@ -1,9 +1,13 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { useNotificationTaps } from '@/features/notifications/useNotifications';
 import { colors, motion } from '@/theme';
 
 export default function RootLayout() {
+  // The root layout mounts once, so the notification listeners live here.
+  useNotificationTaps();
+
   return (
     <>
       <StatusBar style="dark" />

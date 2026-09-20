@@ -22,6 +22,10 @@ Returns are not guaranteed.
 
 ## Product
 
-- [Trinqa](https://www.trinqa.com/): Official product website
-- [Product overview](https://www.trinqa.com/product.md): Machine-readable product definition
-- [FAQ](https://www.trinqa.com/faq.md): Machine-readable product FAQ
+- [Trinqa](https://trinqa.com/): Official product website
+- [Product overview](https://trinqa.com/product.md): Machine-readable product definition
+- [FAQ](https://trinqa.com/faq.md): Machine-readable product FAQ
+
+## Writing
+
+- [Jev gets a vote, not a veto](https://trinqa.com/writing/jev-a-vote-not-a-veto/): How Trinqa uses Jev, TypeSafe's structured decision model, to advise on payout route selection — five of seven scoring factors, gated on confidence, with deterministic cost and speed and a deterministic fallback.

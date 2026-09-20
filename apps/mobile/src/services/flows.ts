@@ -10,7 +10,12 @@ import {
   signXdr,
   stellarAmount,
 } from '@/services/session';
-import type { AnchorQuote, BackendCapabilities, PaymentQuoteResponse } from '@/services/types';
+import type {
+  AnchorQuote,
+  BackendCapabilities,
+  PaymentQuoteResponse,
+  YieldStrategy,
+} from '@/services/types';
 import { refreshLedger } from '@/state/mockAppState';
 import type { PutToWorkHorizonId, PutToWorkRiskId } from '@/types';
 
@@ -305,6 +310,23 @@ export async function executePutToWork(params: {
   onStage?: (stage: PutToWorkStage) => void;
 }): Promise<{ deposited: boolean }> {
   const stage = (next: PutToWorkStage) => params.onStage?.(next);
+  const canEarn = !earnUnavailable(params.capabilities);
+
+  // Pick the strategy before writing the policy: the contract only lets money into
+  // strategies the policy allows, so an empty allowlist denies our own deposit.
+  let strategy: YieldStrategy | undefined;
+  if (canEarn) {
+    const { strategies } = await api.yieldStrategies();
+    strategy = strategies[0];
+    if (!strategy) {
+      throw new BackendApiError(
+        'ADAPTER_UNAVAILABLE',
+        earnUnavailableReason(params.capabilities),
+        503,
+      );
+    }
+  }
+
   stage('policy');
   const builtPolicy = await api.policyBuild({
     action: 'set_policy',
@@ -314,7 +336,7 @@ export async function executePutToWork(params: {
       targetTimestamp: targetTimestamp(params.horizon, params.targetDate),
       liquidityTargetBps: params.risk === 'stable' ? 1000 : params.risk === 'growth' ? 5000 : 3000,
       automationPaused: false,
-      allowedStrategies: [],
+      allowedStrategies: strategy ? [strategy.id] : [],
     },
   });
   const signedPolicy = await signXdr(builtPolicy.unsignedXdr);
@@ -323,22 +345,13 @@ export async function executePutToWork(params: {
     throw new BackendApiError('POLICY_FAILED', 'Policy submit failed', 502);
   }
 
-  if (earnUnavailable(params.capabilities)) {
+  if (!strategy) {
     await refreshLedgerQuietly();
     return { deposited: false };
   }
 
   stage('depositing');
-  const { strategies } = await api.yieldStrategies();
-  const strategy = strategies[0];
-  if (!strategy) {
-    throw new BackendApiError(
-      'ADAPTER_UNAVAILABLE',
-      earnUnavailableReason(params.capabilities),
-      503,
-    );
-  }
-  // The build simulates the policy contract, so the user's own policy can refuse it here.
+  // The build simulates the policy contract, so a policy written elsewhere can still refuse it.
   const builtDeposit = await api
     .yieldDepositBuild({
       accountId: params.accountId,

@@ -16,6 +16,7 @@ import {
   background,
   buttonStyle,
   clipShape,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -392,7 +393,16 @@ function NetworkStep({
               strokeBorder({ content: colors.borderStrong, style: { lineWidth: 0.5 }, shape: 'roundedRectangle', cornerRadius: 14 }),
             ]}
           >
-            <HStack spacing={12} modifiers={[padding({ horizontal: 14 }), frame({ maxWidth: Infinity })]}>
+            <HStack
+              spacing={12}
+              modifiers={[
+                padding({ horizontal: 14 }),
+                frame({ maxWidth: Infinity }),
+                // The card chrome is on the Button, so the Spacer between the name and the
+                // chevron is transparent to hit-testing without a content shape here.
+                contentShape(shapes.rectangle()),
+              ]}
+            >
               <Image systemName="network" size={17} color={colors.textPrimary} />
               <Text modifiers={[font({ size: typography.body, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
                 {network.displayName}

@@ -14,10 +14,13 @@ import { fundRecipientWithUsdcTrustline } from './lib/recipient-usdc-trustline.t
 import { env } from '../backend/src/config/env.js';
 import { StellarService } from '../backend/src/services/stellar.service.js';
 
-const TOTAL = 9;
+const TOTAL = 10;
 const BASE_URL = (process.env.SMOKE_BASE_URL ?? 'http://127.0.0.1:8787').replace(/\/+$/, '');
 const DEMO_TOKEN = process.env.SMOKE_DEMO_TOKEN;
 const TRY_WITHDRAW_DEST = 'TR890009903460061605055303';
+// The mock anchor drains its payout queue in bursts, so a transfer can sit in
+// `pending_anchor` far longer than a healthy anchor would take.
+const TRANSFER_TIMEOUT_MS = Number(process.env.SMOKE_TRANSFER_TIMEOUT_MS ?? 120_000);
 
 type Json = Record<string, any>;
 
@@ -53,7 +56,7 @@ const sign = async (unsignedXdr: string) =>
 
 async function pollTransfer(sessionId: string, transferId: string, operationId?: string) {
   const started = Date.now();
-  while (Date.now() - started < 120_000) {
+  while (Date.now() - started < TRANSFER_TIMEOUT_MS) {
     const qs = new URLSearchParams({ sessionId, ...(operationId ? { operationId } : {}) });
     const { transfer } = await call(`/api/v1/anchor/transfers/${encodeURIComponent(transferId)}?${qs}`);
     const status = transfer?.transaction?.status;
@@ -113,6 +116,12 @@ async function main() {
     await pollTransfer(sessionId, deposit.session.id, deposit.operationId);
     pass('Add money: TRY → USDC (SEP-38 + SEP-6)', `+${depositQuote.buy_amount} USDC`);
 
+    // Allowlist the strategy the next stage deposits into. An empty allowlist makes the
+    // contract deny our own deposit with StrategyNotAllowed, which is what Put to Work hit.
+    const { strategies } = await call('/api/v1/yield/strategies');
+    const strategy = strategies?.[0];
+    if (!strategy) throw new Error('No yield strategy available');
+
     const policy = await call('/api/v1/policy/build', {
       body: {
         action: 'set_policy',
@@ -122,13 +131,25 @@ async function main() {
           targetTimestamp: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
           liquidityTargetBps: 3000,
           automationPaused: false,
-          allowedStrategies: [],
+          allowedStrategies: [strategy.id],
         },
       },
     });
     const policyTx = await call('/api/v1/policy/submit', { body: { signedXdr: await sign(policy.unsignedXdr) } });
     if (!policyTx.successful) throw new Error('Policy submit not successful');
     pass('Policy contract write', policyTx.hash);
+
+    const yieldDeposit = await call('/api/v1/yield/deposits/build', {
+      body: { accountId: account, strategyId: strategy.id, amount: '1.0000000' },
+    });
+    const yieldExecuted = await call('/api/v1/yield/execute', {
+      body: {
+        operationId: yieldDeposit.operationId,
+        signedXdr: await sign(yieldDeposit.unsignedXdr),
+      },
+    });
+    if (!yieldExecuted.successful) throw new Error('Yield deposit not successful');
+    pass('Put to work: policy allows the strategy it funds', yieldExecuted.txHash);
 
     const stellar = new StellarService(env);
     const recipient = stellar.createRandomKeypair();

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Jev in production: a vote, not a veto | Trinqa</title>
+<meta name="description" content="How Trinqa uses Jev, TypeSafe's System One decision model, to help choose a Stellar payout route: Jev advises on 5 of 7 scoring factors, cost and speed stay arithmetic, and a confidence gate, a timeout and named fallbacks overrule it." />
+<link rel="canonical" href="https://trinqa.com/writing/jev-a-vote-not-a-veto/" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="author" content="Trinqa" />
+
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Trinqa" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:title" content="Jev gets a vote, not a veto" />
+<meta property="og:description" content="Jev advises on 5 of Trinqa's 7 payout-routing factors. It never touches the arithmetic, the weights, or the money — here is every way it gets overruled." />
+<meta property="og:url" content="https://trinqa.com/writing/jev-a-vote-not-a-veto/" />
+<meta property="og:image" content="https://trinqa.com/assets/writing/jev-cover.png" />
+<meta property="og:image:width" content="2400" />
+<meta property="og:image:height" content="1260" />
+<meta property="og:image:alt" content="Jev gets a vote, not a veto — 5 of 7 scoring factors the model may advise on, with cost and speed computed in code." />
+<meta property="article:published_time" content="2026-09-20T09:00:00+03:00" />
+<meta property="article:section" content="Engineering" />
+<meta property="article:tag" content="Jev" />
+<meta property="article:tag" content="TypeSafe AI" />
+<meta property="article:tag" content="Stellar" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Jev gets a vote, not a veto" />
+<meta name="twitter:description" content="Jev advises on 5 of Trinqa's 7 payout-routing factors. It never touches the arithmetic, the weights, or the money." />
+<meta name="twitter:image" content="https://trinqa.com/assets/writing/jev-cover.png" />
+<meta name="twitter:image:alt" content="Jev gets a vote, not a veto — 5 of 7 scoring factors the model may advise on." />
+
+<link rel="icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/assets/icon-180.png" />
+<link rel="manifest" href="/site.webmanifest" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BlogPosting",
+      "headline": "Jev gets a vote, not a veto: how Trinqa chooses a payout route",
+      "alternativeHeadline": "Jev in production: a vote, not a veto",
+      "description": "How Trinqa uses Jev, TypeSafe's System One decision model, to help choose a Stellar payout route \u2014 and every way the model is overruled.",
+      "datePublished": "2026-09-20T09:00:00+03:00",
+      "dateModified": "2026-09-20T11:00:00+03:00",
+      "inLanguage": "en",
+      "articleSection": "Engineering",
+      "keywords": "Jev, TypeSafe AI, System One model, structured decisions, payout routing, Stellar anchors, confidence gating",
+      "author": { "@type": "Organization", "name": "Trinqa", "url": "https://trinqa.com" },
+      "publisher": { "@type": "Organization", "name": "Trinqa", "url": "https://trinqa.com" },
+      "mainEntityOfPage": "https://trinqa.com/writing/jev-a-vote-not-a-veto/",
+      "image": "https://trinqa.com/assets/writing/jev-cover.png",
+      "about": [
+        { "@type": "SoftwareApplication", "name": "Jev", "applicationCategory": "Decision model", "creator": { "@type": "Organization", "name": "TypeSafe AI" } }
+      ],
+      "citation": [
+        "https://typesafe.ai/blog/introducing-system-one-models-and-jev",
+        "https://docs.typesafe.ai/introduction",
+        "https://docs.typesafe.ai/model-jaggedness/jev-1.13"
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Trinqa", "item": "https://trinqa.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Writing", "item": "https://trinqa.com/writing/jev-a-vote-not-a-veto/" },
+        { "@type": "ListItem", "position": 3, "name": "Jev gets a vote, not a veto" }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+:root{
+  --bg:#efefef;
+  --fg:#232323;
+  --muted:rgba(35,35,35,.62);
+  --faint:rgba(35,35,35,.42);
+  --card:#fff;
+  --line:rgba(35,35,35,.12);
+  --dark:#111;
+  --font:-apple-system,system-ui,"SF Pro Text","SF Pro Display","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);
+  font-size:17px;line-height:1.62;letter-spacing:-.011em;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── Header: the same pill group as the homepage ── */
+.hdr{position:sticky;top:0;z-index:50;padding:12px 16px;background:linear-gradient(var(--bg) 62%,rgba(239,239,239,0));}
+.hdr-in{max-width:760px;margin:0 auto;display:flex;align-items:stretch;gap:8px}
+.pill{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:999px;padding:10px 15px;
+  font-size:14px;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.pill a{color:var(--fg);text-decoration:none;white-space:nowrap}
+.pill a:hover{opacity:.62}
+.pill--logo{padding:10px 14px}
+.pill--logo img{height:22px;width:22px;object-fit:contain;display:block}
+.pill--cta{background:var(--dark);color:#fff;cursor:pointer;border:0;font:inherit;font-weight:500}
+.pill--cta:hover{opacity:.88}
+.hdr-spacer{flex:1}
+
+/* ── Article ── */
+main{max-width:760px;margin:0 auto;padding:24px 16px 96px}
+.kicker{font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--faint);text-transform:uppercase;margin:24px 0 12px}
+h1{font-size:clamp(32px,6.4vw,46px);font-weight:700;line-height:1.08;letter-spacing:-.032em;margin:0 0 16px}
+.standfirst{font-size:19px;line-height:1.55;color:var(--muted);margin:0 0 22px;max-width:36em}
+.byline{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:14px;color:var(--faint);
+  padding-bottom:26px;border-bottom:1px solid var(--line);margin-bottom:34px}
+h2{font-size:clamp(23px,3.6vw,27px);font-weight:700;letter-spacing:-.022em;line-height:1.22;margin:46px 0 14px}
+h3{font-size:18px;font-weight:650;letter-spacing:-.014em;margin:30px 0 10px}
+p{margin:0 0 18px}
+main a{color:var(--fg);text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(35,35,35,.3)}
+main a:hover{text-decoration-color:var(--fg)}
+ul,ol{margin:0 0 18px;padding-left:22px}
+li{margin:0 0 9px}
+li::marker{color:var(--faint)}
+strong{font-weight:650}
+code{font-family:var(--mono);font-size:.88em;background:rgba(35,35,35,.07);padding:.12em .36em;border-radius:5px}
+pre{background:var(--dark);color:#f2f2f2;border-radius:14px;padding:16px 18px;overflow-x:auto;
+  font-family:var(--mono);font-size:13px;line-height:1.62;margin:0 0 22px;letter-spacing:0}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+
+.card{background:var(--card);border-radius:18px;padding:20px 22px;margin:0 0 24px}
+.card p:last-child,.card ul:last-child{margin-bottom:0}
+.card-title{font-size:14px;font-weight:650;letter-spacing:-.01em;margin:0 0 10px}
+
+table{width:100%;border-collapse:collapse;margin:0 0 24px;font-size:15px;background:var(--card);
+  border-radius:18px;overflow:hidden}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:650;font-size:13px;letter-spacing:.01em;color:var(--muted)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-size:13px;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;white-space:nowrap}
+.tag--det{background:rgba(35,35,35,.09);color:var(--muted)}
+.tag--adv{background:var(--dark);color:#fff}
+
+/* ── Figures: the two data colours are an emphasis pair (accent + de-emphasis
+   gray), validated on this surface: CVD ΔE 16.2, normal-vision ΔE 16.6,
+   both above 3:1 contrast. Identity is never colour alone — every figure
+   carries a legend and direct labels. ── */
+:root{--adv:#2a78d6;--det:#6f6f6f}
+figure{margin:0 0 30px}
+.fig{background:var(--card);border-radius:18px;padding:22px 22px 20px}
+.fig-title{font-size:14px;font-weight:650;letter-spacing:-.01em;margin:0 0 4px}
+.fig-sub{font-size:13.5px;line-height:1.5;color:var(--muted);margin:0 0 18px}
+figcaption{font-size:13.5px;line-height:1.55;color:var(--faint);margin-top:12px}
+.key{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:16px;font-size:13px;color:var(--muted)}
+.key span{display:flex;align-items:center;gap:7px}
+.key i{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+
+/* Pipeline: three stages, reflowing to a column on a phone. */
+.flow{display:flex;align-items:stretch;gap:8px}
+.flow-step{flex:1 1 0;min-width:0;background:var(--bg);border-radius:14px;padding:14px 15px}
+.flow-step .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:999px;background:var(--dark);color:#fff;font-size:11.5px;font-weight:650;margin-bottom:9px}
+.flow-step.is-model .n{background:var(--adv)}
+.flow-step h4{margin:0 0 5px;font-size:14.5px;font-weight:650;letter-spacing:-.012em}
+.flow-step p{margin:0;font-size:13px;line-height:1.48;color:var(--muted)}
+.flow-arrow{align-self:center;flex:0 0 auto;color:rgba(35,35,35,.28);font-size:15px;line-height:1}
+.flow-out{display:flex;gap:8px;margin-top:10px}
+.flow-out div{flex:1 1 0;font-size:12px;line-height:1.45;color:var(--faint);padding-left:11px;
+  border-left:2px solid rgba(35,35,35,.14)}
+.flow-out div.is-skip{border-left-color:var(--adv)}
+@media (max-width:640px){
+  .flow{flex-direction:column}
+  .flow-arrow{transform:rotate(90deg);align-self:flex-start;margin-left:18px}
+  .flow-out{flex-direction:column;gap:8px}
+}
+
+/* Weights: horizontal bars, square at the baseline, 4px rounded data-end. */
+.bars{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr) auto;gap:11px 12px;align-items:center}
+.bars .lbl{font-size:13.5px;letter-spacing:-.01em;white-space:nowrap}
+.bars .track{height:18px;display:flex;align-items:center}
+.bars .bar{height:18px;border-radius:2px 4px 4px 2px;min-width:3px}
+.bars .bar.adv{background:var(--adv)}
+.bars .bar.det{background:var(--det)}
+.bars .val{font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);text-align:right}
+.bars .sep{grid-column:1/-1;height:1px;background:var(--line);margin:3px 0}
+details.tbl{margin-top:16px}
+details.tbl summary{font-size:13px;color:var(--muted);cursor:pointer;list-style:none;
+  display:inline-flex;align-items:center;gap:6px}
+details.tbl summary::-webkit-details-marker{display:none}
+details.tbl summary::before{content:"\203A";display:inline-block;transition:transform .15s;font-size:15px}
+details.tbl[open] summary::before{transform:rotate(90deg)}
+details.tbl table{margin:12px 0 0;background:var(--bg)}
+@media (max-width:520px){
+  .bars{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px}
+  .bars .lbl{grid-column:1}
+  .bars .val{grid-column:2}
+  .bars .track{grid-column:1/-1;margin-bottom:6px}
+}
+
+/* Gates: what one answer has to survive before it counts. */
+.gates{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap}
+.gate{flex:1 1 150px;background:var(--bg);border-radius:12px;padding:12px 13px;border-top:2px solid var(--adv)}
+.gate .q{font-size:13px;font-weight:650;letter-spacing:-.01em;margin:0 0 4px}
+.gate .a{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0}
+.gate.is-end{border-top-color:var(--det)}
+.reasons{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.reasons code{font-size:11.5px;background:rgba(35,35,35,.07);padding:4px 8px;border-radius:6px}
+
+blockquote{margin:0 0 22px;padding:2px 0 2px 18px;border-left:2px solid rgba(35,35,35,.2);color:var(--muted)}
+blockquote p:last-child{margin-bottom:0}
+
+.endcta{background:var(--card);border-radius:22px;padding:28px 24px;text-align:center;margin:52px 0 0}
+.endcta h2{margin:0 0 8px;font-size:24px}
+.endcta p{color:var(--muted);margin:0 0 18px;font-size:16px}
+.btn{display:inline-block;background:var(--dark);color:#fff;border:0;border-radius:999px;
+  padding:13px 24px;font:inherit;font-size:15px;font-weight:550;cursor:pointer}
+.btn:hover{opacity:.88}
+footer{max-width:760px;margin:0 auto;padding:0 16px 56px;font-size:13px;color:var(--faint);
+  display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between}
+footer a{color:var(--faint)}
+.notes{font-size:14.5px;color:var(--muted)}
+.notes li{margin-bottom:7px}
+
+@media (max-width:520px){
+  body{font-size:16.5px}
+  .hdr-in{gap:6px}
+  .pill{padding:9px 13px;gap:12px;font-size:13.5px}
+  main{padding-top:16px}
+  th,td{padding:10px 12px}
+}
+
+/* ── Waitlist modal (same behaviour as the homepage) ── */
+#wl-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.62);padding:20px;opacity:0;pointer-events:none;transition:opacity .2s ease}
+#wl-overlay.wl-open{opacity:1;pointer-events:all}
+#wl-card{position:relative;background:#111;border:1px solid rgba(255,255,255,.1);border-radius:18px;
+  padding:26px 24px;width:100%;max-width:380px;transform:translateY(8px) scale(.98);transition:transform .2s ease}
+#wl-overlay.wl-open #wl-card{transform:translateY(0) scale(1)}
+#wl-close{position:absolute;top:14px;right:14px;width:26px;height:26px;border:0;border-radius:999px;
+  background:rgba(255,255,255,.08);color:#fff;font-size:17px;line-height:1;cursor:pointer}
+#wl-close:hover{background:rgba(255,255,255,.15)}
+#wl-body h2{all:unset;display:block;color:#fff;font-size:21px;font-weight:700;letter-spacing:-.01em;padding-right:34px}
+#wl-body>p{color:rgba(255,255,255,.52);font-size:14px;margin:8px 0 0;line-height:1.55}
+#wl-form{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.wl-input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;
+  padding:12px 14px;color:#fff;font:inherit;font-size:15px}
+.wl-input::placeholder{color:rgba(255,255,255,.35)}
+.wl-input:focus{outline:none;border-color:rgba(255,255,255,.3)}
+#wl-err{color:#ff5f5f;font-size:12px;line-height:1.4;display:none}
+#wl-submit{background:#fff;color:#000;border:0;border-radius:10px;padding:12px 16px;font:inherit;
+  font-size:15px;font-weight:600;cursor:pointer;margin-top:2px}
+#wl-submit:hover{opacity:.88}
+#wl-submit:disabled{opacity:.45;cursor:default}
+#wl-success{display:none;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:4px 0}
+#wl-success .wl-check{font-size:30px;line-height:1;color:#fff}
+#wl-success h3{all:unset;display:block;color:#fff;font-size:18px;font-weight:700}
+#wl-success p{color:rgba(255,255,255,.52);font-size:14px;margin-top:4px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="pill pill--logo"><a href="/" aria-label="Trinqa"><img src="/removed-bg-logo.png" alt="Trinqa" /></a></div>
+    <div class="pill"><a href="/">Home</a><a href="/#how-it-works">How it works</a></div>
+    <div class="hdr-spacer"></div>
+    <button class="pill pill--cta" data-wl-cta>Join waitlist</button>
+  </div>
+</header>
+
+<main>
+  <p class="kicker">Engineering</p>
+  <h1>Jev gets a vote, not a veto</h1>
+  <p class="standfirst">Trinqa asks <strong>Jev</strong> — TypeSafe’s System One decision model — which Stellar payout route looks better, and then ignores it whenever it is slow, unsure, or being asked to do arithmetic. Here is the whole arrangement: the three layers, the weights, and every way the model gets overruled.</p>
+  <div class="byline">
+    <span>Trinqa engineering</span>
+    <span>20 September 2026</span>
+    <span>9 min read</span>
+  </div>
+
+  <figure>
+    <img src="/assets/writing/jev-cover.png" width="2400" height="1260" alt="Jev gets a vote, not a veto — five of seven scoring factors are ones the model may advise on, while cost and speed are computed in code." style="width:100%;height:auto;display:block;border-radius:18px" />
+  </figure>
+
+  <p>When you move money out of Trinqa to a local bank account, something has to choose <em>how</em>. On Stellar that means picking an anchor — the business that takes stablecoin on one side and pays out local currency on the other — and a rail inside it. Several may be able to serve the same withdrawal, and they differ in ways that matter: published fees, minimum and maximum amounts, estimated settlement time, whether the anchor is answering health checks at all, and whether your identity checks have cleared there.</p>
+
+  <p>Some of that is arithmetic. Some of it is judgment. Our position is that those two should never be done by the same thing.</p>
+
+  <h2>Why not just ask an LLM</h2>
+
+  <p>The obvious move is to hand the candidate list to a general model and ask which is best. We did not want that, for three reasons.</p>
+
+  <p>A chat model answers in prose, so you have to parse the answer, and parsing can fail at the exact moment money is moving. It takes seconds when the user is watching a spinner. And most importantly, it makes a text generator the thing that decides where funds go, with no natural boundary around how much of that decision it owns. The interesting question was never "can a model pick a route" — it is <strong>how little</strong> of the decision a model needs in order to be useful.</p>
+
+  <h2>What Jev is</h2>
+
+  <p>Jev is TypeSafe's first "System One" model. It does not generate text. You give it a <em>state</em> and a set of named, typed questions, and it returns typed answers with calibrated probabilities and a confidence score. There are three question types: <code>choice</code> (pick one of these options), <code>score</code> (place this on a rubric), and <code>noul</code> (is this statement true, 0–1). Every question is evaluated in parallel against the same state in one call.</p>
+
+  <p>Because the answer is constrained to the shape you declared, a malformed or invented answer is not something you have to defend against — the model cannot return one. TypeSafe reports end-to-end responses in the 70–500 ms range, with input priced at $0.042 per million tokens and output unmetered. An independent write-up puts typical calls near 100 ms and makes the point we agree with: it is a component inside ordinary application code, not a thing that runs the workflow.</p>
+
+  <div class="card">
+    <p class="card-title">The shape of it</p>
+    <p>A traditional model gives you a paragraph you must interpret. Jev gives you a number you can compare, plus a confidence you can threshold on. That difference is what makes it safe to put near a payment — not that it is smarter, but that its output has edges.</p>
+  </div>
+
+  <h2>Three layers, in order</h2>
+
+  <p>Our route decision has exactly three stages, and the model appears in only one of them.</p>
+
+  <figure>
+    <div class="fig">
+      <p class="fig-title">Where Jev sits in a payout decision</p>
+      <p class="fig-sub">Candidates in on the left, one chosen route out on the right. Only the middle stage involves a model — and the decision completes whether or not that stage answers.</p>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="n">1</span>
+          <h4>Deterministic filter</h4>
+          <p>Drops routes that cannot serve this request — wrong currency, below the minimum, above the maximum, identity checks not cleared.</p>
+        </div>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-step is-model">
+          <span class="n">2</span>
+          <h4>Jev advises</h4>
+          <p>Scores five judgment factors on a rubric we wrote, each answer carrying its own confidence.</p>
+        </div>
+        <div class="flow-arrow" aria-hidden="true">→</div>
+        <div class="flow-step">
+          <span class="n">3</span>
+          <h4>Deterministic score</h4>
+          <p>Our weights, our arithmetic. Ranks what survived and picks the winner.</p>
+        </div>
+      </div>
+      <div class="flow-out">
+        <div>Rejected routes keep their reason and are shown as rejected, not hidden.</div>
+        <div class="is-skip">Stage 2 can be skipped entirely — stage 3 still produces a route.</div>
+      </div>
+    </div>
+    <figcaption>The model is a stage that may be missing, not a dependency the pipeline is built around.</figcaption>
+  </figure>
+
+  <h3>1. A deterministic filter</h3>
+
+  <p>Before anything is judged, routes that simply cannot serve the request are dropped, each with a recorded reason: the currency is not supported, withdrawals are not supported, the amount is below the minimum or above the maximum, the anchor is missing the connection we need, it is unavailable, identity checks have not cleared, or it is not in a state that can actually execute. These are facts about the request and the anchor's own published metadata. No judgment is involved, so no model is involved.</p>
+
+  <p>The reasons survive into the app. A route that was dropped is shown as dropped, with the clause that caused it — "caps payouts below this amount", "needs identity checks to be completed first" — rather than quietly disappearing from a list.</p>
+
+  <h3>2. Jev advises — on five factors out of seven</h3>
+
+  <p>Every surviving candidate is scored on seven factors, each 0–100, combined with fixed weights that sum to 100. Jev is allowed to influence five of them. It is never asked about the other two.</p>
+
+  <figure>
+    <div class="fig">
+      <p class="fig-title">The seven factors, and who produces each number</p>
+      <p class="fig-sub">Weights are fixed, sum to 100, and live in our code. Jev may influence five of them — never the two that are arithmetic.</p>
+      <div class="bars">
+        <div class="lbl">Cost</div>
+        <div class="track"><div class="bar det" style="width:100.0%"></div></div>
+        <div class="val">35</div>
+        <div class="lbl">Speed</div>
+        <div class="track"><div class="bar det" style="width:42.9%"></div></div>
+        <div class="val">15</div>
+        <div class="lbl">Reliability</div>
+        <div class="track"><div class="bar adv" style="width:42.9%"></div></div>
+        <div class="val">15</div>
+        <div class="lbl">Room under the limit</div>
+        <div class="track"><div class="bar adv" style="width:28.6%"></div></div>
+        <div class="val">10</div>
+        <div class="lbl">Fits your timing</div>
+        <div class="track"><div class="bar adv" style="width:28.6%"></div></div>
+        <div class="val">10</div>
+        <div class="lbl">Fits your risk setting</div>
+        <div class="track"><div class="bar adv" style="width:28.6%"></div></div>
+        <div class="val">10</div>
+        <div class="lbl">Effect on your earnings</div>
+        <div class="track"><div class="bar adv" style="width:14.3%"></div></div>
+        <div class="val">5</div>
+      </div>
+      <div class="key">
+        <span><i style="background:var(--det)"></i>Arithmetic, in our code — 50 points</span>
+        <span><i style="background:var(--adv)"></i>Jev may advise — 50 points</span>
+      </div>
+      <details class="tbl">
+        <summary>Show as a table</summary>
+        <table>
+          <thead><tr><th>Factor</th><th>Weight</th><th>Who produces it</th></tr></thead>
+          <tbody>
+          <tr><td>Cost</td><td class="num">35</td><td>Arithmetic, in our code</td></tr>
+          <tr><td>Speed</td><td class="num">15</td><td>Arithmetic, in our code</td></tr>
+          <tr><td>Reliability</td><td class="num">15</td><td>Jev may advise</td></tr>
+          <tr><td>Room under the limit</td><td class="num">10</td><td>Jev may advise</td></tr>
+          <tr><td>Fits your timing</td><td class="num">10</td><td>Jev may advise</td></tr>
+          <tr><td>Fits your risk setting</td><td class="num">10</td><td>Jev may advise</td></tr>
+          <tr><td>Effect on your earnings</td><td class="num">5</td><td>Jev may advise</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+    <figcaption>Cost and speed carry half the total weight between them, and neither is ever sent to the model.</figcaption>
+  </figure>
+
+  <p>Cost and speed are excluded on purpose. Cost is a fee percentage plus a fixed fee plus any spread in the quote, divided by the amount; speed is settlement minutes. That is arithmetic on published numbers, and TypeSafe's own guidance on Jev's rough edges is blunt about it: <em>keep the arithmetic in code</em>. The same page notes that this model's score levels are weak in numerical calibration and should not be used to interpolate exact values. So the two heaviest factors, carrying half the weight between them, are computed from fee schedules and estimated minutes and never leave our code.</p>
+
+  <p>What is left is the part that is genuinely judgment — how much to trust an anchor's health signal, whether the amount sits comfortably inside the limits, whether this route's pace suits someone who needs the money in four days rather than four weeks. Each is sent as a <code>score</code> question against a five-level rubric we wrote, lowest first:</p>
+
+<pre><code>"r0_liquidity": {
+  "type": "score",
+  "instructions": "Judge how comfortably the requested amount fits within
+                   this route's published rail limits (min/max), given in
+                   `state`. Do not perform the arithmetic comparison
+                   precisely yourself; give a qualitative judgment of
+                   headroom.",
+  "criteria": [
+    "Requested amount is far outside the published min/max limits.",
+    "Requested amount is close to a limit boundary, little headroom.",
+    "Fits within limits, but headroom is unclear or only moderate.",
+    "Comfortably fits within limits with good headroom.",
+    "Fits with ample headroom, well within both min and max."
+  ]
+}</code></pre>
+
+  <p>Note what the instruction says: do not do the comparison precisely, give a qualitative judgment. We are asking for the thing it is good at and explicitly waving it off the thing it is not. The answer comes back as a score on that rubric plus a confidence, and we normalise it to 0–100 using the legend the model returns when it has one, falling back to the rubric length we sent. When more than one route survives the filter we also ask a single <code>choice</code> question — which route would you recommend, on these judgment factors only — and use the answer for nothing but a line of rationale attached to the winner.</p>
+
+  <p>The state is deliberately thin — the request, and for each route only its name, status, estimated minutes, reliability signal, fee fields, and rail limits. TypeSafe documents that accuracy falls as unrelated detail accumulates in the state, because it acts as a distractor. So nothing goes in that a question does not need.</p>
+
+  <h3>3. Deterministic scoring, with our weights</h3>
+
+  <p>Whatever comes back, the final score is <code>Σ (weight × factor) / 100</code>, using weights that live in our code and are not in the request, not in the response, and not negotiable by the model. Jev can move five inputs. It cannot move the formula, and it cannot move what those inputs are worth.</p>
+
+  <h2>Every way the model gets overruled</h2>
+
+  <p>The interesting part of this design is not the call. It is everything around the call.</p>
+
+  <figure>
+    <div class="fig">
+      <p class="fig-title">What one answer has to survive to count</p>
+      <p class="fig-sub">Four gates, applied in order. Failing any of them costs that answer its influence — never the decision.</p>
+      <div class="gates">
+        <div class="gate">
+          <p class="q">Did it arrive in time?</p>
+          <p class="a">2.5s in the adapter, 3s on the whole call. A late answer is simply not there.</p>
+        </div>
+        <div class="gate">
+          <p class="q">Did it parse?</p>
+          <p class="a">Unknown or missing fields drop that route’s advice rather than throwing.</p>
+        </div>
+        <div class="gate">
+          <p class="q">Is confidence ≥ 0.6?</p>
+          <p class="a">Checked per factor, so one uncertain judgment does not discard the confident ones beside it.</p>
+        </div>
+        <div class="gate is-end">
+          <p class="q">Then it is used — and labelled</p>
+          <p class="a">The factor is marked <code>advisor</code>; everything else stays <code>deterministic</code>.</p>
+        </div>
+      </div>
+      <div class="reasons">
+        <code>timeout</code><code>low_confidence</code><code>invalid_output</code><code>error</code><code>disabled</code><code>no_routes</code>
+      </div>
+      <p class="fig-sub" style="margin:10px 0 0">Whichever gate closed, the decision records why in one of those six names, and scoring carries on without the advice.</p>
+    </div>
+    <figcaption>None of these gates can produce a worse outcome than not calling the model at all.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Confidence is a gate, not a decoration.</strong> A factor answered below 0.6 confidence is dropped, and the advice that is handed on carries the mean confidence of the factors that survived — so the route-level threshold reflects what is actually being used.</li>
+    <li><strong>A slow advisor loses its vote.</strong> The adapter times out at 2.5 seconds, the scorer races the whole call at 3. Nobody waits on a spinner because a model is thinking.</li>
+    <li><strong>Every failure has a name.</strong> When advice is not used, the decision records why: <code>timeout</code>, <code>low_confidence</code>, <code>invalid_output</code>, <code>error</code>, <code>disabled</code>, <code>no_routes</code>. The route still gets chosen — deterministically — and the reason is in the payload.</li>
+    <li><strong>Unknown fields drop advice, not requests.</strong> The response is parsed defensively; anything we do not recognise costs that route its advice instead of throwing.</li>
+    <li><strong>Every number is labelled by origin.</strong> Each scored route carries a per-factor source: <code>deterministic</code> or <code>advisor</code>. The app reads that and changes what it says about the number, so "a model judged this" and "we calculated this" are never shown as the same kind of claim.</li>
+    <li><strong>The advisor never signs anything.</strong> It returns scores. Execution is gated separately — by the policy contract and by your approval. There is no path from a model's answer to a signed transaction.</li>
+  </ul>
+
+  <p>Turn Jev off entirely and Trinqa still picks a route. That is the test we held the design to: the model is an improvement to a system that works without it, not a dependency the system is built around.</p>
+
+  <h2>What we are not claiming</h2>
+
+  <div class="card">
+    <p class="card-title">Honest limits</p>
+    <ul class="notes">
+      <li>This runs on testnet today. The route planner, the advisor and the anchor directory are live in the build; real money is not.</li>
+      <li>Our own baseline for timing fit and risk fit is neutral unless the app sends a target date and a risk setting, and the earnings-impact factor is not measured on our side at all. Those three carry 25 points of weight on a signal that is, for now, thinner than the weight suggests.</li>
+      <li>We have not benchmarked Jev against a general model on our own labelled route decisions. TypeSafe's calibration claims are theirs, and the honest position is that calibrated probabilities need validating against your own data before you lean on them.</li>
+      <li>Jev 1.13 has documented rough edges beyond arithmetic: dates read as text rather than ordered quantities, sensitivity to double negatives and indirection, and no adversarial reading of its own state. We designed around the ones that touch us and wrote the instructions as directly as we could.</li>
+    </ul>
+  </div>
+
+  <h2>The general shape</h2>
+
+  <p>Strip out the anchors and the stablecoins and there is a pattern here that has nothing to do with payments.</p>
+
+  <p>Decide first which parts of a decision are arithmetic and which are judgment. Compute the arithmetic. For the judgment, ask a model questions with edges — a rubric, an enumerated choice, a boolean — instead of asking for an opinion in prose. Take a confidence score with each answer and set a threshold you are willing to defend. Keep the weights. Put a timeout on the whole thing. Record why you ignored it when you did. Then label, in whatever you show the user, which numbers a model touched.</p>
+
+  <p>None of that requires trusting the model. That is the point: we would rather build something whose correctness does not depend on the model being right, and then let a model make it better.</p>
+
+  <div class="endcta">
+    <h2>Trinqa is in early access</h2>
+    <p>Money that keeps working until you need it. Join the waitlist and we will reach out when your spot is ready.</p>
+    <button class="btn" data-wl-cta>Join the waitlist &rarr;</button>
+  </div>
+
+  <h2>Sources</h2>
+  <ul class="notes">
+    <li><a href="https://typesafe.ai/blog/introducing-system-one-models-and-jev" rel="noopener">TypeSafe AI — Introducing System One Models &amp; Jev</a> (latency, pricing, what a System One model is)</li>
+    <li><a href="https://docs.typesafe.ai/introduction" rel="noopener">TypeSafe AI docs — Introduction</a> (the choice / score / noul question types, confidence versus probability)</li>
+    <li><a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13" rel="noopener">TypeSafe AI docs — Jev 1.13 jaggedness</a> ("keep the arithmetic in code", distractors, indirection, numeric calibration)</li>
+    <li><a href="https://flaviocopes.com/jev/" rel="noopener">Flavio Copes — A deep dive into Jev</a> (independent latency and cost figures, and where it fits next to an LLM)</li>
+  </ul>
+</main>
+
+<footer>
+  <span>&copy; 2026 Trinqa</span>
+  <span><a href="/">trinqa.com</a> &middot; <a href="/llms.txt">llms.txt</a></span>
+</footer>
+
+<div id="wl-overlay" role="dialog" aria-modal="true" aria-label="Join the Trinqa waitlist">
+  <div id="wl-card">
+    <button id="wl-close" aria-label="Close">&times;</button>
+    <div id="wl-body">
+      <h2>Get early access</h2>
+      <p>Be among the first to put idle money to work with Trinqa.</p>
+      <form id="wl-form" novalidate>
+        <input class="wl-input" id="wl-name" type="text" placeholder="Your name (optional)" autocomplete="name" />
+        <input class="wl-input" id="wl-email" type="email" placeholder="your@email.com" autocomplete="email" required />
+        <div id="wl-err"></div>
+        <button type="submit" id="wl-submit">Join the waitlist &rarr;</button>
+      </form>
+    </div>
+    <div id="wl-success">
+      <div class="wl-check">&#10003;</div>
+      <h3>You're on the list!</h3>
+      <p>We'll email you as soon as your spot is ready. Stay tuned.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Production talks to the deployed API; only a local page talks to a local backend.
+  var API_ORIGIN = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8787'
+    : 'https://api.trinqa.com';
+  var BACKEND = API_ORIGIN + '/api/v1/waitlist';
+
+  var overlay = document.getElementById('wl-overlay');
+  var closeBtn = document.getElementById('wl-close');
+  var form = document.getElementById('wl-form');
+  var submitBtn = document.getElementById('wl-submit');
+  var errDiv = document.getElementById('wl-err');
+  var successDiv = document.getElementById('wl-success');
+  var bodyDiv = document.getElementById('wl-body');
+
+  function openModal(e){
+    if(e) e.preventDefault();
+    overlay.classList.add('wl-open');
+    document.getElementById('wl-email').focus();
+  }
+  function closeModal(){ overlay.classList.remove('wl-open'); }
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-wl-cta]'), function(el){
+    el.addEventListener('click', openModal);
+  });
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal(); });
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var email = document.getElementById('wl-email').value.trim();
+    var name = document.getElementById('wl-name').value.trim();
+    errDiv.style.display = 'none';
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      errDiv.textContent = 'Please enter a valid email address.';
+      errDiv.style.display = 'block';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Joining…';
+    fetch(BACKEND, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email: email, name: name || undefined, source: 'article-jev' })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data && data.success){
+        bodyDiv.style.display = 'none';
+        successDiv.style.display = 'flex';
+      } else {
+        throw new Error(data && data.error ? data.error : 'Something went wrong');
+      }
+    })
+    .catch(function(err){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Join the waitlist →';
+      errDiv.textContent = err && err.message ? err.message : 'Could not connect. Please try again.';
+      errDiv.style.display = 'block';
+    });
+  });
+})();
+</script>
+</body>
+</html>

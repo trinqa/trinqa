@@ -1,0 +1,75 @@
+/* hero section motion — see README.md for the contract.
+ *
+ * Scope: #hero headline/lead/CTAs, the ambient hero background, and the
+ * fixed header/nav above it. Everything below is gated behind `.tq-motion`
+ * (added by motion.js only once it can actually run — see rule 1 in
+ * README.md) and lives inside a `prefers-reduced-motion: no-preference`
+ * query, so a reduced-motion viewer or a no-JS viewer both get the page in
+ * its finished, fully visible state with zero animation.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* --- Header / nav: first-paint entrance, alongside the headline ------- */
+  .tq-motion header {
+    animation: tq-hero-rise 420ms var(--tq-ease-out) both;
+  }
+
+  /* --- Hero copy: staged entrance — headline, then lead, then CTAs ------ */
+  .tq-motion #hero h1 {
+    animation: tq-hero-rise 480ms var(--tq-ease-out) 40ms both;
+  }
+
+  .tq-motion #hero p.lead-style {
+    animation: tq-hero-rise 460ms var(--tq-ease-out) 170ms both;
+  }
+
+  .tq-motion #hero a[href="index.html"] {
+    animation: tq-hero-rise 380ms var(--tq-ease-out) 300ms both;
+  }
+
+  .tq-motion #hero a[href="#how-it-works"] {
+    animation: tq-hero-rise 380ms var(--tq-ease-out) 350ms both;
+  }
+
+  @keyframes tq-hero-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 14px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* --- Ambient background: quiet drift, never a hard loop --------------- */
+  .tq-motion #hero::before {
+    animation: tq-hero-drift 26s var(--tq-ease) infinite alternate;
+  }
+
+  @keyframes tq-hero-drift {
+    0% {
+      opacity: 0.4;
+      transform: translate3d(-1.4%, -0.8%, 0) scale(1);
+    }
+    100% {
+      opacity: 0.6;
+      transform: translate3d(1.4%, 1.2%, 0) scale(1.04);
+    }
+  }
+}
+
+/* Static base for the ambient blob: a plain, motionless gradient when there
+ * is no JS, no IntersectionObserver, or reduced motion is requested. #hero
+ * is already `position: relative` with its own stacking context (`z-0`), so
+ * `z-index: -1` keeps this behind every real child without touching layout. */
+#hero::before {
+  content: "";
+  position: absolute;
+  inset: -8% -4% auto -4%;
+  height: 62%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(60% 60% at 50% 35%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0) 72%);
+  opacity: 0.5;
+}

@@ -1,0 +1,77 @@
+/*
+ * Trinqa motion layer — shared foundation.
+ *
+ * The landing is a static export whose React runtime never hydrates, so every
+ * animation here is plain CSS driven by `motion.js`. Section modules build on
+ * these tokens and utilities; they must not redefine them.
+ *
+ * Contract: nothing is hidden until `motion.js` marks the document. If the
+ * script fails to load, the page renders exactly as it does today.
+ */
+
+:root {
+  /* The site's own easing and duration, taken from the existing FAQ script. */
+  --tq-ease: cubic-bezier(0.7, 0, 0, 1);
+  --tq-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --tq-dur-fast: 260ms;
+  --tq-dur: 500ms;
+  --tq-dur-slow: 760ms;
+  --tq-stagger: 70ms;
+  /* Reveals travel a short distance; anything larger reads as a page jump. */
+  --tq-rise: 18px;
+}
+
+/* --- Reveal ------------------------------------------------------------- */
+
+.tq-motion [data-tq-reveal] {
+  opacity: 0;
+  transform: translate3d(0, var(--tq-rise), 0);
+  transition:
+    opacity var(--tq-dur) var(--tq-ease-out),
+    transform var(--tq-dur) var(--tq-ease-out);
+  transition-delay: var(--tq-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.tq-motion [data-tq-reveal="fade"] {
+  transform: none;
+}
+
+.tq-motion [data-tq-reveal="left"] {
+  transform: translate3d(calc(var(--tq-rise) * -1), 0, 0);
+}
+
+.tq-motion [data-tq-reveal="right"] {
+  transform: translate3d(var(--tq-rise), 0, 0);
+}
+
+.tq-motion [data-tq-reveal="scale"] {
+  transform: translate3d(0, var(--tq-rise), 0) scale(0.97);
+}
+
+.tq-motion [data-tq-reveal].tq-in {
+  opacity: 1;
+  transform: none;
+  /* A finished element should stop claiming a compositor layer. */
+  will-change: auto;
+}
+
+/* --- Accessibility and no-JS -------------------------------------------- */
+
+/*
+ * Two safety nets: a viewer who asked for less motion, and a viewer whose
+ * browser never ran motion.js. Both see the finished state immediately.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .tq-motion [data-tq-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+.tq-motion-off [data-tq-reveal] {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
