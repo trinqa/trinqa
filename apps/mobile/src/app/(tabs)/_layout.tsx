@@ -22,7 +22,11 @@ export default function TabLayout() {
 
       <NativeTabs.Trigger name="activity">
         <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} />
+        {/* Activity is a history list, not a second chart. Earn already owns the
+            uptrend glyph, and two chart icons side by side told the user nothing. */}
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'list.bullet', selected: 'list.bullet' }}
+        />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

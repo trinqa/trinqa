@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { useWindowDimensions } from 'react-native';
+
 import { Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
 import { font, foregroundStyle, frame, padding } from '@expo/ui/swift-ui/modifiers';
 import { useRouter } from 'expo-router';
@@ -23,6 +25,7 @@ import type { EarnSegment, Transaction } from '@/types';
 
 export function EarnScreen() {
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
   const { account, balances, strategy, transactions, capabilities } = useMockAppState();
   const providerBlocked = earnUnavailable(capabilities);
   const [segment, setSegment] = useState<EarnSegment>('earnings');
@@ -57,8 +60,11 @@ export function EarnScreen() {
     { id: 'risk', label: 'How risky', value: profile.riskLabel },
   ];
   const earn = screenTokens.earn;
-  // Three equal cards that fill the (device-scaled) content width.
-  const metricWidth = Math.floor((earn.contentWidth - earn.metricGap * 2) / 3);
+  // One content width for the whole screen. The chart, the metrics and the lower
+  // panel used to be 350, 350 and 374 wide at three different offsets, which put
+  // three left edges on one screen.
+  const contentWidth = windowWidth - spacing.screenHorizontal * 2;
+  const metricWidth = Math.floor((contentWidth - earn.metricGap * 2) / 3);
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
@@ -71,8 +77,7 @@ export function EarnScreen() {
         spacing={4}
         modifiers={[
           padding({ top: earn.headlineTopGap }),
-          padding({ leading: earn.contentHorizontalOffset }),
-          frame({ width: earn.contentWidth, alignment: 'leading' }),
+          frame({ width: contentWidth, alignment: 'leading' }),
         ]}
       >
         <Text
@@ -105,8 +110,8 @@ export function EarnScreen() {
 
       <VStack
         modifiers={[
-          padding({ top: earn.chartTopGap, leading: earn.contentHorizontalOffset }),
-          frame({ width: earn.contentWidth }),
+          padding({ top: earn.chartTopGap }),
+          frame({ width: contentWidth }),
         ]}
       >
         <ActivityChart points={earnChartPoints} />
@@ -115,8 +120,8 @@ export function EarnScreen() {
       <HStack
         spacing={earn.metricGap}
         modifiers={[
-          padding({ top: earn.metricTopGap, leading: earn.contentHorizontalOffset }),
-          frame({ width: earn.contentWidth }),
+          padding({ top: earn.metricTopGap }),
+          frame({ width: contentWidth }),
         ]}
       >
         {metrics.map((metric) => (
@@ -130,7 +135,7 @@ export function EarnScreen() {
       </HStack>
 
       {providerBlocked ? (
-        <Group modifiers={[padding({ top: spacing.row, leading: earn.contentHorizontalOffset })]}>
+        <Group modifiers={[padding({ top: spacing.row })]}>
           <FlowInlineState
             symbol="exclamationmark.triangle"
             title="Earn unavailable"
@@ -139,12 +144,13 @@ export function EarnScreen() {
         </Group>
       ) : null}
 
-      <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
+      <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: contentWidth })]}>
         <TransactionDetailsSheet
           transaction={selectedTransaction}
           onDismiss={() => setSelectedTransaction(null)}
           anchor={(
             <EarnDetailsPanel
+              width={contentWidth}
               segment={segment}
               onChange={setSegment}
               items={items}

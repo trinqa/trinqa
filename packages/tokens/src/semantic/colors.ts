@@ -54,6 +54,8 @@ export const semanticColor = {
     canvas: primitiveColor.gray0A,
     surface: primitiveColor.gray1414,
     surfaceLayer: primitiveColor.gray1C,
+    /** Unfilled half of a proportion bar. Must clear `surface`, not sit on it. */
+    track: primitiveColor.gray3F,
     border: primitiveColor.gray2E,
     textPrimary: primitiveColor.white,
     textSecondary: primitiveColor.grayA1,

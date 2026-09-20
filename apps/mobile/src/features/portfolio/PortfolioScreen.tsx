@@ -118,7 +118,7 @@ function SplitBar({
         modifiers={[
           frame({ maxWidth: Infinity, height: track }),
           background(
-            deepColors.surfaceLayer,
+            deepColors.track,
             shapes.roundedRectangle({ cornerRadius: track / 2 }),
           ),
           clipShape('roundedRectangle', track / 2),
@@ -397,7 +397,7 @@ export function PortfolioScreen() {
             value={`${growingValue} ${capability.symbol}`}
           />
           <LegendDot
-            color={deepColors.surfaceLayer}
+            color={deepColors.track}
             label={`Ready to use · ${formatSharePercent(split.readyShare)}`}
             value={`${readyValue} ${capability.symbol}`}
           />
@@ -418,7 +418,6 @@ export function PortfolioScreen() {
           </HStack>
 
           <Button
-            label="Change plan"
             onPress={() => router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })}
             modifiers={[buttonStyle('plain'), accessibilityLabel('Change plan')]}
           >

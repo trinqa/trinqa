@@ -10,6 +10,7 @@ import { colors, componentTokens, screenTokens } from '@/theme';
 import type { EarnListItem, EarnSegment } from '@/types';
 
 interface EarnDetailsPanelProps {
+  width: number;
   segment: EarnSegment;
   onChange: (segment: EarnSegment) => void;
   items: EarnListItem[];
@@ -18,6 +19,7 @@ interface EarnDetailsPanelProps {
 }
 
 export function EarnDetailsPanel({
+  width,
   segment,
   onChange,
   items,
@@ -27,7 +29,7 @@ export function EarnDetailsPanel({
   const earn = screenTokens.earn;
 
   return (
-    <SurfacePanel width={earn.lowerPanelWidth}>
+    <SurfacePanel width={width}>
       <VStack
         alignment="leading"
         spacing={earn.pickerToRowsGap}

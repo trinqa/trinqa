@@ -45,6 +45,26 @@ export interface MockAppState {
 
 const emptyBalances: BalanceState = { available: 0, earning: 0, baseCurrency: 'USDC' };
 
+/** Everything healthy, so offline screens show their normal state rather than warnings. */
+const offlineCapabilities: BackendCapabilities = {
+  version: 'offline',
+  network: 'offline',
+  currencies: [],
+  routes: {
+    stellar_transfer: { status: 'ok' },
+    stellar_swap_transfer: { status: 'ok' },
+    fiat_payout: { status: 'ok' },
+  },
+  features: {
+    pay: 'ok',
+    earn: 'beta',
+    demoSigner: false,
+    defindex: { configured: true, ok: true },
+    soroswap: { configured: true, ok: true },
+    policyContract: { status: 'ok' },
+  },
+};
+
 let state: MockAppState = {
   // A device that already has a wallet skips the welcome and reconnects straight away.
   accountBootstrap: hasStoredWallet() ? 'creating' : 'new',
@@ -127,6 +147,8 @@ export async function refreshLedger() {
 
 export async function bootstrapAccount() {
   // Design/offline mode short-circuits the backend so screens render from fixtures.
+  // Capabilities are seeded as healthy too, otherwise every screen shows a provider
+  // warning that is about the missing backend rather than about the design.
   if (isOfflineDemo()) {
     emit({
       ...state,
@@ -134,6 +156,7 @@ export async function bootstrapAccount() {
       balances: mockInitialBalances,
       strategy: mockInitialStrategy,
       transactions: mockInitialTransactions,
+      capabilities: offlineCapabilities,
       backendError: null,
     });
     return;

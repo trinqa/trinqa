@@ -69,8 +69,15 @@ export function transactionCategory(transaction: Transaction): Exclude<ActivityS
   return earningTypes.has(transaction.type) ? 'earnings' : 'payments';
 }
 
+/**
+ * Three states, three answers. These used to collapse to `Completed` / `Uncompleted`,
+ * which told someone waiting on a transfer that it had failed, and said it in a word
+ * that is not how anyone describes money.
+ */
 export function transactionStatusLabel(status: TransactionStatus) {
-  return status === 'completed' ? 'Completed' : 'Uncompleted';
+  if (status === 'completed') return 'Done';
+  if (status === 'pending') return 'On its way';
+  return "Didn't go through";
 }
 
 export function transactionTypeLabel(transaction: Transaction) {
@@ -88,11 +95,15 @@ export function transactionTypeLabel(transaction: Transaction) {
 }
 
 export function transactionStatusSymbol(status: TransactionStatus): SFSymbol {
-  return status === 'completed' ? 'checkmark.circle.fill' : 'xmark.circle.fill';
+  if (status === 'completed') return 'checkmark.circle.fill';
+  if (status === 'pending') return 'clock.fill';
+  return 'xmark.circle.fill';
 }
 
 export function transactionStatusColor(status: TransactionStatus) {
-  return status === 'completed' ? colors.success : colors.danger;
+  if (status === 'completed') return colors.success;
+  if (status === 'pending') return colors.pending;
+  return colors.danger;
 }
 
 export function compactTransactionHash(hash: string) {

@@ -31,6 +31,7 @@ export const primitiveColor = {
   gray0A: '#0A0A0A',
   gray1C: '#1C1C1E',
   gray2E: '#2E2E32',
+  gray3F: '#3F3F45',
   grayA1: '#A1A1A1',
   gray737: '#737373',
   green00D691: '#00D691',

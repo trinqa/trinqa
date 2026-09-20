@@ -36,6 +36,8 @@ export function HomeScreen() {
         <TabHeader title="Home" />
       </Group>
 
+      <PortfolioPullHint onPress={openPortfolio} />
+
       <Group modifiers={[padding({ top: screenTokens.wallet.headerToBalance })]}>
         <BalanceSummary
           totalValue={totalValue}
@@ -63,8 +65,6 @@ export function HomeScreen() {
       <Group modifiers={[padding({ top: homeTokens.layout.shortcutRecentGap })]}>
         <HomeRecentGroup />
       </Group>
-
-      <PortfolioPullHint onPress={openPortfolio} />
     </SwiftUIScreenShell>
   );
 }

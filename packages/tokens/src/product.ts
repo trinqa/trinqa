@@ -47,6 +47,7 @@ export const deepColors = {
   background: semanticColor.deep.canvas,
   surface: semanticColor.deep.surface,
   surfaceLayer: semanticColor.deep.surfaceLayer,
+  track: semanticColor.deep.track,
   textPrimary: semanticColor.deep.textPrimary,
   textSecondary: semanticColor.deep.textSecondary,
   textTertiary: semanticColor.deep.textTertiary,
