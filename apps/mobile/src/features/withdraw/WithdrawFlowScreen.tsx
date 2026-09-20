@@ -7,6 +7,7 @@ import {
   Group,
   HStack,
   Image,
+  Label,
   Spacer,
   Text,
   TextField,
@@ -19,6 +20,7 @@ import {
   background,
   buttonStyle,
   clipShape,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -302,6 +304,9 @@ function DestinationRow({
         modifiers={[
           padding({ horizontal: row.horizontalPadding }),
           frame({ width: screenTokens.withdrawalFlow.contentWidth, height: row.height }),
+          // The card chrome sits on the Button, not on this stack, so without a content shape
+          // the Spacer and the padding swallow taps and only the text/icons are hit-tested.
+          contentShape(shapes.roundedRectangle({ cornerRadius: row.radius })),
         ]}
       >
         <ZStack
@@ -387,13 +392,10 @@ function NewBankAccountSheet({
       onDismiss={handleDismiss}
       anchor={
         <Button
-          label="Add new bank account"
-          systemImage="plus.circle"
           onPress={() => setIsPresented(true)}
           modifiers={[
             buttonStyle('plain'),
             accessibilityLabel('Add new bank account'),
-            frame({ width: flow.contentWidth, height: componentTokens.headerControl.size }),
             background(
               colors.surface,
               shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius }),
@@ -406,7 +408,18 @@ function NewBankAccountSheet({
               cornerRadius: componentTokens.surface.controlRadius,
             }),
           ]}
-        />
+        >
+          {/* A Button is hit-tested against its label, not against chrome applied to the
+              Button, so the card's size and hit shape have to live on the label itself. */}
+          <Label
+            title="Add new bank account"
+            systemImage="plus.circle"
+            modifiers={[
+              frame({ width: flow.contentWidth, height: componentTokens.headerControl.size }),
+              contentShape(shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius })),
+            ]}
+          />
+        </Button>
       }
     >
       <Group

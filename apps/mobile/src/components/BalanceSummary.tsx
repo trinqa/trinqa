@@ -1,9 +1,10 @@
 import { useState } from 'react';
 
-import { Button, Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, Group, HStack, Label, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
   buttonStyle,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -126,16 +127,9 @@ export function BalanceSummary({
           </HStack>
 
           <Button
-            label={balanceVisible ? 'Hide balance' : 'Show balance'}
-            systemImage={balanceVisible ? 'eye.slash' : 'eye'}
             onPress={() => setBalanceVisible((visible) => !visible)}
             modifiers={[
               buttonStyle('plain'),
-              labelStyle('iconOnly'),
-              frame({
-                width: componentTokens.headerControl.size,
-                height: componentTokens.headerControl.size,
-              }),
               background(colors.surface, shapes.circle()),
               strokeBorder({
                 content: colors.borderStrong,
@@ -143,7 +137,22 @@ export function BalanceSummary({
                 shape: 'circle',
               }),
             ]}
-          />
+          >
+            {/* A Button is hit-tested against its label, not against chrome applied to the
+                Button, so the circle's size and hit shape have to live on the label. */}
+            <Label
+              title={balanceVisible ? 'Hide balance' : 'Show balance'}
+              systemImage={balanceVisible ? 'eye.slash' : 'eye'}
+              modifiers={[
+                labelStyle('iconOnly'),
+                frame({
+                  width: componentTokens.headerControl.size,
+                  height: componentTokens.headerControl.size,
+                }),
+                contentShape(shapes.circle()),
+              ]}
+            />
+          </Button>
         </HStack>
 
         <Group modifiers={[padding({ top: wallet.balanceValueToMetrics })]}>
