@@ -1,0 +1,143 @@
+/*
+ * Social dock — a macOS-style rail pinned to the left of the hero.
+ *
+ * Built on the motion layer's tokens (see assets/motion/motion.css). The rail
+ * is created by social-dock.js, so a page without JS simply never gets one and
+ * keeps the footer links it already has.
+ */
+
+.tq-dock {
+  position: fixed;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 7px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--background, #efefef) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foreground, #232323) 10%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  /* Hidden until the hero is on screen; the dock belongs to the first banner. */
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--tq-dur, 500ms) var(--tq-ease-out, ease),
+    visibility var(--tq-dur, 500ms) var(--tq-ease-out, ease);
+}
+
+.tq-dock[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tq-dock-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  color: var(--foreground, #232323);
+  transform-origin: left center;
+  transition:
+    transform 280ms var(--tq-ease-out, ease),
+    background-color 280ms var(--tq-ease-out, ease),
+    color 280ms var(--tq-ease-out, ease);
+}
+
+.tq-dock-item svg {
+  width: 19px;
+  height: 19px;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.tq-dock-item:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+/* --- Magnification ------------------------------------------------------- */
+
+/*
+ * A real dock scales by pointer distance. Two rings of falloff read the same
+ * at this size and cost no JavaScript: the hovered icon grows, its immediate
+ * neighbours grow a little, and `:has()` covers the one above it.
+ */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .tq-dock-item:hover {
+    transform: scale(1.32);
+    background: color-mix(in srgb, var(--foreground, #232323) 8%, transparent);
+  }
+
+  .tq-dock-item:hover + .tq-dock-item,
+  .tq-dock-item:has(+ .tq-dock-item:hover) {
+    transform: scale(1.14);
+  }
+}
+
+/* Without magnification the icon still has to answer the pointer. */
+@media (hover: hover) {
+  .tq-dock-item:hover {
+    background: color-mix(in srgb, var(--foreground, #232323) 8%, transparent);
+  }
+}
+
+/* --- Label --------------------------------------------------------------- */
+
+.tq-dock-label {
+  position: absolute;
+  left: calc(100% + 10px);
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--background, #efefef);
+  background: var(--foreground, #232323);
+  opacity: 0;
+  transform: translateX(-4px);
+  pointer-events: none;
+  transition:
+    opacity 200ms var(--tq-ease-out, ease),
+    transform 200ms var(--tq-ease-out, ease);
+}
+
+.tq-dock-item {
+  position: relative;
+}
+
+@media (hover: hover) {
+  .tq-dock-item:hover .tq-dock-label,
+  .tq-dock-item:focus-visible .tq-dock-label {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Small screens ------------------------------------------------------- */
+
+/*
+ * The hero copy is at most 1004px wide and centred, so its left edge only
+ * clears the rail (76px, 83px hovered) past roughly 1200px. Below that the
+ * dock would sit on the text, and the footer already carries the same links.
+ */
+@media (max-width: 1199px) {
+  .tq-dock {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tq-dock,
+  .tq-dock-item,
+  .tq-dock-label {
+    transition: none;
+  }
+}
