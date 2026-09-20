@@ -706,19 +706,17 @@ export function WithdrawFlowScreen() {
     [balances.available, intent, liveQuote.data],
   );
   /**
-   * The planner's own view, independent of the quote: it answers before a quote exists and
-   * also when the quote fails. Debounced on the same key as the quote so a settling amount
-   * fires one request, not one per keystroke. Its failure is swallowed — `routePreview.data`
-   * is simply null and the row disappears.
-   *
-   * `amount` is the payout figure the user typed, but the endpoint reads it as USDC. No rate
-   * exists before a quote, so nothing better can be sent; the sheet's wording therefore never
-   * ties a score to the amount on screen.
+   * The planner scores routes against limits published in USDC, while the figure on screen is
+   * the payout in TRY, so the preview asks about the quote's own USDC debit. That means it
+   * waits for a quote — sending the payout figure instead would measure the wrong amount and
+   * could rule an anchor in or out for a limit the user never hit. A failed preview is
+   * swallowed: `routePreview.data` is null and the row disappears, never blocking the quote.
    */
+  const previewAmount = liveQuote.data?.quote.debitAmount ?? null;
   const routePreview = useLiveQuote(
-    `routes:${currency}:${amount}`,
-    amount > 0,
-    () => api.routesPreview({ direction: 'withdraw', currency, amount: String(amount) }),
+    `routes:${currency}:${previewAmount ?? ''}`,
+    previewAmount !== null,
+    () => api.routesPreview({ direction: 'withdraw', currency, amount: previewAmount ?? '0' }),
   );
   // A failed quote carries no decision, so the last one is kept to explain what was already ruled out.
   const [lastDecision, setLastDecision] = useState<

@@ -67,8 +67,8 @@ export const ROUTE_FACTORS: readonly {
     computedNote: 'Worked out from health checks and how fresh the anchor’s details are.',
   },
   {
-    // Deliberately not "room for your amount": the planner is asked in USDC, not in the
-    // payout currency, so the headroom it measures is not the figure on the amount screen.
+    // "Room under the limit", not "room for your amount": the planner is asked in USDC, the
+    // asset the limits are published in, so this is not headroom against the payout figure.
     key: 'liquidity',
     label: 'Room under the limit',
     weight: 10,
