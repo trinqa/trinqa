@@ -3,6 +3,7 @@ import {
   accessibilityLabel,
   background,
   buttonStyle,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -62,7 +63,6 @@ export function FlowInlineState({
           modifiers={[
             buttonStyle('plain'),
             accessibilityLabel(retryLabel),
-            padding({ horizontal: 12, vertical: 7 }),
             background(colors.surface, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius })),
             strokeBorder({
               content: colors.borderStrong,
@@ -72,7 +72,18 @@ export function FlowInlineState({
             }),
           ]}
         >
-          <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.action)]}>
+          {/* The padding ring belongs to the label: padding applied to the Button is drawn by
+              nothing, so taps beside the word would fall through. */}
+          <Text
+            modifiers={[
+              font({ size: typography.footnote, weight: 'semibold' }),
+              foregroundStyle(colors.action),
+              padding({ horizontal: 12, vertical: 7 }),
+              contentShape(
+                shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius }),
+              ),
+            ]}
+          >
             {retryLabel}
           </Text>
         </Button>

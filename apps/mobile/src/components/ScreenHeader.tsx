@@ -1,6 +1,7 @@
 import {
   Button,
   HStack,
+  Label,
   Spacer,
   Text,
   ZStack,
@@ -8,6 +9,7 @@ import {
 import {
   background,
   buttonStyle,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -40,16 +42,9 @@ function HeaderIconButton({
 }) {
   return (
     <Button
-      label={label}
-      systemImage={symbol}
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        labelStyle('iconOnly'),
-        frame({
-          width: componentTokens.headerControl.size,
-          height: componentTokens.headerControl.size,
-        }),
         background(colors.surface, shapes.circle()),
         strokeBorder({
           content: colors.borderStrong,
@@ -57,7 +52,22 @@ function HeaderIconButton({
           shape: 'circle',
         }),
       ]}
-    />
+    >
+      {/* A Button is hit-tested against its label, not against chrome applied to the Button,
+          so the circle's size and hit shape have to live on the label itself. */}
+      <Label
+        title={label}
+        systemImage={symbol}
+        modifiers={[
+          labelStyle('iconOnly'),
+          frame({
+            width: componentTokens.headerControl.size,
+            height: componentTokens.headerControl.size,
+          }),
+          contentShape(shapes.circle()),
+        ]}
+      />
+    </Button>
   );
 }
 
