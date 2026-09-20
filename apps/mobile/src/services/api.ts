@@ -25,8 +25,11 @@ export function setWalletKey(key: string | null) {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const isDemo = path.startsWith('/api/v1/demo/');
-  const demoToken = isDemo ? getDemoAccessToken() : undefined;
+  // Device-scoped routes: the demo namespace, plus push registration, which is behind the
+  // same gate and needs the wallet key to know whose account the token belongs to.
+  const isDeviceScoped =
+    path.startsWith('/api/v1/demo/') || path.startsWith('/api/v1/notifications/devices');
+  const demoToken = isDeviceScoped ? getDemoAccessToken() : undefined;
   const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
     headers: {
@@ -34,7 +37,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       // Fastify rejects an empty body declared as JSON, so only bodied requests carry it.
       ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(demoToken ? { 'x-demo-token': demoToken } : {}),
-      ...(isDemo && walletKey ? { 'x-wallet-key': walletKey } : {}),
+      ...(isDeviceScoped && walletKey ? { 'x-wallet-key': walletKey } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -85,6 +88,13 @@ export const api = {
     request<{ result: unknown }>('/api/v1/demo/anchor/simulate-bank-transfer', {
       method: 'POST',
       body: JSON.stringify({ sessionId, transferId }),
+    }),
+
+  /** Ties this device's Expo push token to the account behind the wallet key. */
+  registerPushDevice: (body: { expoPushToken: string; platform: string }) =>
+    request<unknown>('/api/v1/notifications/devices', {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
 
   balances: (accountId: string) =>

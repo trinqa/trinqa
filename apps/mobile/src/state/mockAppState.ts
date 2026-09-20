@@ -122,7 +122,8 @@ export async function refreshLedger() {
   });
 }
 
-export async function bootstrapAccount() {
+/** Resolves the device's account, then returns its id so callers can act on it. */
+export async function bootstrapAccount(): Promise<string> {
   const health = await api.health();
   const capabilities = await api.capabilities();
   const { accountId } = await connectSigner(capabilities);
@@ -147,6 +148,7 @@ export async function bootstrapAccount() {
     backendError: null,
   });
   await refreshLedger();
+  return accountId;
 }
 
 function addTransaction(transaction: Transaction) {

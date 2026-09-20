@@ -12,6 +12,8 @@ import type { PolicyService } from './policy.service.js';
 import type { StellarService } from './stellar.service.js';
 import type { OperationStore } from './operation-store.js';
 import { recordOperation } from './operation-store.js';
+import type { PushSender } from './push-sender.service.js';
+import { yieldDepositCompleted } from './notification-copy.js';
 
 /** Minimum/maximum bps we'll ever pass to the policy contract's `authorize_allocation`. */
 const MIN_ALLOCATION_BPS = 1;
@@ -30,6 +32,7 @@ export class YieldService {
     private readonly operations: OperationStore,
     /** Optional: enables the deposit policy gate (balance read + tx-hash pinning). Without it, deposits skip the gate and execute() skips the signed-tx guard. */
     private readonly stellar?: StellarService,
+    private readonly pushSender?: PushSender,
   ) {}
 
   async listStrategies(accountId?: string): Promise<YieldStrategy[]> {
@@ -281,6 +284,10 @@ export class YieldService {
     });
     if (!ok) {
       throw new ApiError('ADAPTER_UNAVAILABLE', 'DeFindex transaction submission failed', 502);
+    }
+    // Always a genuine transition: an already-completed operation is rejected above.
+    if (op.kind === 'yield_deposit' && this.pushSender) {
+      void this.pushSender.notify(op.accountId, yieldDepositCompleted(op));
     }
     return { operationId, txHash, successful: true };
   }

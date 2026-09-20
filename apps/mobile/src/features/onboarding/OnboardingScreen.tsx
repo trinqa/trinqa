@@ -9,6 +9,7 @@ import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { WelcomeHero } from '@/features/onboarding/WelcomeHero';
 import { welcomePalette as palette } from '@/features/onboarding/welcomePalette';
 import { errorMessage } from '@/services/apiErrors';
+import { registerPushToken, requestPushPermission } from '@/services/pushNotifications';
 import { bootstrapAccount, setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
 import { componentTokens } from '@/theme';
 
@@ -48,12 +49,18 @@ export function OnboardingScreen() {
   useEffect(() => {
     if (accountBootstrap !== 'creating') return;
     let cancelled = false;
+    // Asked as the user leaves the welcome screen and never awaited, so the system prompt
+    // runs alongside account creation instead of holding it up.
+    void requestPushPermission();
     void (async () => {
       try {
-        await bootstrapAccount();
+        const accountId = await bootstrapAccount();
         if (!cancelled) {
           setAccountBootstrap('ready');
           router.replace('/');
+          // The account exists only now, so this is the first moment a token can belong to
+          // it. Not awaited: the home screen must not wait on a notification token.
+          void registerPushToken(accountId);
         }
       } catch (err) {
         // The real reason matters here: a missing demo token and an unreachable

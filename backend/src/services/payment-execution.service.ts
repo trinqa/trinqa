@@ -1,5 +1,6 @@
 import type { AppConfig } from '../config/env.js';
 import { ApiError } from '../domain/api-errors.js';
+import type { Operation } from '../domain/operation.js';
 import type { PaymentExecutionStep, PaymentRouteQuote, PaymentRouteType } from '../domain/payment.js';
 import { Decimal } from '../domain/money.js';
 import { strategyIdForVault } from '../domain/yield.js';
@@ -11,6 +12,8 @@ import type { QuoteStore } from './quote-store.service.js';
 import type { OperationStore } from './operation-store.js';
 import type { YieldService } from './yield.service.js';
 import type { AnchorSessionStore } from './anchor-session-store.service.js';
+import type { PushSender } from './push-sender.service.js';
+import { paymentCompleted } from './notification-copy.js';
 type PaymentMeta = {
   quoteId: string;
   routeType: PaymentRouteType;
@@ -39,6 +42,7 @@ export class PaymentExecutionService {
     private readonly yieldSvc: YieldService,
     private readonly quotes: QuoteStore,
     private readonly operations: OperationStore,
+    private readonly pushSender?: PushSender,
   ) {}
 
   private assertSignedMatchesBuilt(expectedTxHash: string | undefined, signedXdr: string): void {
@@ -300,6 +304,7 @@ export class PaymentExecutionService {
           currentStep: undefined,
         },
       });
+      this.notifyPaymentDone(op, result.successful);
       return { operationId, stepCompleted: 'stellar_payment', txHash: result.hash, successful: result.successful };
     }
 
@@ -314,6 +319,7 @@ export class PaymentExecutionService {
           currentStep: undefined,
         },
       });
+      this.notifyPaymentDone(op, result.success);
       return { operationId, stepCompleted: 'soroswap_swap', txHash: result.txHash, successful: result.success };
     }
 
@@ -338,6 +344,16 @@ export class PaymentExecutionService {
     }
 
     throw new ApiError('VALIDATION_ERROR', 'Unsupported execution step', 400);
+  }
+
+  /**
+   * The last step of a payment just landed. `op` is the pre-update snapshot, so this fires on
+   * the transition only; a replayed step is rejected earlier as ALREADY_COMPLETED.
+   * Fire-and-forget: `notify` never throws and the request never waits on it.
+   */
+  private notifyPaymentDone(op: Operation, successful: boolean): void {
+    if (!this.pushSender || !successful || op.status === 'completed') return;
+    void this.pushSender.notify(op.accountId, paymentCompleted(op));
   }
 
   async buildEarnUnwindStep(

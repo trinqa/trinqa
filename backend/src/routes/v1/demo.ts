@@ -15,6 +15,9 @@ import {
   type AccountSigner,
 } from '../../services/custodial-wallet.service.js';
 import { sendApiError } from './http-errors.js';
+import { WALLET_KEY_HEADER, signerForRequest } from './wallet-signer.js';
+
+export { WALLET_KEY_HEADER };
 
 const trustlineBody = z.object({
   account: z.string().regex(/^G[A-Z0-9]{55}$/),
@@ -31,9 +34,6 @@ const walletBody = z.object({
 const contactsBody = z.object({
   ids: z.array(z.string()).min(1).max(12),
 });
-
-/** Header carrying a device's custodial wallet key; absent = the shared env demo account. */
-export const WALLET_KEY_HEADER = 'x-wallet-key';
 
 const simulateBankBody = z.object({
   sessionId: z.string().uuid(),
@@ -64,12 +64,9 @@ export function registerDemoRoutes(
 ): void {
   /** The signer this request acts as: its device wallet, or the env demo account for legacy clients. */
   function signerFor(request: FastifyRequest): AccountSigner {
-    const header = request.headers[WALLET_KEY_HEADER];
-    if (header === undefined) return envDemoSigner(env.DEMO_SIGNER_SECRET!, stellar.networkPassphrase);
-    if (!isWalletKey(header) || !wallets) {
-      throw new ApiError('VALIDATION_ERROR', `Invalid ${WALLET_KEY_HEADER}`, 400);
-    }
-    return wallets.signerFor(header);
+    return signerForRequest(request, wallets, () =>
+      envDemoSigner(env.DEMO_SIGNER_SECRET!, stellar.networkPassphrase),
+    );
   }
 
   app.post('/api/v1/demo/wallets', { preHandler: demoSignerGuard }, async (request, reply) => {
