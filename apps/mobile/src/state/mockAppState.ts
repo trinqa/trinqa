@@ -152,7 +152,11 @@ export async function bootstrapAccount() {
   if (isOfflineDemo()) {
     emit({
       ...state,
-      account: mockAccountIdentity,
+      // Matches what a real bootstrap produces. The flow screens present the USDC
+      // ledger as USD, so an offline account on TRY would show one currency on the
+      // tabs and another inside the flows — a mismatch belonging to the seed, not
+      // to the design.
+      account: { ...mockAccountIdentity, displayCurrency: 'USD', ledgerAsset: 'USDC' },
       balances: mockInitialBalances,
       strategy: mockInitialStrategy,
       transactions: mockInitialTransactions,

@@ -125,7 +125,8 @@ export const mockInitialTransactions: Transaction[] = [
     amount: 2000,
     currency: 'TRY',
     direction: 'out',
-    status: 'completed',
+    // Left in flight so the three status treatments are all reachable in the fixtures.
+    status: 'pending',
     occurredAt: '2026-09-16T16:18:00+03:00',
     symbol: 'arrow.down.to.line',
     recipient: 'Mock bank account',
