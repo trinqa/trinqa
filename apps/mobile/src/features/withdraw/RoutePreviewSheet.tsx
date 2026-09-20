@@ -15,6 +15,7 @@ import {
 import {
   accessibilityLabel,
   buttonStyle,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -22,6 +23,7 @@ import {
   presentationBackground,
   presentationDetents,
   presentationDragIndicator,
+  shapes,
 } from '@expo/ui/swift-ui/modifiers';
 
 import {
@@ -177,6 +179,9 @@ function PreviewRow({
         modifiers={[
           padding({ horizontal: row.horizontalPadding }),
           frame({ width: flow.contentWidth, height: row.height }),
+          // The card chrome sits on the Button, not on this stack, so without a content shape
+          // the Spacer and the padding swallow taps and only the text/icons are hit-tested.
+          contentShape(shapes.roundedRectangle({ cornerRadius: row.radius })),
         ]}
       >
         <Image systemName="point.3.connected.trianglepath.dotted" size={row.symbolSize} color={colors.textPrimary} />

@@ -12,6 +12,7 @@ import {
 import {
   background,
   buttonStyle,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -78,7 +79,15 @@ function WalletActionRow({
         }),
       ]}
     >
-      <HStack spacing={8} modifiers={[frame({ maxWidth: Infinity })]}>
+      <HStack
+        spacing={8}
+        modifiers={[
+          frame({ maxWidth: Infinity }),
+          // The chip background is on the Button, so the Spacer between the label and the
+          // chevron is transparent to hit-testing without a content shape of its own.
+          contentShape(shapes.rectangle()),
+        ]}
+      >
         <Text
           modifiers={[
             font({ size: typography.label, weight: 'semibold' }),
