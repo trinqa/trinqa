@@ -1,5 +1,7 @@
 import type { SFSymbol } from 'sf-symbols-typescript';
 
+import type { QuoteRouteDecision } from '@/services/types';
+
 export interface AccountSummary {
   accountName: string;
   cardLabel: string;
@@ -184,6 +186,8 @@ export interface WithdrawalQuote {
   requiresEarnUnwind: boolean;
   earnUnwindAmount: number;
   routeId: string;
+  /** How the backend picked the payout route. Absent for non-TRY quotes and when the planner failed. */
+  routeDecision: QuoteRouteDecision | null;
   hasSufficientTotal: boolean;
 }
 

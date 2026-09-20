@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   BottomSheet,
@@ -54,8 +54,17 @@ import {
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
 import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
+import { ROUTE_REJECT_REASONS } from '@/data/routeCopy';
+import { RoutePreviewSheet } from '@/features/withdraw/RoutePreviewSheet';
+import { api } from '@/services/api';
 import { describeCode, errorMessage } from '@/services/apiErrors';
 import { executeWithdrawTry, quoteWithdrawTry, type WithdrawLiveQuote } from '@/services/flows';
+import type {
+  QuoteRouteDecision,
+  RouteAdvisorInfo,
+  RouteDecision,
+  RouteRejectReason,
+} from '@/services/types';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
@@ -106,6 +115,107 @@ function formatUsdRate(value: number) {
   })} $`;
 }
 
+const ADVISOR_FALLBACK_REASONS = [
+  'disabled',
+  'timeout',
+  'error',
+  'low_confidence',
+  'invalid_output',
+  'no_routes',
+] as const;
+
+function isAdvisorFallbackReason(value: unknown): value is NonNullable<RouteAdvisorInfo['fallbackReason']> {
+  return ADVISOR_FALLBACK_REASONS.some((reason) => reason === value);
+}
+
+/**
+ * `providerPayload` is free-form, so the decision is validated before anything is shown.
+ * A malformed row drops the whole decision — a partial list would misreport how many routes
+ * were considered. Reason codes are the exception: an unknown one is skipped when the reasons
+ * are written out, because the entry still counts even when we cannot phrase it.
+ */
+function parseRouteDecision(payload: Record<string, unknown> | undefined): QuoteRouteDecision | null {
+  const raw = payload?.routeDecision;
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as Record<string, unknown>;
+  const advisor = value.advisor;
+  if (typeof value.executedVia !== 'string' || !value.executedVia) return null;
+  if (!advisor || typeof advisor !== 'object') return null;
+  const advisorValue = advisor as Record<string, unknown>;
+  if (advisorValue.name !== 'jev' && advisorValue.name !== 'none') return null;
+  if (typeof advisorValue.used !== 'boolean' || typeof advisorValue.minConfidence !== 'number') return null;
+  if (!Array.isArray(value.eligible) || !Array.isArray(value.rejected)) return null;
+
+  const eligible: QuoteRouteDecision['eligible'] = [];
+  for (const item of value.eligible) {
+    if (!item || typeof item !== 'object') return null;
+    const row = item as Record<string, unknown>;
+    if (typeof row.routeId !== 'string' || typeof row.score !== 'number') return null;
+    eligible.push({ routeId: row.routeId, score: row.score });
+  }
+
+  const rejected: QuoteRouteDecision['rejected'] = [];
+  for (const item of value.rejected) {
+    if (!item || typeof item !== 'object') return null;
+    const row = item as Record<string, unknown>;
+    if (typeof row.anchorId !== 'string' || !Array.isArray(row.reasons)) return null;
+    if (row.reasons.some((reason) => typeof reason !== 'string')) return null;
+    const reasons = row.reasons.filter(
+      (reason): reason is RouteRejectReason => reason in ROUTE_REJECT_REASONS,
+    );
+    rejected.push({ anchorId: row.anchorId, reasons });
+  }
+
+  return {
+    chosenRouteId: typeof value.chosenRouteId === 'string' ? value.chosenRouteId : null,
+    chosenAnchor: typeof value.chosenAnchor === 'string' ? value.chosenAnchor : null,
+    executable: value.executable === true,
+    executedVia: value.executedVia,
+    advisor: {
+      name: advisorValue.name,
+      used: advisorValue.used,
+      minConfidence: advisorValue.minConfidence,
+      ...(isAdvisorFallbackReason(advisorValue.fallbackReason)
+        ? { fallbackReason: advisorValue.fallbackReason }
+        : {}),
+    },
+    eligible,
+    rejected,
+  };
+}
+
+/**
+ * Describes the real decision. Two claims only: how many options were looked at, and who was
+ * picked — the count covers rejected anchors too, which are never scored, so it stays separate
+ * from the pick. The payout always leaves through `executedVia`, whatever ranked highest.
+ */
+function routeDecisionSubtitle(decision: QuoteRouteDecision) {
+  const considered = decision.eligible.length + decision.rejected.length;
+  // The notice box is a fixed height, so every variant stays close to the copy it replaced.
+  const checked = `${considered} ${considered === 1 ? 'option' : 'options'} checked.`;
+  const chosen = decision.chosenAnchor;
+  if (!chosen) return `${checked} ${decision.executedVia} pays you out.`;
+  // Jev is only named when it actually fed the scores; otherwise the pick was computed here.
+  const pick = decision.advisor.used ? `Jev helped pick ${chosen}` : `We picked ${chosen}`;
+  if (chosen === decision.executedVia) return `${checked} ${pick}, which pays you out.`;
+  return `${checked} ${pick}, but ${decision.executedVia} pays out.`;
+}
+
+/**
+ * Only reached with a decision from an earlier, successful quote, so anything the amount changes
+ * (BELOW_MIN, ABOVE_MAX) is dropped — it would describe a different amount than the one that failed.
+ */
+function ruledOutSubtitle(decision: QuoteRouteDecision) {
+  const lines = decision.rejected
+    .map((entry) => {
+      const reasons = entry.reasons.filter((reason) => reason !== 'BELOW_MIN' && reason !== 'ABOVE_MAX');
+      if (reasons.length === 0) return null;
+      return `${entry.anchorId} ${reasons.map((reason) => ROUTE_REJECT_REASONS[reason]).join(', ')}.`;
+    })
+    .filter((line): line is string => line !== null);
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
 /** Maps the BFF cash-out quote onto the review model. Without a live quote nothing is claimable. */
 function toWithdrawalQuote(
   intent: WithdrawalIntent,
@@ -126,6 +236,7 @@ function toWithdrawalQuote(
       requiresEarnUnwind: false,
       earnUnwindAmount: 0,
       routeId: 'tr-mock-anchor',
+      routeDecision: null,
       hasSufficientTotal: false,
     };
   }
@@ -145,6 +256,7 @@ function toWithdrawalQuote(
     requiresEarnUnwind: Boolean(quote.funding?.requiresEarnUnwind),
     earnUnwindAmount: Number(quote.funding?.earnContribution ?? 0),
     routeId: quote.routeType,
+    routeDecision: parseRouteDecision(quote.providerPayload),
     hasSufficientTotal: true,
   };
 }
@@ -402,11 +514,15 @@ function WithdrawalAmountSummary({
   quote,
   quoteState,
   blockedReason,
+  routePreview,
+  ruledOut,
 }: {
   intent: WithdrawalIntent;
   quote: WithdrawalQuote;
   quoteState: LiveQuoteState<WithdrawLiveQuote>;
   blockedReason: string | null;
+  routePreview: RouteDecision | null;
+  ruledOut: string | null;
 }) {
   const ready = Boolean(quoteState.data);
   return (
@@ -455,6 +571,10 @@ function WithdrawalAmountSummary({
         </VStack>
       </FlowCard>
 
+      {/* Renders nothing while the preview is missing, in flight or empty — it must never
+          delay the quote or crowd the amount step. */}
+      <RoutePreviewSheet decision={routePreview} />
+
       {quote.requiresEarnUnwind && quote.hasSufficientTotal ? (
         <FlowNotice
           symbol="arrow.uturn.backward.circle"
@@ -476,6 +596,9 @@ function WithdrawalAmountSummary({
           subtitle={quoteState.error}
           onRetry={quoteState.retry}
         />
+      ) : null}
+      {quoteState.error && ruledOut ? (
+        <FlowInlineState symbol="xmark.circle" title="Payout options already ruled out" subtitle={ruledOut} />
       ) : null}
     </VStack>
   );
@@ -565,11 +688,13 @@ function ReviewStep({
           </VStack>
         </FlowCard>
 
-        <FlowNotice
-          symbol="point.3.connected.trianglepath.dotted"
-          title="TRY payout rail"
-          subtitle="Withdrawals use the TR mock anchor. Other payout currencies are unavailable."
-        />
+        {quote.routeDecision ? (
+          <FlowNotice
+            symbol="point.3.connected.trianglepath.dotted"
+            title="Payout route"
+            subtitle={routeDecisionSubtitle(quote.routeDecision)}
+          />
+        ) : null}
         {error ? (
           <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Withdrawal failed" subtitle={error} />
         ) : null}
@@ -606,6 +731,31 @@ export function WithdrawFlowScreen() {
     () => toWithdrawalQuote(intent, balances.available, liveQuote.data),
     [balances.available, intent, liveQuote.data],
   );
+  /**
+   * The planner scores routes against limits published in USDC, while the figure on screen is
+   * the payout in TRY, so the preview asks about the quote's own USDC debit. That means it
+   * waits for a quote — sending the payout figure instead would measure the wrong amount and
+   * could rule an anchor in or out for a limit the user never hit. A failed preview is
+   * swallowed: `routePreview.data` is null and the row disappears, never blocking the quote.
+   */
+  const previewAmount = liveQuote.data?.quote.debitAmount ?? null;
+  const routePreview = useLiveQuote(
+    `routes:${currency}:${previewAmount ?? ''}`,
+    previewAmount !== null,
+    () => api.routesPreview({ direction: 'withdraw', currency, amount: previewAmount ?? '0' }),
+  );
+  // A failed quote carries no decision, so the last one is kept to explain what was already ruled out.
+  const [lastDecision, setLastDecision] = useState<
+    { currency: WithdrawalCurrency; decision: QuoteRouteDecision } | null
+  >(null);
+  useEffect(() => {
+    if (quote.routeDecision) setLastDecision({ currency, decision: quote.routeDecision });
+  }, [currency, quote.routeDecision]);
+  const ruledOut = useMemo(
+    () => (lastDecision?.currency === currency ? ruledOutSubtitle(lastDecision.decision) : null),
+    [currency, lastDecision],
+  );
+
   const receiveAmount = formatPayoutAmount(amount, currency);
   const withdrawalId = useMemo(
     () => `withdrawal-${destination.id}-${currency.toLowerCase()}-${amount}`,
@@ -714,6 +864,8 @@ export function WithdrawFlowScreen() {
               quote={quote}
               quoteState={liveQuote}
               blockedReason={blocked}
+              routePreview={routePreview.data}
+              ruledOut={ruledOut}
             />
           )}
           title="Withdraw"
