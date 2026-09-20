@@ -5,6 +5,7 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -53,14 +54,19 @@ function SlideVideo({ source, isActive }: { source: number; isActive: boolean })
   );
 }
 
+/**
+ * Enter and exit are deliberately asymmetric. A symmetric cross-fade leaves both
+ * slides half-visible through the middle of the transition, which on two large
+ * objects reads as a double exposure. The outgoing one clears first, then the
+ * incoming one arrives into an empty stage.
+ */
 function Slide({ slide, isActive }: { slide: WelcomeSlide; isActive: boolean }) {
   const progress = useSharedValue(isActive ? 1 : 0);
 
   useEffect(() => {
-    progress.value = withTiming(isActive ? 1 : 0, {
-      duration: 520,
-      easing: Easing.out(Easing.cubic),
-    });
+    progress.value = isActive
+      ? withDelay(170, withTiming(1, { duration: 430, easing: Easing.out(Easing.cubic) }))
+      : withTiming(0, { duration: 220, easing: Easing.in(Easing.quad) });
   }, [isActive, progress]);
 
   const style = useAnimatedStyle(() => ({
@@ -79,11 +85,12 @@ function Slide({ slide, isActive }: { slide: WelcomeSlide; isActive: boolean }) 
 function SlideText({ slide, isActive }: { slide: WelcomeSlide; isActive: boolean }) {
   const progress = useSharedValue(isActive ? 1 : 0);
 
+  // Text overlapping text is the worst of it — two headlines on top of each other
+  // are unreadable in a way two illustrations are not. It clears fastest.
   useEffect(() => {
-    progress.value = withTiming(isActive ? 1 : 0, {
-      duration: 460,
-      easing: Easing.out(Easing.cubic),
-    });
+    progress.value = isActive
+      ? withDelay(190, withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) }))
+      : withTiming(0, { duration: 160, easing: Easing.in(Easing.quad) });
   }, [isActive, progress]);
 
   const style = useAnimatedStyle(() => ({
