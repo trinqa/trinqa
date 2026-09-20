@@ -10,11 +10,12 @@ function optionalGAddress(value: string | undefined): string | undefined {
 /** Public testnet SEP-6 dest used by core E2E — not a secret. */
 export const TRY_WITHDRAW_DEST = 'TR890009903460061605055303';
 
+/** Hosted testnet BFF. Override with EXPO_PUBLIC_API_BASE_URL (e.g. http://127.0.0.1:8787 for a local backend). */
+export const DEFAULT_API_BASE_URL = 'https://api.trinqa.com';
+
 export function getApiBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
-  if (fromEnv) return trimSlash(fromEnv);
-  if (__DEV__) return 'http://127.0.0.1:8787';
-  throw new Error('EXPO_PUBLIC_API_BASE_URL is required outside development');
+  return trimSlash(fromEnv || DEFAULT_API_BASE_URL);
 }
 
 /** Testnet demo-signer gate (x-demo-token). Ships in the bundle, so it only keeps casual callers out. */

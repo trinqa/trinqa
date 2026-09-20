@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 
 import { ActivityChart } from '@/components/ActivityChart';
 import { EarnDetailsPanel } from '@/components/EarnDetailsPanel';
+import { FlowInlineState } from '@/components/FlowStates';
 import { MetricCard } from '@/components/MetricCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
@@ -14,15 +15,16 @@ import { earnChartPoints } from '@/data/mocks/earnAnalytics';
 import { putToWorkRiskProfiles } from '@/data/mocks/putToWork';
 import { formatLedgerMoney } from '@/domain/money';
 import { earnTransactions, toEarnListItem } from '@/domain/transactionPresentation';
+import { earnUnavailable, earnUnavailableReason } from '@/services/session';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, spacing, typography } from '@/theme';
 import type { EarnSegment, Transaction } from '@/types';
 
-const METRIC_WIDTHS = [112, 112, 112] as const;
 
 export function EarnScreen() {
   const router = useRouter();
-  const { account, balances, strategy, transactions } = useMockAppState();
+  const { account, balances, strategy, transactions, capabilities } = useMockAppState();
+  const providerBlocked = earnUnavailable(capabilities);
   const [segment, setSegment] = useState<EarnSegment>('earnings');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const profile = putToWorkRiskProfiles.find((item) => item.id === strategy.risk) ?? putToWorkRiskProfiles[1];
@@ -55,6 +57,8 @@ export function EarnScreen() {
     { id: 'risk', label: 'How risky', value: profile.riskLabel },
   ];
   const earn = screenTokens.earn;
+  // Three equal cards that fill the (device-scaled) content width.
+  const metricWidth = Math.floor((earn.contentWidth - earn.metricGap * 2) / 3);
 
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
@@ -115,15 +119,25 @@ export function EarnScreen() {
           frame({ width: earn.contentWidth }),
         ]}
       >
-        {metrics.map((metric, index) => (
+        {metrics.map((metric) => (
           <MetricCard
             key={metric.id}
             label={metric.label}
             value={metric.value}
-            width={METRIC_WIDTHS[index] ?? 117}
+            width={metricWidth}
           />
         ))}
       </HStack>
+
+      {providerBlocked ? (
+        <Group modifiers={[padding({ top: spacing.row, leading: earn.contentHorizontalOffset })]}>
+          <FlowInlineState
+            symbol="exclamationmark.triangle"
+            title="Earn unavailable"
+            subtitle={earnUnavailableReason(capabilities)}
+          />
+        </Group>
+      ) : null}
 
       <VStack modifiers={[padding({ top: earn.lowerPanelTopGap }), frame({ width: earn.contentWidth })]}>
         <TransactionDetailsSheet

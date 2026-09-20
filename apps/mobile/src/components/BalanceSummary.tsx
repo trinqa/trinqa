@@ -1,29 +1,30 @@
-import { Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
+import { useState } from 'react';
+
+import { Button, Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
+  buttonStyle,
   font,
   foregroundStyle,
   frame,
+  labelStyle,
   padding,
   shapes,
+  strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { InsetActionRow } from '@/components/InsetActionRow';
-import { InsetLayer } from '@/components/InsetLayer';
 import { SurfacePanel } from '@/components/SurfacePanel';
+import { InsetLayer } from '@/components/InsetLayer';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 interface BalanceSummaryProps {
   currencySymbol?: string;
-  totalLabel?: string;
+  totalLabel: string;
   totalValue: string;
   leftLabel: string;
   leftValue: string;
   rightLabel: string;
   rightValue: string;
-  onMoveToGrow: () => void;
-  onTakeMoneyOut: () => void;
-  width?: number;
 }
 
 function MetricTile({
@@ -65,21 +66,17 @@ export function BalanceSummary({
   leftValue,
   rightLabel,
   rightValue,
-  onMoveToGrow,
-  onTakeMoneyOut,
-  width,
 }: BalanceSummaryProps) {
+  const [balanceVisible, setBalanceVisible] = useState(true);
+  const displayValue = balanceVisible ? totalValue : '••••••';
   const wallet = screenTokens.wallet;
-  const panelWidth = width ?? wallet.contentWidth;
-  const metricWidth =
-    (panelWidth
-      - wallet.balancePaddingHorizontal * 2
-      - componentTokens.layer.inset * 2
-      - componentTokens.layer.gap * 2) / 2;
+  // Two tiles filling the panel: 159pt each on the 402pt design canvas, wider on larger phones.
+  const tileWidth = Math.floor((wallet.contentWidth - wallet.balancePaddingHorizontal * 2 - 16) / 2);
 
   return (
     <SurfacePanel
-      width={panelWidth}
+      width={wallet.contentWidth}
+      height={wallet.balanceHeight}
       cornerRadius={componentTokens.surface.panelRadius}
     >
       <VStack
@@ -89,63 +86,73 @@ export function BalanceSummary({
           padding({
             top: wallet.balancePaddingTop,
             horizontal: wallet.balancePaddingHorizontal,
-            bottom: wallet.detailsBottomPadding,
           }),
-          frame({ maxWidth: Infinity, alignment: 'leading' }),
+          frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'topLeading' }),
         ]}
       >
-        {totalLabel ? (
-          <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-            {totalLabel}
-          </Text>
-        ) : null}
+        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
+          {totalLabel}
+        </Text>
 
         <HStack
-          alignment="firstTextBaseline"
-          spacing={4}
+          alignment="center"
+          spacing={8}
           modifiers={[
-            padding({ top: totalLabel ? wallet.balanceTitleToValue : 0 }),
-            frame({ maxWidth: Infinity, alignment: 'leading' }),
+            padding({ top: wallet.balanceTitleToValue }),
+            frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size }),
           ]}
         >
-          <Text
-            modifiers={[
-              font({ size: typography.amountCurrency, weight: 'bold' }),
-              foregroundStyle(colors.textPrimary),
-            ]}
+          <HStack
+            alignment="firstTextBaseline"
+            spacing={4}
+            modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
           >
-            {totalValue}
-          </Text>
-          <Text
+            <Text
+              modifiers={[
+                font({ size: typography.amountCurrency, weight: 'bold' }),
+                foregroundStyle(colors.textPrimary),
+              ]}
+            >
+              {displayValue}
+            </Text>
+            <Text
+              modifiers={[
+                font({ size: typography.label, weight: 'medium' }),
+                foregroundStyle(colors.textSecondary),
+              ]}
+            >
+              {currencySymbol}
+            </Text>
+          </HStack>
+
+          <Button
+            label={balanceVisible ? 'Hide balance' : 'Show balance'}
+            systemImage={balanceVisible ? 'eye.slash' : 'eye'}
+            onPress={() => setBalanceVisible((visible) => !visible)}
             modifiers={[
-              font({ size: typography.label, weight: 'medium' }),
-              foregroundStyle(colors.textSecondary),
+              buttonStyle('plain'),
+              labelStyle('iconOnly'),
+              frame({
+                width: componentTokens.headerControl.size,
+                height: componentTokens.headerControl.size,
+              }),
+              background(colors.surface, shapes.circle()),
+              strokeBorder({
+                content: colors.borderStrong,
+                style: { lineWidth: componentTokens.surface.borderWidth },
+                shape: 'circle',
+              }),
             ]}
-          >
-            {currencySymbol}
-          </Text>
+          />
         </HStack>
 
         <Group modifiers={[padding({ top: wallet.balanceValueToMetrics })]}>
-          <InsetLayer>
-            <HStack
-              alignment="center"
-              spacing={componentTokens.layer.gap}
-              modifiers={[frame({ maxWidth: Infinity, height: wallet.metricLayerHeight - componentTokens.layer.inset * 2 })]}
-            >
-              <MetricTile label={leftLabel} value={leftValue} width={metricWidth} currencySymbol={currencySymbol} />
-              <MetricTile label={rightLabel} value={rightValue} width={metricWidth} currencySymbol={currencySymbol} />
-            </HStack>
-            <InsetActionRow
-              label="Move to grow"
-              symbol="arrow.right"
-              onPress={onMoveToGrow}
-            />
-            <InsetActionRow
-              label="Take money out"
-              symbol="arrow.down.to.line"
-              onPress={onTakeMoneyOut}
-            />
+          <InsetLayer
+            axis="horizontal"
+            height={wallet.metricLayerHeight}
+          >
+            <MetricTile label={leftLabel} value={leftValue} width={tileWidth} currencySymbol={currencySymbol} />
+            <MetricTile label={rightLabel} value={rightValue} width={tileWidth} currencySymbol={currencySymbol} />
           </InsetLayer>
         </Group>
       </VStack>

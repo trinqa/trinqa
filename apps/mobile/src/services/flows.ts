@@ -6,66 +6,134 @@ import {
   earnUnavailableReason,
   ensureAnchorSession,
   executeBuiltPayment,
-  payRecipientOrSelf,
   pollTransfer,
   signXdr,
   stellarAmount,
 } from '@/services/session';
-import type { BackendCapabilities } from '@/services/types';
+import type { AnchorQuote, BackendCapabilities, PaymentQuoteResponse } from '@/services/types';
 import { refreshLedger } from '@/state/mockAppState';
 import type { PutToWorkHorizonId, PutToWorkRiskId } from '@/types';
 
-export async function executeAddMoney(params: {
-  accountId: string;
-  amount: number;
-  currency: string;
-  sourceId: string;
-}) {
-  if (params.sourceId === 'card') {
+/** Live SEP-38 TRY→USDC quote for the Add Money review; `executeAddMoney` deposits against it. */
+export interface AddMoneyLiveQuote {
+  sessionId: string;
+  quote: AnchorQuote;
+}
+
+function assertTryBankDeposit(sourceId: string, currency: string) {
+  if (sourceId === 'card') {
     throw new BackendApiError('ROUTE_UNAVAILABLE', 'Card deposits are not available.', 422);
   }
-  if (params.sourceId === 'wallet') {
+  if (sourceId === 'wallet') {
     throw new BackendApiError(
       'ROUTE_UNAVAILABLE',
       'Only Stellar / TRY bank deposits are available.',
       422,
     );
   }
-  if (params.currency !== 'TRY') {
+  if (currency !== 'TRY') {
     throw new BackendApiError(
       'ROUTE_UNAVAILABLE',
-      `${params.currency} deposits are not available. TRY on-ramp is the supported rail.`,
+      `${currency} deposits are not available. TRY on-ramp is the supported rail.`,
       422,
     );
   }
+}
+
+export async function quoteAddMoney(params: {
+  amount: number;
+  currency: string;
+  sourceId: string;
+}): Promise<AddMoneyLiveQuote> {
+  assertTryBankDeposit(params.sourceId, params.currency);
   const sessionId = await ensureAnchorSession();
-  const sellAmount = String(params.amount);
   const { quote } = await api.anchorQuotes({
     sessionId,
     sellAsset: 'iso4217:TRY',
-    sellAmount,
+    sellAmount: String(params.amount),
   });
+  return { sessionId, quote };
+}
+
+function isExpiring(expiresAt: string | undefined, marginMs = 30_000) {
+  const t = expiresAt ? Date.parse(expiresAt) : NaN;
+  return Number.isFinite(t) && Date.now() > t - marginMs;
+}
+
+/**
+ * The money already moved by the time we refresh — a failed read must not be reported
+ * as a failed transfer. The next screen that reads the ledger picks the balances up.
+ */
+async function refreshLedgerQuietly() {
+  try {
+    await refreshLedger();
+  } catch {
+    // Balances stay stale until the next successful refresh.
+  }
+}
+
+/** Stages the Add Money processing timeline reflects, in order. */
+export type AddMoneyStage = 'initiated' | 'transfer' | 'convert' | 'balance';
+
+export async function executeAddMoney(params: {
+  accountId: string;
+  live: AddMoneyLiveQuote;
+  amount: number;
+  currency: string;
+  sourceId: string;
+  onStage?: (stage: AddMoneyStage) => void;
+}) {
+  const stage = (next: AddMoneyStage) => params.onStage?.(next);
+  stage('initiated');
+  // The anchor rejects expired quotes; refresh rather than failing the deposit.
+  const live = isExpiring(params.live.quote.expires_at)
+    ? await quoteAddMoney({ amount: params.amount, currency: params.currency, sourceId: params.sourceId })
+    : params.live;
   const deposit = await api.anchorDeposits({
-    sessionId,
+    sessionId: live.sessionId,
     account: params.accountId,
-    amount: sellAmount,
-    quoteId: quote.id,
+    amount: live.quote.sell_amount,
+    quoteId: live.quote.id,
   });
   const transferId = deposit.session.id;
   if (!transferId) {
     throw new BackendApiError('ADAPTER_UNAVAILABLE', 'Deposit did not return a transfer id', 502);
   }
-  await api.demoSimulateBank(sessionId, transferId);
-  await pollTransfer(sessionId, transferId, deposit.operationId);
-  await refreshLedger();
+  stage('transfer');
+  await api.demoSimulateBank(live.sessionId, transferId);
+  stage('convert');
+  await pollTransfer(live.sessionId, transferId, deposit.operationId);
+  stage('balance');
+  await refreshLedgerQuietly();
 }
 
-export async function executePay(params: {
+/** Live USDC payment quote for the Pay review; `executePay` builds against the same quote. */
+export interface PayLiveQuote {
+  quote: PaymentQuoteResponse;
+}
+
+export async function quotePay(params: {
   accountId: string;
+  /** The recipient's Stellar account. Resolve it with `recipientAccount` before quoting. */
+  recipientAccount: string;
   amount: number;
   currency: string;
-  approveEarnUnwind: boolean;
-}) {
+}): Promise<PayLiveQuote> {
+  if (!params.recipientAccount) {
+    throw new BackendApiError(
+      'RECIPIENT_UNRESOLVED',
+      'We could not prepare this contact’s account, so the payment cannot be sent.',
+      422,
+    );
+  }
+  // Paying yourself is never what the user asked for; refuse instead of moving money in a circle.
+  if (params.recipientAccount === params.accountId) {
+    throw new BackendApiError(
+      'RECIPIENT_IS_SENDER',
+      'This payment would go back to your own account, so it was stopped.',
+      422,
+    );
+  }
   if (params.currency === 'BRL') {
     throw new BackendApiError(
       'NO_SUPPORTED_PAYOUT_RAIL',
@@ -83,26 +151,59 @@ export async function executePay(params: {
   const receiveCurrency = params.currency === 'USD' ? 'USDC' : params.currency;
   const { quote } = await api.paymentsQuote({
     fromAccount: params.accountId,
-    recipient: payRecipientOrSelf(params.accountId),
+    recipient: params.recipientAccount,
     receiveAmount: stellarAmount(params.amount),
     receiveCurrency,
     balanceSource: 'available',
   });
-  const built = await api.paymentsBuild(quote.quoteId, params.accountId, params.approveEarnUnwind);
+  return { quote };
+}
+
+/** Stages the Pay processing timeline reflects, in order. */
+export type PayStage = 'initiated' | 'converting' | 'sending' | 'completed';
+
+export async function executePay(params: {
+  accountId: string;
+  recipientAccount: string;
+  live: PayLiveQuote;
+  amount: number;
+  currency: string;
+  approveEarnUnwind: boolean;
+  onStage?: (stage: PayStage) => void;
+}) {
+  const stage = (next: PayStage) => params.onStage?.(next);
+  stage('initiated');
+  const live = isExpiring(params.live.quote.expiresAt)
+    ? await quotePay({
+        accountId: params.accountId,
+        recipientAccount: params.recipientAccount,
+        amount: params.amount,
+        currency: params.currency,
+      })
+    : params.live;
+  stage('converting');
+  const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
+  stage('sending');
   const result = await executeBuiltPayment(built);
   if ('successful' in result && result.successful === false) {
     throw new BackendApiError('PAYMENT_FAILED', 'Payment submission failed', 502);
   }
-  await refreshLedger();
+  stage('completed');
+  await refreshLedgerQuietly();
 }
 
-export async function executeWithdrawTry(params: {
+/** Live TRY cash-out quote: `tryAmount` is what lands in the bank; the BFF prices the USDC debit and fee. */
+export interface WithdrawLiveQuote {
+  sessionId: string;
+  quote: PaymentQuoteResponse;
+}
+
+export async function quoteWithdrawTry(params: {
   accountId: string;
-  usdcAmount: number;
+  tryAmount: number;
   currency: string;
   dest?: string;
-  approveEarnUnwind: boolean;
-}) {
+}): Promise<WithdrawLiveQuote> {
   if (params.currency !== 'TRY') {
     throw new BackendApiError(
       params.currency === 'BRL' ? 'NO_SUPPORTED_PAYOUT_RAIL' : 'ROUTE_UNAVAILABLE',
@@ -111,19 +212,70 @@ export async function executeWithdrawTry(params: {
     );
   }
   const sessionId = await ensureAnchorSession();
-  const { quote } = await api.paymentsWithdrawQuote({
+  const { quote } = await api.paymentsQuote({
     fromAccount: params.accountId,
-    usdcAmount: stellarAmount(params.usdcAmount),
+    recipient: params.accountId,
+    receiveAmount: params.tryAmount.toFixed(2),
+    receiveCurrency: 'TRY',
     anchorSessionId: sessionId,
     withdrawDest: params.dest ?? TRY_WITHDRAW_DEST,
   });
-  const built = await api.paymentsBuild(quote.quoteId, params.accountId, params.approveEarnUnwind);
+  return { sessionId, quote };
+}
+
+/** Stages the Withdraw processing timeline reflects, in order. */
+export type WithdrawStage = 'initiated' | 'unwinding' | 'converting' | 'sending' | 'completed';
+
+export async function executeWithdrawTry(params: {
+  accountId: string;
+  live: WithdrawLiveQuote;
+  tryAmount: number;
+  currency: string;
+  dest?: string;
+  approveEarnUnwind: boolean;
+  onStage?: (stage: WithdrawStage) => void;
+}) {
+  const stage = (next: WithdrawStage) => params.onStage?.(next);
+  stage(params.approveEarnUnwind ? 'unwinding' : 'initiated');
+  // Quotes are single-use and expire after a few minutes; refresh a stale one instead of failing.
+  const live = isExpiring(params.live.quote.expiresAt)
+    ? await quoteWithdrawTry({
+        accountId: params.accountId,
+        tryAmount: params.tryAmount,
+        currency: params.currency,
+        dest: params.dest,
+      })
+    : params.live;
+  stage('converting');
+  const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
+  stage('sending');
   await executeBuiltPayment(built);
   const transferId = built.anchorSession?.transferId;
   if (transferId) {
-    await pollTransfer(sessionId, transferId, built.operationId);
+    await pollTransfer(live.sessionId, transferId, built.operationId);
   }
-  await refreshLedger();
+  stage('completed');
+  await refreshLedgerQuietly();
+}
+
+/**
+ * Plain wording for the allocation policy contract's refusal reasons, keyed by the `reason`
+ * the backend puts in `details`. Reasons that are not listed keep the backend's own message:
+ * we only restate what we can describe accurately.
+ */
+const POLICY_DENIED_COPY: Record<string, string> = {
+  AutomationPaused: 'Growing money is paused on your account, so this money was not moved.',
+  StrategyNotAllowed:
+    'Your saved plan does not allow this way of growing money, so this money was not moved.',
+};
+
+function rethrowPolicyDenied(err: unknown): never {
+  if (err instanceof BackendApiError && err.code === 'POLICY_DENIED') {
+    const reason = (err.details as { reason?: string } | undefined)?.reason;
+    const copy = reason ? POLICY_DENIED_COPY[reason] : undefined;
+    if (copy) throw new BackendApiError(err.code, copy, err.status, err.details);
+  }
+  throw err;
 }
 
 function riskProfile(id: PutToWorkRiskId) {
@@ -140,6 +292,9 @@ function targetTimestamp(horizon: PutToWorkHorizonId, date: Date) {
   return now + 365 * 24 * 3600;
 }
 
+/** Stages the Put to Work processing timeline reflects, in order. */
+export type PutToWorkStage = 'policy' | 'depositing' | 'completed';
+
 export async function executePutToWork(params: {
   accountId: string;
   amount: number;
@@ -147,7 +302,10 @@ export async function executePutToWork(params: {
   horizon: PutToWorkHorizonId;
   targetDate: Date;
   capabilities: BackendCapabilities | null;
+  onStage?: (stage: PutToWorkStage) => void;
 }): Promise<{ deposited: boolean }> {
+  const stage = (next: PutToWorkStage) => params.onStage?.(next);
+  stage('policy');
   const builtPolicy = await api.policyBuild({
     action: 'set_policy',
     accountId: params.accountId,
@@ -166,10 +324,11 @@ export async function executePutToWork(params: {
   }
 
   if (earnUnavailable(params.capabilities)) {
-    await refreshLedger();
+    await refreshLedgerQuietly();
     return { deposited: false };
   }
 
+  stage('depositing');
   const { strategies } = await api.yieldStrategies();
   const strategy = strategies[0];
   if (!strategy) {
@@ -179,16 +338,20 @@ export async function executePutToWork(params: {
       503,
     );
   }
-  const builtDeposit = await api.yieldDepositBuild({
-    accountId: params.accountId,
-    strategyId: strategy.id,
-    amount: stellarAmount(params.amount),
-  });
+  // The build simulates the policy contract, so the user's own policy can refuse it here.
+  const builtDeposit = await api
+    .yieldDepositBuild({
+      accountId: params.accountId,
+      strategyId: strategy.id,
+      amount: stellarAmount(params.amount),
+    })
+    .catch(rethrowPolicyDenied);
   const signedDeposit = await signXdr(builtDeposit.unsignedXdr);
   const executed = await api.yieldExecute(builtDeposit.operationId, signedDeposit);
   if (!executed.successful) {
     throw new BackendApiError('ADAPTER_UNAVAILABLE', 'Yield deposit failed', 502);
   }
-  await refreshLedger();
+  stage('completed');
+  await refreshLedgerQuietly();
   return { deposited: true };
 }

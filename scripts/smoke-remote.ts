@@ -64,14 +64,15 @@ async function pollTransfer(sessionId: string, transferId: string, operationId?:
   throw new Error(`Transfer ${transferId} timed out`);
 }
 
-async function expectStatus(promise: Promise<unknown>, status: number, code?: string) {
+async function expectStatus(promise: Promise<unknown>, status: number, code?: string | string[]) {
+  const codes = code === undefined ? undefined : Array.isArray(code) ? code : [code];
   try {
     await promise;
   } catch (err) {
-    if (err instanceof HttpError && err.status === status && (!code || err.body.error === code)) return;
+    if (err instanceof HttpError && err.status === status && (!codes || codes.includes(err.body.error))) return;
     throw err;
   }
-  throw new Error(`Expected HTTP ${status}${code ? ` ${code}` : ''}, got success`);
+  throw new Error(`Expected HTTP ${status}${codes ? ` ${codes.join('|')}` : ''}, got success`);
 }
 
 async function main() {
@@ -162,9 +163,10 @@ async function main() {
         body: { fromAccount: account, usdcAmount: '5000.0000000', anchorSessionId: sessionId, withdrawDest: TRY_WITHDRAW_DEST },
       }),
       422,
-      'AMOUNT_OUT_OF_RANGE',
+      // The anchor's published SEP-6 max rejects it first when it publishes one; otherwise the balance does.
+      ['AMOUNT_OUT_OF_RANGE', 'INSUFFICIENT_BALANCE'],
     );
-    pass('Cash-out quote: fee shown, limits enforced', `${wQuote.destination.amount} TRY, fee ${wQuote.fee.amount} USDC`);
+    pass('Cash-out quote: fee shown, oversized amount rejected', `${wQuote.destination.amount} TRY, fee ${wQuote.fee.amount} USDC`);
 
     const builtW = await call('/api/v1/payments/build', { body: { quoteId: wQuote.quoteId, fromAccount: account } });
     const funded = await call('/api/v1/payments/execute-step', {

@@ -2,12 +2,38 @@ import { z } from 'zod';
 
 export const riskProfileSchema = z.number().int().min(0).max(2);
 
+const SOROBAN_SYMBOL = /^[A-Za-z0-9_]{1,32}$/;
+const DEFINDEX_STRATEGY_ID = /^defindex:(C[A-Z2-7]{55})$/;
+
+/**
+ * Strategy ids (`defindex:<vault C-address>`, 65 bytes) do not fit a Soroban Symbol (max 32).
+ * The policy contract stores this short, deterministic alias instead: `dfx_` + first 12 chars of the vault.
+ */
+export function policyStrategySymbol(strategyId: string): string {
+  const vault = DEFINDEX_STRATEGY_ID.exec(strategyId)?.[1];
+  const symbol = vault ? `dfx_${vault.slice(0, 12)}` : strategyId;
+  if (!SOROBAN_SYMBOL.test(symbol)) {
+    throw new Error(`Strategy "${strategyId}" cannot be stored as a Soroban Symbol`);
+  }
+  return symbol;
+}
+
+/** A strategy reference the API accepts: a full strategy id or an already-short Symbol. */
+const strategyRefSchema = z.string().refine((v) => {
+  try {
+    policyStrategySymbol(v);
+    return true;
+  } catch {
+    return false;
+  }
+}, 'strategy must be a strategy id (defindex:C…) or a Soroban Symbol (<= 32 chars, [A-Za-z0-9_])');
+
 export const userPolicyInputSchema = z.object({
   riskProfile: riskProfileSchema,
   targetTimestamp: z.coerce.bigint().refine((v) => v > 0n, 'targetTimestamp must be positive'),
   liquidityTargetBps: z.number().int().min(0).max(10_000),
   automationPaused: z.boolean().default(false),
-  allowedStrategies: z.array(z.string().min(1).max(32)).default([]),
+  allowedStrategies: z.array(strategyRefSchema).default([]),
 });
 
 export type UserPolicyInput = z.infer<typeof userPolicyInputSchema>;
@@ -31,20 +57,20 @@ export const policyBuildActionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('set_strategy_allowed'),
     accountId: z.string().min(56).max(56),
-    strategy: z.string().min(1).max(32),
+    strategy: strategyRefSchema,
     allowed: z.boolean(),
   }),
   z.object({
     action: z.literal('authorize_allocation'),
     accountId: z.string().min(56).max(56),
-    strategy: z.string().min(1).max(32),
+    strategy: strategyRefSchema,
     amountBps: z.number().int().min(0).max(10_000),
   }),
   z.object({
     action: z.literal('authorize_rebalance'),
     accountId: z.string().min(56).max(56),
-    fromStrategy: z.string().min(1).max(32),
-    toStrategy: z.string().min(1).max(32),
+    fromStrategy: strategyRefSchema,
+    toStrategy: strategyRefSchema,
   }),
   z.object({
     action: z.literal('pause_automation'),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   BottomSheet,
@@ -49,13 +49,25 @@ import { FlowInlineState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
-  createWithdrawalQuote,
   quickWithdrawalAmounts,
   withdrawalCurrencies,
   withdrawalDestinations,
 } from '@/data/mocks/withdraw';
-import { recordWithdrawal, useMockAppState } from '@/state/mockAppState';
-import { colors, componentTokens, motion, screenTokens, spacing, typography } from '@/theme';
+import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
+import { ROUTE_REJECT_REASONS } from '@/data/routeCopy';
+import { RoutePreviewSheet } from '@/features/withdraw/RoutePreviewSheet';
+import { api } from '@/services/api';
+import { describeCode, errorMessage } from '@/services/apiErrors';
+import { executeWithdrawTry, quoteWithdrawTry, type WithdrawLiveQuote } from '@/services/flows';
+import type {
+  QuoteRouteDecision,
+  RouteAdvisorInfo,
+  RouteDecision,
+  RouteRejectReason,
+} from '@/services/types';
+import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
+import { useMockAppState } from '@/state/mockAppState';
+import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
   WithdrawalCurrency,
@@ -88,18 +100,165 @@ function formatPayoutAmount(
   })} ${CURRENCY_SYMBOLS[currency]}`;
 }
 
+// Balances, debits and fees are USDC, presented as USD across the app.
 function formatUsd(value: number) {
   return `${value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ₺`;
+    maximumFractionDigits: 4,
+  })} $`;
 }
 
 function formatUsdRate(value: number) {
   return `${value.toLocaleString('en-US', {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  })} ₺`;
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })} $`;
+}
+
+const ADVISOR_FALLBACK_REASONS = [
+  'disabled',
+  'timeout',
+  'error',
+  'low_confidence',
+  'invalid_output',
+  'no_routes',
+] as const;
+
+function isAdvisorFallbackReason(value: unknown): value is NonNullable<RouteAdvisorInfo['fallbackReason']> {
+  return ADVISOR_FALLBACK_REASONS.some((reason) => reason === value);
+}
+
+/**
+ * `providerPayload` is free-form, so the decision is validated before anything is shown.
+ * A malformed row drops the whole decision — a partial list would misreport how many routes
+ * were considered. Reason codes are the exception: an unknown one is skipped when the reasons
+ * are written out, because the entry still counts even when we cannot phrase it.
+ */
+function parseRouteDecision(payload: Record<string, unknown> | undefined): QuoteRouteDecision | null {
+  const raw = payload?.routeDecision;
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as Record<string, unknown>;
+  const advisor = value.advisor;
+  if (typeof value.executedVia !== 'string' || !value.executedVia) return null;
+  if (!advisor || typeof advisor !== 'object') return null;
+  const advisorValue = advisor as Record<string, unknown>;
+  if (advisorValue.name !== 'jev' && advisorValue.name !== 'none') return null;
+  if (typeof advisorValue.used !== 'boolean' || typeof advisorValue.minConfidence !== 'number') return null;
+  if (!Array.isArray(value.eligible) || !Array.isArray(value.rejected)) return null;
+
+  const eligible: QuoteRouteDecision['eligible'] = [];
+  for (const item of value.eligible) {
+    if (!item || typeof item !== 'object') return null;
+    const row = item as Record<string, unknown>;
+    if (typeof row.routeId !== 'string' || typeof row.score !== 'number') return null;
+    eligible.push({ routeId: row.routeId, score: row.score });
+  }
+
+  const rejected: QuoteRouteDecision['rejected'] = [];
+  for (const item of value.rejected) {
+    if (!item || typeof item !== 'object') return null;
+    const row = item as Record<string, unknown>;
+    if (typeof row.anchorId !== 'string' || !Array.isArray(row.reasons)) return null;
+    if (row.reasons.some((reason) => typeof reason !== 'string')) return null;
+    const reasons = row.reasons.filter(
+      (reason): reason is RouteRejectReason => reason in ROUTE_REJECT_REASONS,
+    );
+    rejected.push({ anchorId: row.anchorId, reasons });
+  }
+
+  return {
+    chosenRouteId: typeof value.chosenRouteId === 'string' ? value.chosenRouteId : null,
+    chosenAnchor: typeof value.chosenAnchor === 'string' ? value.chosenAnchor : null,
+    executable: value.executable === true,
+    executedVia: value.executedVia,
+    advisor: {
+      name: advisorValue.name,
+      used: advisorValue.used,
+      minConfidence: advisorValue.minConfidence,
+      ...(isAdvisorFallbackReason(advisorValue.fallbackReason)
+        ? { fallbackReason: advisorValue.fallbackReason }
+        : {}),
+    },
+    eligible,
+    rejected,
+  };
+}
+
+/**
+ * Describes the real decision. Two claims only: how many options were looked at, and who was
+ * picked — the count covers rejected anchors too, which are never scored, so it stays separate
+ * from the pick. The payout always leaves through `executedVia`, whatever ranked highest.
+ */
+function routeDecisionSubtitle(decision: QuoteRouteDecision) {
+  const considered = decision.eligible.length + decision.rejected.length;
+  // The notice box is a fixed height, so every variant stays close to the copy it replaced.
+  const checked = `${considered} ${considered === 1 ? 'option' : 'options'} checked.`;
+  const chosen = decision.chosenAnchor;
+  if (!chosen) return `${checked} ${decision.executedVia} pays you out.`;
+  // Jev is only named when it actually fed the scores; otherwise the pick was computed here.
+  const pick = decision.advisor.used ? `Jev helped pick ${chosen}` : `We picked ${chosen}`;
+  if (chosen === decision.executedVia) return `${checked} ${pick}, which pays you out.`;
+  return `${checked} ${pick}, but ${decision.executedVia} pays out.`;
+}
+
+/**
+ * Only reached with a decision from an earlier, successful quote, so anything the amount changes
+ * (BELOW_MIN, ABOVE_MAX) is dropped — it would describe a different amount than the one that failed.
+ */
+function ruledOutSubtitle(decision: QuoteRouteDecision) {
+  const lines = decision.rejected
+    .map((entry) => {
+      const reasons = entry.reasons.filter((reason) => reason !== 'BELOW_MIN' && reason !== 'ABOVE_MAX');
+      if (reasons.length === 0) return null;
+      return `${entry.anchorId} ${reasons.map((reason) => ROUTE_REJECT_REASONS[reason]).join(', ')}.`;
+    })
+    .filter((line): line is string => line !== null);
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
+/** Maps the BFF cash-out quote onto the review model. Without a live quote nothing is claimable. */
+function toWithdrawalQuote(
+  intent: WithdrawalIntent,
+  available: number,
+  live: WithdrawLiveQuote | null,
+): WithdrawalQuote {
+  if (!live) {
+    return {
+      receiveAmount: intent.amount,
+      receiveCurrency: intent.payoutCurrency,
+      debitAmount: 0,
+      debitCurrency: 'USD',
+      fee: 0,
+      exchangeRate: 0,
+      estimatedArrival: '—',
+      availableAmount: available,
+      availableDebitAmount: 0,
+      requiresEarnUnwind: false,
+      earnUnwindAmount: 0,
+      routeId: 'tr-mock-anchor',
+      routeDecision: null,
+      hasSufficientTotal: false,
+    };
+  }
+  const { quote } = live;
+  const receiveAmount = Number(quote.receiveAmount);
+  const debitAmount = Number(quote.debitAmount);
+  return {
+    receiveAmount,
+    receiveCurrency: intent.payoutCurrency,
+    debitAmount,
+    debitCurrency: 'USD',
+    fee: Number(quote.fee.amount),
+    exchangeRate: receiveAmount > 0 ? debitAmount / receiveAmount : 0,
+    estimatedArrival: `~${quote.estimatedArrivalMinutes} min`,
+    availableAmount: available,
+    availableDebitAmount: Number(quote.funding?.availableContribution ?? debitAmount),
+    requiresEarnUnwind: Boolean(quote.funding?.requiresEarnUnwind),
+    earnUnwindAmount: Number(quote.funding?.earnContribution ?? 0),
+    routeId: quote.routeType,
+    routeDecision: parseRouteDecision(quote.providerPayload),
+    hasSufficientTotal: true,
+  };
 }
 
 function processingRowState(
@@ -353,10 +512,19 @@ function DestinationStep({
 function WithdrawalAmountSummary({
   intent,
   quote,
+  quoteState,
+  blockedReason,
+  routePreview,
+  ruledOut,
 }: {
   intent: WithdrawalIntent;
   quote: WithdrawalQuote;
+  quoteState: LiveQuoteState<WithdrawLiveQuote>;
+  blockedReason: string | null;
+  routePreview: RouteDecision | null;
+  ruledOut: string | null;
 }) {
+  const ready = Boolean(quoteState.data);
   return (
     <VStack spacing={8}>
       <FlowCard height={screenTokens.withdrawalFlow.summaryHeight}>
@@ -380,17 +548,32 @@ function WithdrawalAmountSummary({
             {formatPayoutAmount(intent.amount, intent.payoutCurrency)}
           </Text>
           <Divider />
-          <FlowInfoRow label="Estimated debit" value={formatUsd(quote.debitAmount)} />
+          <FlowInfoRow
+            label="Estimated debit"
+            value={
+              ready
+                ? formatUsd(quote.debitAmount)
+                : blockedReason
+                  ? 'Unavailable'
+                  : quoteState.loading
+                    ? 'Getting a live quote…'
+                    : '—'
+            }
+          />
           <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
-            <FlowInfoRow label="Fee" value={formatUsd(quote.fee)} />
+            <FlowInfoRow label="Fee" value={ready ? formatUsd(quote.fee) : '—'} />
             <FlowInfoRow label="Arrival" value={quote.estimatedArrival} />
           </HStack>
           <FlowInfoRow
             label="Exchange rate"
-            value={`1 ${CURRENCY_SYMBOLS[intent.payoutCurrency]} ≈ ${formatUsdRate(quote.exchangeRate)}`}
+            value={ready ? `1 ${CURRENCY_SYMBOLS[intent.payoutCurrency]} ≈ ${formatUsdRate(quote.exchangeRate)}` : '—'}
           />
         </VStack>
       </FlowCard>
+
+      {/* Renders nothing while the preview is missing, in flight or empty — it must never
+          delay the quote or crowd the amount step. */}
+      <RoutePreviewSheet decision={routePreview} />
 
       {quote.requiresEarnUnwind && quote.hasSufficientTotal ? (
         <FlowNotice
@@ -399,12 +582,23 @@ function WithdrawalAmountSummary({
           subtitle={`Needed from Earn ${formatUsd(quote.earnUnwindAmount)}`}
         />
       ) : null}
-      {!quote.hasSufficientTotal ? (
+      {blockedReason ? (
         <FlowInlineState
           symbol="exclamationmark.circle"
-          title="Not enough balance"
-          subtitle="Add money or change the amount to continue."
+          title={`${intent.payoutCurrency} payouts aren’t live yet`}
+          subtitle={describeCode(blockedReason)}
         />
+      ) : quoteState.error ? (
+        <FlowInlineState
+          symbol="exclamationmark.circle"
+          tone="danger"
+          title="Can’t withdraw this amount"
+          subtitle={quoteState.error}
+          onRetry={quoteState.retry}
+        />
+      ) : null}
+      {quoteState.error && ruledOut ? (
+        <FlowInlineState symbol="xmark.circle" title="Payout options already ruled out" subtitle={ruledOut} />
       ) : null}
     </VStack>
   );
@@ -417,18 +611,27 @@ function ReviewStep({
   onConfirm,
   quote,
   error,
+  isSubmitting,
 }: {
   destination: WithdrawalDestination;
   intent: WithdrawalIntent;
   onBack: () => void;
   onConfirm: () => void;
+  isSubmitting: boolean;
   quote: WithdrawalQuote;
   error?: string | null;
 }) {
   const receiveAmount = formatPayoutAmount(intent.amount, intent.payoutCurrency);
 
   return (
-    <FlowStepLayout title="Review" onBack={onBack} primaryLabel="Confirm" onPrimaryPress={onConfirm}>
+    <FlowStepLayout
+      title="Review"
+      onBack={onBack}
+      primaryLabel="Confirm"
+      onPrimaryPress={onConfirm}
+      isPrimaryDisabled={!quote.hasSufficientTotal}
+      isPrimaryBusy={isSubmitting}
+    >
       <VStack alignment="leading" spacing={screenTokens.paymentFlow.cardGap} modifiers={[padding({ top: spacing.xxxl })]}>
         <FlowCard>
           <VStack alignment="leading" spacing={11} modifiers={[padding({ all: screenTokens.paymentFlow.cardPadding })]}>
@@ -485,13 +688,15 @@ function ReviewStep({
           </VStack>
         </FlowCard>
 
-        <FlowNotice
-          symbol="point.3.connected.trianglepath.dotted"
-          title="TRY payout rail"
-          subtitle="Withdrawals use the TR mock anchor. Other payout currencies are unavailable."
-        />
+        {quote.routeDecision ? (
+          <FlowNotice
+            symbol="point.3.connected.trianglepath.dotted"
+            title="Payout route"
+            subtitle={routeDecisionSubtitle(quote.routeDecision)}
+          />
+        ) : null}
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Withdrawal failed" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Withdrawal failed" subtitle={error} />
         ) : null}
       </VStack>
     </FlowStepLayout>
@@ -500,21 +705,57 @@ function ReviewStep({
 
 export function WithdrawFlowScreen() {
   const router = useRouter();
-  const { balances } = useMockAppState();
+  const { account, balances, capabilities } = useMockAppState();
   const [step, setStep] = useState<WithdrawalStep>('amount');
   const [currency, setCurrency] = useState<WithdrawalCurrency>('TRY');
   const [amount, setAmount] = useState(1);
   const [destination, setDestination] = useState<WithdrawalDestination>(withdrawalDestinations[0]);
   const [withdrawalStatus, setWithdrawalStatus] = useState<WithdrawalStatus>('initiated');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const amountText = useNativeState(formatWholeAmount(1));
-  const withdrawOptions = withdrawalCurrencies;
+  const currencies = liveCurrenciesFor('withdraw', capabilities);
+  const withdrawOptions = currencies.length ? currencies : withdrawalCurrencies;
 
   const intent = useMemo<WithdrawalIntent>(
     () => ({ amount, payoutCurrency: currency, destinationId: destination.id }),
     [amount, currency, destination.id],
   );
-  const quote = useMemo(() => createWithdrawalQuote(intent, balances), [balances, intent]);
+  const blocked = payoutBlockedReason(currency, capabilities);
+  const liveQuote = useLiveQuote(
+    `${account.id}:${currency}:${amount}`,
+    amount > 0 && !blocked,
+    () => quoteWithdrawTry({ accountId: account.id, tryAmount: amount, currency }),
+  );
+  const quote = useMemo(
+    () => toWithdrawalQuote(intent, balances.available, liveQuote.data),
+    [balances.available, intent, liveQuote.data],
+  );
+  /**
+   * The planner scores routes against limits published in USDC, while the figure on screen is
+   * the payout in TRY, so the preview asks about the quote's own USDC debit. That means it
+   * waits for a quote — sending the payout figure instead would measure the wrong amount and
+   * could rule an anchor in or out for a limit the user never hit. A failed preview is
+   * swallowed: `routePreview.data` is null and the row disappears, never blocking the quote.
+   */
+  const previewAmount = liveQuote.data?.quote.debitAmount ?? null;
+  const routePreview = useLiveQuote(
+    `routes:${currency}:${previewAmount ?? ''}`,
+    previewAmount !== null,
+    () => api.routesPreview({ direction: 'withdraw', currency, amount: previewAmount ?? '0' }),
+  );
+  // A failed quote carries no decision, so the last one is kept to explain what was already ruled out.
+  const [lastDecision, setLastDecision] = useState<
+    { currency: WithdrawalCurrency; decision: QuoteRouteDecision } | null
+  >(null);
+  useEffect(() => {
+    if (quote.routeDecision) setLastDecision({ currency, decision: quote.routeDecision });
+  }, [currency, quote.routeDecision]);
+  const ruledOut = useMemo(
+    () => (lastDecision?.currency === currency ? ruledOutSubtitle(lastDecision.decision) : null),
+    [currency, lastDecision],
+  );
+
   const receiveAmount = formatPayoutAmount(amount, currency);
   const withdrawalId = useMemo(
     () => `withdrawal-${destination.id}-${currency.toLowerCase()}-${amount}`,
@@ -548,7 +789,7 @@ export function WithdrawFlowScreen() {
     }
     if (step === 'destination') setStep('amount');
     if (step === 'review') setStep('destination');
-    if (step === 'processing') setStep('review');
+    // 'processing' has no back: the withdrawal is already in flight.
   };
 
   const finishAtWallet = () => router.replace('/');
@@ -617,7 +858,16 @@ export function WithdrawFlowScreen() {
           quickAmounts={quickWithdrawalAmounts}
           selectionSymbol="wallet.bifold.fill"
           selectionTitle={`Available ${formatUsd(balances.available)}`}
-          summary={<WithdrawalAmountSummary intent={intent} quote={quote} />}
+          summary={(
+            <WithdrawalAmountSummary
+              intent={intent}
+              quote={quote}
+              quoteState={liveQuote}
+              blockedReason={blocked}
+              routePreview={routePreview.data}
+              ruledOut={ruledOut}
+            />
+          )}
           title="Withdraw"
         />
       ) : null}
@@ -638,15 +888,38 @@ export function WithdrawFlowScreen() {
           error={submitError}
           intent={intent}
           onBack={goBack}
+          isSubmitting={isSubmitting}
           onConfirm={() => {
+            if (destination.kind !== 'bank') {
+              setSubmitError('Wallet withdrawals are not available. Use a TRY bank destination.');
+              return;
+            }
+            const live = liveQuote.data;
+            if (!live || isSubmitting) return;
             setSubmitError(null);
-            setWithdrawalStatus('sending');
+            setIsSubmitting(true);
+            setWithdrawalStatus('initiated');
             setStep('processing');
-            setTimeout(() => {
-              recordWithdrawal(withdrawalId, intent, quote, destination);
-              setWithdrawalStatus('completed');
-              setStep('success');
-            }, motion.duration.flowProcessing);
+            void (async () => {
+              try {
+                await executeWithdrawTry({
+                  accountId: account.id,
+                  live,
+                  tryAmount: amount,
+                  currency,
+                  approveEarnUnwind: quote.requiresEarnUnwind,
+                  onStage: setWithdrawalStatus,
+                });
+                setWithdrawalStatus('completed');
+                setStep('success');
+              } catch (err) {
+                setSubmitError(errorMessage(err));
+                setWithdrawalStatus('failed');
+                setStep('review');
+              } finally {
+                setIsSubmitting(false);
+              }
+            })();
           }}
           quote={quote}
         />
@@ -659,9 +932,8 @@ export function WithdrawFlowScreen() {
           supportingLines={['This usually takes a moment.']}
           symbol="arrow.down.to.line"
           steps={processingSteps}
-          noticeTitle="You can close this screen"
-          noticeSubtitle="We’ll notify you when it’s complete."
-          onBack={goBack}
+          noticeTitle="Keep this screen open"
+          noticeSubtitle="We’ll move you on as soon as the anchor confirms."
         />
       ) : null}
 

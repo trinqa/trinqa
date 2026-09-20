@@ -1,6 +1,8 @@
-import { HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   background,
+  buttonStyle,
   font,
   foregroundStyle,
   frame,
@@ -17,10 +19,17 @@ export function FlowInlineState({
   symbol,
   title,
   subtitle,
+  tone = 'neutral',
+  onRetry,
+  retryLabel = 'Retry',
 }: {
   symbol: SFSymbol;
   title: string;
   subtitle: string;
+  /** 'danger' tints the icon red — use it when the row reports a failure, not an explanation. */
+  tone?: 'neutral' | 'danger';
+  onRetry?: () => void;
+  retryLabel?: string;
 }) {
   return (
     <HStack
@@ -38,7 +47,7 @@ export function FlowInlineState({
         }),
       ]}
     >
-      <Image systemName={symbol} size={18} color={colors.textPrimary} />
+      <Image systemName={symbol} size={18} color={tone === 'danger' ? colors.danger : colors.textPrimary} />
       <VStack alignment="leading" spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
         <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
           {title}
@@ -47,6 +56,27 @@ export function FlowInlineState({
           {subtitle}
         </Text>
       </VStack>
+      {onRetry ? (
+        <Button
+          onPress={onRetry}
+          modifiers={[
+            buttonStyle('plain'),
+            accessibilityLabel(retryLabel),
+            padding({ horizontal: 12, vertical: 7 }),
+            background(colors.surface, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius })),
+            strokeBorder({
+              content: colors.borderStrong,
+              style: { lineWidth: componentTokens.surface.borderWidth },
+              shape: 'roundedRectangle',
+              cornerRadius: componentTokens.surface.controlRadius,
+            }),
+          ]}
+        >
+          <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.action)]}>
+            {retryLabel}
+          </Text>
+        </Button>
+      ) : null}
     </HStack>
   );
 }

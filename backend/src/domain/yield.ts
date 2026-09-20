@@ -8,6 +8,8 @@ export type YieldStrategy = {
   /** Trinqa product classification — not a separate on-chain vault. */
   risk: RiskTier;
   estimatedApy: number;
+  /** `fixed_apr`: rate set by the strategy contract; `provider`: DeFindex API estimate. */
+  apySource?: 'provider' | 'fixed_apr';
   withdrawalAvailability: 'flexible' | '30d' | '90d';
   vaultAddress: string;
   symbol?: string;

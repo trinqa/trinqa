@@ -6,7 +6,7 @@ import {
   type YieldStrategy,
   strategyIdForVault,
 } from '../domain/yield.js';
-import { providerNumberToDecimalString } from '../domain/provider-amount.js';
+import { providerAtomicToDecimalString } from '../domain/provider-amount.js';
 import { bigintToSafeNumber } from '../domain/safe-integer.js';
 import { normalizeProviderError } from '../util/provider-error.js';
 import { ApiError } from '../domain/api-errors.js';
@@ -201,7 +201,9 @@ export class DefindexYieldAdapter {
     let name = `DeFindex vault ${vault.slice(0, 8)}…`;
     let symbol: string | undefined;
     let assets: string[] | undefined;
-    let apy = 0;
+    const fixedAprBps = this.config.DEFINDEX_FIXED_APR_BPS;
+    const apySource = fixedAprBps === undefined ? 'provider' : 'fixed_apr';
+    let apy = fixedAprBps === undefined ? 0 : fixedAprBps / 100;
     if (this.isConfigured) {
       try {
         const info = await this.getVaultInfo();
@@ -211,7 +213,8 @@ export class DefindexYieldAdapter {
         if (rawAssets?.length) {
           assets = rawAssets.map((a) => a.code ?? a.symbol ?? 'asset').filter(Boolean);
         }
-        apy = await this.getVaultAPY();
+        // The API derives APY from share-price drift, which is wildly off for a young, tiny vault.
+        if (apySource === 'provider') apy = await this.getVaultAPY();
       } catch {
         // keep minimal metadata
       }
@@ -222,6 +225,7 @@ export class DefindexYieldAdapter {
       name,
       risk,
       estimatedApy: apy,
+      apySource,
       withdrawalAvailability: 'flexible',
       vaultAddress: vault,
       symbol,
@@ -258,9 +262,10 @@ export class DefindexYieldAdapter {
       throw new ApiError('DEFINDEX_VAULT_ASSET_MISMATCH', 'Vault has no Trinqa USDC asset slot', 422);
     }
     const balance = await this.getVaultBalance(accountId);
-    const shares = String(balance.dfTokens ?? 0);
-    const underlying = (balance.underlyingBalance ?? []).map((n: number, i: number) =>
-      providerNumberToDecimalString(n, 7, `underlyingBalance[${i}]`),
+    // dfTokens are vault shares; kept as the raw atomic integer string.
+    const shares = providerAtomicToDecimalString(balance.dfTokens ?? '0', 0, 'dfTokens');
+    const underlying = ((balance.underlyingBalance ?? []) as unknown[]).map((n, i) =>
+      providerAtomicToDecimalString(n, 7, `underlyingBalance[${i}]`),
     );
     const totalUnderlying = underlying[usdcIndex] ?? '0';
     if (Number(shares) <= 0 && Number(totalUnderlying) <= 0) {

@@ -1,5 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { policyBuildActionSchema, policyViewFromNative, userPolicyInputSchema } from '../../src/domain/policy.js';
+import {
+  policyBuildActionSchema,
+  policyStrategySymbol,
+  policyViewFromNative,
+  userPolicyInputSchema,
+} from '../../src/domain/policy.js';
+
+describe('policyStrategySymbol', () => {
+  const vault = 'CBSHFPAW56ZRV7DBSC6GYOD7IOMTDJJY3MCVW5RONTWL33MHTXOML7LA';
+
+  it('maps a DeFindex strategy id to a stable on-chain Symbol (<= 32 bytes)', () => {
+    const symbol = policyStrategySymbol(`defindex:${vault}`);
+    expect(symbol).toBe('dfx_CBSHFPAW56ZR');
+    expect(symbol.length).toBeLessThanOrEqual(32);
+    expect(policyStrategySymbol(`defindex:${vault}`)).toBe(symbol);
+  });
+
+  it('passes short symbol-safe names through', () => {
+    expect(policyStrategySymbol('soroswap')).toBe('soroswap');
+    expect(policyStrategySymbol('dfx_CBSHFPAW56ZR')).toBe('dfx_CBSHFPAW56ZR');
+  });
+
+  it('rejects anything that cannot be a Soroban Symbol', () => {
+    expect(() => policyStrategySymbol('x'.repeat(33))).toThrow(/Symbol/);
+    expect(() => policyStrategySymbol('has space')).toThrow(/Symbol/);
+  });
+});
 
 describe('policy domain', () => {
   it('validates set_policy build payload', () => {

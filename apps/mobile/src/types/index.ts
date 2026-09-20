@@ -1,5 +1,7 @@
 import type { SFSymbol } from 'sf-symbols-typescript';
 
+import type { QuoteRouteDecision } from '@/services/types';
+
 export interface AccountSummary {
   accountName: string;
   cardLabel: string;
@@ -72,7 +74,7 @@ export type AddMoneyStep = 'network' | 'amount' | 'review' | 'processing' | 'suc
 
 export type PutToWorkRiskId = 'stable' | 'balanced' | 'growth';
 export type PutToWorkHorizonId = 'anytime' | 'seven-days' | 'thirty-days' | 'date';
-export type PutToWorkStep = 'strategy' | 'amount' | 'review' | 'success';
+export type PutToWorkStep = 'strategy' | 'amount' | 'review' | 'processing' | 'success';
 export type PutToWorkOrigin = 'add-money' | 'wallet' | 'earn';
 
 export interface PutToWorkRiskProfile {
@@ -184,6 +186,8 @@ export interface WithdrawalQuote {
   requiresEarnUnwind: boolean;
   earnUnwindAmount: number;
   routeId: string;
+  /** How the backend picked the payout route. Absent for non-TRY quotes and when the planner failed. */
+  routeDecision: QuoteRouteDecision | null;
   hasSufficientTotal: boolean;
 }
 

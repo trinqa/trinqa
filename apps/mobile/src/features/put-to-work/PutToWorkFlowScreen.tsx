@@ -34,8 +34,10 @@ import {
   FlowCard,
   FlowInfoRow,
   FlowNotice,
+  FlowProcessingState,
   FlowStepLayout,
   FlowSuccessState,
+  type FlowProcessingRowState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { FlowInlineState } from '@/components/FlowStates';
@@ -47,7 +49,10 @@ import {
   putToWorkRiskProfiles,
   quickPutToWorkAmounts,
 } from '@/data/mocks/putToWork';
-import { recordAllocation, useMockAppState } from '@/state/mockAppState';
+import { BackendApiError, errorMessage } from '@/services/apiErrors';
+import { executePutToWork, type PutToWorkStage } from '@/services/flows';
+import { earnUnavailable, earnUnavailableReason } from '@/services/session';
+import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
 import type {
   PutToWorkHorizon,
@@ -63,6 +68,26 @@ const HORIZON_OPTIONS = putToWorkHorizons.map((horizon) => ({
   label: horizon.title,
   value: horizon.id,
 }));
+
+interface FlowFailure {
+  title: string;
+  subtitle: string;
+}
+
+/**
+ * The title separates the three outcomes the user can act on differently: their own plan
+ * refused the move, the check could not run at all, or something else broke.
+ */
+function toFlowFailure(err: unknown): FlowFailure {
+  const subtitle = errorMessage(err);
+  if (err instanceof BackendApiError && err.code === 'POLICY_DENIED') {
+    return { title: 'Your plan did not allow this', subtitle };
+  }
+  if (err instanceof BackendApiError && err.code === 'ADAPTER_UNAVAILABLE') {
+    return { title: 'Not available right now', subtitle };
+  }
+  return { title: 'Could not complete', subtitle };
+}
 
 function formatWholeAmount(value: number) {
   return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -321,14 +346,16 @@ function ReviewStep({
   quote,
   error,
   earnBlockedReason,
+  isSubmitting,
 }: {
   horizon: PutToWorkHorizon;
   onBack: () => void;
   onConfirm: () => void;
   profile: PutToWorkRiskProfile;
   quote: PutToWorkQuote;
-  error?: string | null;
+  error?: FlowFailure | null;
   earnBlockedReason?: string | null;
+  isSubmitting: boolean;
 }) {
   return (
     <FlowStepLayout
@@ -336,6 +363,7 @@ function ReviewStep({
       onBack={onBack}
       primaryLabel="Confirm"
       onPrimaryPress={onConfirm}
+      isPrimaryBusy={isSubmitting}
     >
       <VStack
         alignment="leading"
@@ -416,7 +444,7 @@ function ReviewStep({
           }
         />
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Could not complete" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" tone="danger" title={error.title} subtitle={error.subtitle} />
         ) : null}
         <StrategyDetailsSheet profile={profile} />
       </VStack>
@@ -424,9 +452,19 @@ function ReviewStep({
   );
 }
 
+const PUT_TO_WORK_STAGE_ORDER: PutToWorkStage[] = ['policy', 'depositing', 'completed'];
+
+function putToWorkRowState(current: PutToWorkStage, row: PutToWorkStage): FlowProcessingRowState {
+  const currentIndex = PUT_TO_WORK_STAGE_ORDER.indexOf(current);
+  const rowIndex = PUT_TO_WORK_STAGE_ORDER.indexOf(row);
+  if (rowIndex < currentIndex) return 'complete';
+  if (rowIndex === currentIndex) return 'current';
+  return 'pending';
+}
+
 export function PutToWorkFlowScreen() {
   const router = useRouter();
-  const { balances } = useMockAppState();
+  const { account, balances, capabilities } = useMockAppState();
   const params = useLocalSearchParams<{ origin?: string }>();
   const originParam = Array.isArray(params.origin) ? params.origin[0] : params.origin;
   const origin: PutToWorkOrigin =
@@ -437,8 +475,12 @@ export function PutToWorkFlowScreen() {
   const [horizonId, setHorizonId] = useState<PutToWorkHorizonId>('anytime');
   const [amount, setAmount] = useState(1);
   const [targetDate, setTargetDate] = useState(new Date(2026, 9, 25));
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<FlowFailure | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stage, setStage] = useState<PutToWorkStage>('policy');
+  const [deposited, setDeposited] = useState(true);
   const amountText = useNativeState(formatWholeAmount(1));
+  const blockedReason = earnUnavailable(capabilities) ? earnUnavailableReason(capabilities) : null;
 
   const profile =
     putToWorkRiskProfiles.find((option) => option.id === profileId) ?? putToWorkRiskProfiles[1];
@@ -511,34 +553,84 @@ export function PutToWorkFlowScreen() {
 
       {step === 'review' ? (
         <ReviewStep
-          earnBlockedReason={null}
+          earnBlockedReason={blockedReason}
           error={submitError}
           horizon={horizon}
+          isSubmitting={isSubmitting}
           onBack={goBack}
           onConfirm={() => {
+            if (isSubmitting) return;
             setSubmitError(null);
-            recordAllocation({
-              id: `earn-${Date.now()}`,
-              amountTry: quote.amount,
-              risk: profile.id,
-              timeHorizon: {
-                kind: horizon.id,
-                targetDate: horizon.id === 'date' ? targetDate.toISOString() : undefined,
-              },
-            });
-            setStep('success');
+            setIsSubmitting(true);
+            setStage('policy');
+            setStep('processing');
+            void (async () => {
+              try {
+                const result = await executePutToWork({
+                  accountId: account.id,
+                  amount,
+                  risk: profile.id,
+                  horizon: horizon.id,
+                  targetDate,
+                  capabilities,
+                  onStage: setStage,
+                });
+                setDeposited(result.deposited);
+                setStep('success');
+              } catch (err) {
+                setSubmitError(toFlowFailure(err));
+                setStep('review');
+              } finally {
+                setIsSubmitting(false);
+              }
+            })();
           }}
           profile={profile}
           quote={quote}
         />
       ) : null}
 
+      {step === 'processing' ? (
+        <FlowProcessingState
+          headerTitle="Grow money"
+          stateTitle="Setting your money to grow"
+          supportingLines={['Signing your plan and moving the funds.']}
+          symbol="chart.line.uptrend.xyaxis"
+          steps={[
+            {
+              id: 'policy',
+              title: 'Saving your plan',
+              subtitle: 'Signing the policy',
+              state: putToWorkRowState(stage, 'policy'),
+            },
+            {
+              id: 'depositing',
+              title: 'Moving money into the strategy',
+              subtitle: profile.title,
+              state: putToWorkRowState(stage, 'depositing'),
+            },
+            {
+              id: 'completed',
+              title: 'Updating your balance',
+              subtitle: 'Final step',
+              state: putToWorkRowState(stage, 'completed'),
+            },
+          ]}
+          noticeTitle="Keep this screen open"
+          noticeSubtitle="We’ll move you on as soon as it’s set."
+        />
+      ) : null}
+
       {step === 'success' ? (
         <FlowSuccessState
           amount={formatUsd(quote.amount)}
-          noticeSubtitle="That money is now set aside to grow."
+          noticeSubtitle={
+            deposited
+              ? 'That money is now set aside to grow.'
+              : 'Your plan was saved. Growing money is unavailable until the yield provider is configured.'
+          }
           noticeSymbol="chart.line.uptrend.xyaxis"
-          noticeTitle="Growing money updated"
+          noticeTitle={deposited ? 'Growing money updated' : 'Plan saved'}
           onClose={finish}
           onDone={finish}
           onSecondaryPress={viewEarn}

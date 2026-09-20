@@ -1,8 +1,9 @@
 import { Client } from '@stellar/stellar-sdk/contract';
+import { Api } from '@stellar/stellar-sdk/rpc';
 import type { AppConfig } from '../config/env.js';
 import { loadTestnetDeployment } from '../config/deployments.js';
 import type { UserPolicyInput } from '../domain/policy.js';
-import { policyViewFromNative } from '../domain/policy.js';
+import { policyStrategySymbol, policyViewFromNative } from '../domain/policy.js';
 
 type ContractClient = Client & {
   get_policy: (args: { user: string }) => Promise<{ result?: unknown; simulate: () => Promise<void>; toXDR: () => string }>;
@@ -36,13 +37,50 @@ type ContractClient = Client & {
   ) => Promise<{ simulate: () => Promise<void>; toXDR: () => string }>;
 };
 
+/**
+ * Reasons `authorize_allocation` can decline an allocation, mirrored from the contract's
+ * `Error` enum (`contracts/trinqa-policy/contracts/trinqa-allocation-policy/src/lib.rs`).
+ * `PolicyNotFound` also covers an account that does not exist on-chain yet (simulation
+ * cannot even load it) — both cases mean "no policy is enforced for this user".
+ */
+export type AuthorizeAllocationDenialReason =
+  | 'PolicyNotFound'
+  | 'InvalidLiquidityBps'
+  | 'AutomationPaused'
+  | 'StrategyNotAllowed'
+  | 'ZeroAllocationAmount';
+
+export type AuthorizeAllocationResult =
+  | { ok: true }
+  | { ok: false; reason: AuthorizeAllocationDenialReason };
+
+/** Soroban simulation errors surface as `Error(Contract, #N)` inside the thrown message. */
+function classifyAuthorizeAllocationError(message: string): AuthorizeAllocationDenialReason | undefined {
+  if (message.includes('Account not found') || message.includes('PolicyNotFound') || message.includes('Error(Contract, #1)')) {
+    return 'PolicyNotFound';
+  }
+  if (message.includes('InvalidLiquidityBps') || message.includes('Error(Contract, #3)')) {
+    return 'InvalidLiquidityBps';
+  }
+  if (message.includes('AutomationPaused') || message.includes('Error(Contract, #5)')) {
+    return 'AutomationPaused';
+  }
+  if (message.includes('StrategyNotAllowed') || message.includes('Error(Contract, #6)')) {
+    return 'StrategyNotAllowed';
+  }
+  if (message.includes('ZeroAllocationAmount') || message.includes('Error(Contract, #7)')) {
+    return 'ZeroAllocationAmount';
+  }
+  return undefined;
+}
+
 function toContractPolicy(policy: UserPolicyInput) {
   return {
     risk_profile: policy.riskProfile,
     target_timestamp: policy.targetTimestamp,
     liquidity_target_bps: policy.liquidityTargetBps,
     automation_paused: policy.automationPaused,
-    allowed_strategies: policy.allowedStrategies,
+    allowed_strategies: policy.allowedStrategies.map(policyStrategySymbol),
   };
 }
 
@@ -126,23 +164,75 @@ export class TrinqaPolicyAdapter {
 
   buildSetStrategyAllowed(accountId: string, strategy: string, allowed: boolean) {
     return this.buildTx(accountId, (client) =>
-      client.set_strategy_allowed({ user: accountId, strategy, allowed }, { simulate: true }),
+      client.set_strategy_allowed(
+        { user: accountId, strategy: policyStrategySymbol(strategy), allowed },
+        { simulate: true },
+      ),
     );
   }
 
   buildAuthorizeAllocation(accountId: string, strategy: string, amountBps: number) {
     return this.buildTx(accountId, (client) =>
       client.authorize_allocation(
-        { user: accountId, strategy, amount_bps: amountBps },
+        { user: accountId, strategy: policyStrategySymbol(strategy), amount_bps: amountBps },
         { simulate: true },
       ),
     );
   }
 
+  /**
+   * Read-only check: would the policy contract authorize this allocation? Simulates
+   * `authorize_allocation` via Soroban RPC — nothing is signed or submitted. The
+   * transaction source is the user's own account so `require_auth` resolves via the
+   * implicit source-account credential (no real signature needed for simulation).
+   *
+   * Note: `authorize_allocation` returns `Result<bool, Error>`; the contract macro turns an
+   * `Err` into a host-level trap, so the RPC simulation itself reports an error (it is not a
+   * normal successful return we could read via `.result`). `Client.fromWasmHash`'s generic
+   * `.result` getter would swallow that trap into an `Err({message: ''})` value (our contract
+   * has no doc comments on its error variants, so the message is always empty and the numeric
+   * code is lost) — so we read the raw simulation response ourselves instead.
+   */
+  async simulateAuthorizeAllocation(
+    accountId: string,
+    strategy: string,
+    amountBps: number,
+  ): Promise<AuthorizeAllocationResult> {
+    const client = await this.clientFor(accountId);
+    try {
+      const assembled = await client.authorize_allocation(
+        { user: accountId, strategy: policyStrategySymbol(strategy), amount_bps: amountBps },
+        { simulate: true },
+      );
+      await assembled.simulate();
+      const simulation = (assembled as unknown as { simulation?: unknown }).simulation;
+      if (simulation && typeof simulation === 'object' && Api.isSimulationError(simulation as Api.SimulateTransactionResponse)) {
+        const message = (simulation as Api.SimulateTransactionErrorResponse).error;
+        const reason = classifyAuthorizeAllocationError(message);
+        if (reason) {
+          return { ok: false, reason };
+        }
+        throw new Error(`authorize_allocation simulation failed: ${message}`);
+      }
+      return { ok: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      const reason = classifyAuthorizeAllocationError(message);
+      if (reason) {
+        return { ok: false, reason };
+      }
+      throw err;
+    }
+  }
+
   buildAuthorizeRebalance(accountId: string, fromStrategy: string, toStrategy: string) {
     return this.buildTx(accountId, (client) =>
       client.authorize_rebalance(
-        { user: accountId, from_strategy: fromStrategy, to_strategy: toStrategy },
+        {
+          user: accountId,
+          from_strategy: policyStrategySymbol(fromStrategy),
+          to_strategy: policyStrategySymbol(toStrategy),
+        },
         { simulate: true },
       ),
     );

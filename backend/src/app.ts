@@ -25,11 +25,35 @@ import { AnchorSessionStore } from './services/anchor-session-store.service.js';
 import { registerAccountRoutes } from './routes/v1/accounts.js';
 import { registerTransactionRoutes } from './routes/v1/transactions.js';
 import { registerSwapRoutes } from './routes/v1/swaps.js';
+import { registerWaitlistRoutes } from './routes/v1/waitlist.js';
+import { createAnchorRegistry } from './services/anchor-registry.service.js';
+import { registerAnchorDirectoryRoutes } from './routes/v1/anchors.js';
+import { RoutePlanner } from './services/route-planner.service.js';
+import { NoopAdvisor } from './services/route-advisor.js';
+import { createRouteAdvisorFromEnv } from './adapters/jev-advisor.js';
+import { registerRouteRoutes } from './routes/v1/routes.js';
+import { DEFAULT_ADVISOR_MIN_CONFIDENCE } from './domain/route.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: env.NODE_ENV !== 'test' });
 
-  await app.register(cors, { origin: true });
+  await app.register(cors, {
+    origin: [
+      'http://127.0.0.1:4180',
+      'http://localhost:4180',
+      'http://127.0.0.1:4173',
+      'http://localhost:4173',
+      'http://127.0.0.1:8080',
+      'http://localhost:8080',
+      'http://127.0.0.1:3000',
+      'http://localhost:3000',
+      // fallback: allow any localhost/127.0.0.1 port in dev
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
+  });
 
   const stellar = new StellarService(env);
   const anchor = new TrMockAnchorAdapter(env, stellar.networkPassphrase);
@@ -40,7 +64,7 @@ export async function buildApp() {
   const quotes = new QuoteStore();
   const operations = createOperationStore(resolveOperationsDataDir());
   const anchorSessions = new AnchorSessionStore();
-  const yieldSvc = new YieldService(defindex, policy, operations);
+  const yieldSvc = new YieldService(defindex, policy, operations, stellar);
   const paymentExecution = new PaymentExecutionService(
     env,
     stellar,
@@ -52,6 +76,13 @@ export async function buildApp() {
     quotes,
     operations,
   );
+  // Phase 2 routing: every anchor behind one directory, Jev as an optional advisor.
+  const anchorRegistry = createAnchorRegistry(env, anchor);
+  const routeAdvisor = createRouteAdvisorFromEnv(env) ?? new NoopAdvisor();
+  const routePlanner = new RoutePlanner(anchorRegistry, routeAdvisor, {
+    usdcIssuer: env.USDC_ISSUER,
+    minConfidence: env.JEV_MIN_CONFIDENCE ?? DEFAULT_ADVISOR_MIN_CONFIDENCE,
+  });
   const paymentRouter = new PaymentRouter(
     env,
     stellar,
@@ -63,6 +94,7 @@ export async function buildApp() {
     operations,
     anchorSessions,
     paymentExecution,
+    routePlanner,
   );
 
   registerHealthRoutes(app, stellar, anchor, defindex, soroswap, policy);
@@ -77,6 +109,9 @@ export async function buildApp() {
   registerAccountRoutes(app, stellar);
   registerTransactionRoutes(app, stellar);
   registerSwapRoutes(app, soroswap);
+  registerWaitlistRoutes(app, resolveOperationsDataDir());
+  registerAnchorDirectoryRoutes(app, anchorRegistry);
+  registerRouteRoutes(app, routePlanner);
 
   app.get('/', async () => ({ service: 'trinqa-backend', api: '/api/v1/health' }));
 
@@ -93,5 +128,8 @@ export async function buildApp() {
     paymentExecution,
     operations,
     anchorSessions,
+    anchorRegistry,
+    routePlanner,
+    routeAdvisor,
   };
 }

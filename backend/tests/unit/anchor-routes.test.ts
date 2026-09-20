@@ -58,6 +58,27 @@ describe('anchor routes (sessionId only)', () => {
     await app.close();
   });
 
+  it('records a TRY on-ramp deposit in TRY, not as USDC', async () => {
+    const sessions = new AnchorSessionStore();
+    const account = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+    const { sessionId } = sessions.create('anchor-jwt', account);
+    const anchor = {
+      sep6Deposit: vi.fn().mockResolvedValue({ id: 'sep_1' }),
+    } as unknown as TrMockAnchorAdapter;
+    const operations = new MemoryOperationStore();
+    const app = Fastify();
+    registerAnchorRoutes(app, anchor, sessions, operations);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/anchor/deposits',
+      payload: { sessionId, account, amount: '500.00', quoteId: 'qt_1' },
+    });
+    expect(res.statusCode).toBe(200);
+    const op = await operations.get(res.json().operationId);
+    expect(op?.amount).toEqual({ assetCode: 'TRY', amount: '500.00' });
+    await app.close();
+  });
+
   it('reads and submits SEP-12 customer info through the session', async () => {
     const sessions = new AnchorSessionStore();
     const account = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';

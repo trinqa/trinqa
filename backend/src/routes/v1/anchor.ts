@@ -149,7 +149,8 @@ export function registerAnchorRoutes(
         status: 'pending',
         accountId: body.account,
         title: 'Anchor deposit',
-        amount: { assetCode: 'USDC', amount: body.amount },
+        // `amount` is the fiat the user sends to the anchor (TRY sell side), not the USDC credited.
+        amount: { assetCode: 'TRY', amount: body.amount },
         externalRefs: { quoteId: body.quoteId, anchorTransferId: transferId },
         metadata: { provider: 'tr_mock_anchor' },
       });

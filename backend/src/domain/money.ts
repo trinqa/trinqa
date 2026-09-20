@@ -59,6 +59,10 @@ export function toAtomic(value: DecimalString, decimals: number): bigint {
 export function fromAtomic(atomic: bigint, decimals: number): DecimalString {
   const negative = atomic < 0n;
   const abs = negative ? -atomic : atomic;
+  if (decimals === 0) {
+    // slice(-0) would return the whole string as the fraction.
+    return `${negative ? '-' : ''}${abs.toString()}`;
+  }
   const s = abs.toString().padStart(decimals + 1, '0');
   const whole = s.slice(0, -decimals) || '0';
   const frac = s.slice(-decimals).replace(/0+$/, '');
