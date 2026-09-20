@@ -1,1 +1,62 @@
 /* team-footer section motion — see README.md for the contract. */
+
+/* --- Carousel arrows: read as clickable, keyboard-focusable ------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  #testimonials button[aria-label="Previous testimonial"],
+  #testimonials button[aria-label="Next testimonial"] {
+    transition:
+      transform var(--tq-dur-fast) var(--tq-ease-out),
+      opacity var(--tq-dur-fast) var(--tq-ease-out);
+  }
+
+  /* Pointer-only: a touch tap must not leave a stuck hover state. */
+  @media (hover: hover) and (pointer: fine) {
+    #testimonials button[aria-label="Previous testimonial"]:hover:not(:disabled),
+    #testimonials button[aria-label="Next testimonial"]:hover:not(:disabled) {
+      transform: scale(1.08);
+    }
+  }
+}
+
+#testimonials button[aria-label="Previous testimonial"]:focus-visible,
+#testimonials button[aria-label="Next testimonial"]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+/* --- Footer social links: restrained hover, last thing on the page ------ */
+
+.tq-footer-link {
+  position: relative;
+}
+
+.tq-footer-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.7;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tq-footer-link::after {
+    transition: transform var(--tq-dur-fast) var(--tq-ease-out);
+  }
+}
+
+.tq-footer-link:hover::after,
+.tq-footer-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.tq-footer-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
