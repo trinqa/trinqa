@@ -9,6 +9,7 @@ import { HomeRecentGroup } from '@/components/HomeRecentGroup';
 import { PortfolioPullHint } from '@/components/PortfolioPullHint';
 import { ShortcutRow } from '@/components/ShortcutRow';
 import { TabHeader } from '@/components/TabHeader';
+import { NativeSegmentedControl } from '@/components/NativeSegmentedControl';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { ValueSummary } from '@/components/ValueSummary';
 import { currencyCapability } from '@/data/capabilities';
@@ -51,8 +52,27 @@ export function HomeScreen() {
 
       <PortfolioPullHint onPress={openPortfolio} />
 
+      {/* The window every figure below is measured over. */}
+      <Group
+        modifiers={[
+          padding({
+            top: screenTokens.wallet.headerToBalance,
+            bottom: screenTokens.periodBar.toContent,
+          }),
+        ]}
+      >
+        <NativeSegmentedControl
+          accessibilityLabel="Period"
+          value={period}
+          onChange={setPeriod}
+          options={portfolioPeriods}
+          width={contentWidth}
+          height={screenTokens.periodBar.height}
+        />
+      </Group>
+
       {/* The same card Portfolio opens with, so the pull lands somewhere recognisable. */}
-      <Group modifiers={[padding({ top: screenTokens.wallet.headerToBalance })]}>
+      <Group>
         <ValueSummary
           width={contentWidth}
           label="Total value"

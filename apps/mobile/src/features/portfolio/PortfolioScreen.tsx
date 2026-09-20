@@ -1,4 +1,4 @@
-import { Button, DisclosureGroup, Group, HStack, Image, Popover, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, Group, HStack, Image, Popover, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   accessibilityLabel,
   background,
@@ -11,7 +11,6 @@ import {
   padding,
   shapes,
   strokeBorder,
-  tint,
 } from '@expo/ui/swift-ui/modifiers';
 import { useState } from 'react';
 
@@ -23,6 +22,7 @@ import { InsetLayer } from '@/components/InsetLayer';
 import { HeaderIconButton } from '@/components/ScreenHeader';
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { MetricTile } from '@/components/MetricTile';
+import { NativeSegmentedControl } from '@/components/NativeSegmentedControl';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { ValueSummary } from '@/components/ValueSummary';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
@@ -30,17 +30,15 @@ import { currencyCapability } from '@/data/capabilities';
 import { formatSharePercent } from '@/domain/balance';
 import { formatAmountNumber, formatLedgerMoney, toDisplayAmount } from '@/domain/money';
 import {
-  getPortfolioNotes,
+  getPortfolioRead,
   getPortfolioSplit,
   portfolioChanges,
   earnedWithin,
   lastEarnedAt,
   portfolioPeriods,
-  portfolioSince,
   resolvePeriod,
   resolveRiskProfile,
   totalEarned,
-  type PortfolioNote,
   type PortfolioPeriod,
 } from '@/domain/portfolio';
 import {
@@ -111,108 +109,6 @@ function Section({
   );
 }
 
-function NoteRow({ note }: { note: PortfolioNote }) {
-  const tint = note.tone === 'positive' ? colors.success : colors.textSecondary;
-
-  return (
-    <HStack
-      alignment="top"
-      spacing={componentTokens.transactionRow.contentGap}
-      modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
-    >
-      <Image systemName={note.symbol} size={typography.sectionTitle} color={tint} />
-      <VStack alignment="leading" spacing={componentTokens.transactionRow.textGap}>
-        <Text
-          modifiers={[
-            font({ size: typography.label, weight: 'semibold' }),
-            foregroundStyle(colors.textPrimary),
-            frame({ maxWidth: Infinity, alignment: 'leading' }),
-          ]}
-        >
-          {note.title}
-        </Text>
-        <Text
-          modifiers={[
-            font({ size: typography.body, weight: 'medium' }),
-            foregroundStyle(colors.textSecondary),
-            frame({ maxWidth: Infinity, alignment: 'leading' }),
-          ]}
-        >
-          {note.body}
-        </Text>
-      </VStack>
-    </HStack>
-  );
-}
-
-/**
- * Trinq's read on the portfolio, folded away behind one line. The notes were a
- * standing wall of text that pushed the history off the screen; as a disclosure
- * they are there for whoever wants them and invisible to everyone else. The
- * expansion is SwiftUI's own, so it animates without anything to hand-tune.
- */
-function PortfolioRead({
-  notes,
-  width,
-  isExpanded,
-  onExpandedChange,
-}: {
-  notes: PortfolioNote[];
-  width: number;
-  isExpanded: boolean;
-  onExpandedChange: (next: boolean) => void;
-}) {
-  return (
-    <SurfacePanel width={width}>
-      <VStack
-        alignment="leading"
-        spacing={0}
-        modifiers={[
-          padding({
-            vertical: spacing.md,
-            horizontal: homeTokens.recent.horizontalPadding,
-          }),
-          frame({ maxWidth: Infinity, alignment: 'leading' }),
-        ]}
-      >
-        <DisclosureGroup
-          isExpanded={isExpanded}
-          onIsExpandedChange={onExpandedChange}
-          modifiers={[tint(colors.action)]}
-        >
-          <DisclosureGroup.Label>
-            <HStack alignment="center" spacing={spacing.sm}>
-              <Image
-                systemName="sparkles"
-                size={typography.sectionTitle}
-                color={colors.action}
-              />
-              <Text
-                modifiers={[
-                  font({ size: typography.kicker, weight: 'semibold' }),
-                  foregroundStyle(colors.textPrimary),
-                ]}
-              >
-                Trinq's read
-              </Text>
-            </HStack>
-          </DisclosureGroup.Label>
-
-          <VStack
-            alignment="leading"
-            spacing={spacing.lg}
-            modifiers={[padding({ top: spacing.md }), frame({ maxWidth: Infinity })]}
-          >
-            {notes.map((note) => (
-              <NoteRow key={note.id} note={note} />
-            ))}
-          </VStack>
-        </DisclosureGroup>
-      </VStack>
-    </SurfacePanel>
-  );
-}
-
 export function PortfolioScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
@@ -234,18 +130,17 @@ export function PortfolioScreen() {
 
   const [isGainOpen, setGainOpen] = useState(false);
   const [period, setPeriod] = useState<PortfolioPeriod>('1M');
-  const [isReadExpanded, setReadExpanded] = useState(false);
+  const [isReadOpen, setReadOpen] = useState(false);
 
   const capability = currencyCapability(account.displayCurrency);
   const split = getPortfolioSplit(balances);
-  const notes = getPortfolioNotes(split, strategy);
+  const read = getPortfolioRead(split, strategy);
   const changes = portfolioChanges(transactions);
   const profile = resolveRiskProfile(strategy);
   const earned = earnedWithin(transactions, period);
   const periodCaption = resolvePeriod(period).caption;
   const gain = earned > 0 ? `+${formatLedgerMoney(earned, account)}` : undefined;
   const gainInPeriod = gain ? `${gain} · ${period}` : undefined;
-  const since = portfolioSince(transactions);
   const lastPaid = lastEarnedAt(transactions);
 
   const totalValue = formatAmountNumber(toDisplayAmount(split.total, account));
@@ -274,39 +169,91 @@ export function PortfolioScreen() {
         <Spacer />
 
         {/*
-          Trinq's own affordance, level with the title. The read itself sits further
-          down the page now, so this is the quick way to it — the same control, not
-          a second opinion.
+          Trinq's read, in a popover rather than a card. Two lines do not deserve a
+          section of their own between the balance and its history.
         */}
-        <Button
-          onPress={() => setReadExpanded((open) => !open)}
-          modifiers={[
-            buttonStyle('plain'),
-            ...hitTargetModifiers({
-              label: "Trinq's read",
-              hint: 'Opens what Trinq makes of your portfolio.',
-              minSize: true,
-              shape: 'circle',
-              press: 'opacity',
-            }),
-            frame({
-              width: componentTokens.headerControl.size,
-              height: componentTokens.headerControl.size,
-            }),
-            background(colors.surface, shapes.circle()),
-            strokeBorder({
-              content: colors.borderStrong,
-              style: { lineWidth: componentTokens.surface.borderWidth },
-              shape: 'circle',
-            }),
-          ]}
+        <Popover
+          isPresented={isReadOpen}
+          onIsPresentedChange={setReadOpen}
+          arrowEdge="top"
         >
-          <Image
-            systemName="sparkles"
-            size={componentTokens.headerControl.symbolSize}
-            color={colors.action}
-          />
-        </Button>
+          <Popover.Trigger>
+            <Button
+              onPress={() => setReadOpen(true)}
+              modifiers={[
+                buttonStyle('plain'),
+                ...hitTargetModifiers({
+                  label: "Trinq's read",
+                  hint: 'What Trinq makes of your portfolio.',
+                  minSize: true,
+                  shape: 'circle',
+                  press: 'opacity',
+                }),
+                frame({
+                  width: componentTokens.headerControl.size,
+                  height: componentTokens.headerControl.size,
+                }),
+                background(colors.surface, shapes.circle()),
+                strokeBorder({
+                  content: colors.borderStrong,
+                  style: { lineWidth: componentTokens.surface.borderWidth },
+                  shape: 'circle',
+                }),
+              ]}
+            >
+              <Image
+                systemName="sparkles"
+                size={componentTokens.headerControl.symbolSize}
+                color={colors.action}
+              />
+            </Button>
+          </Popover.Trigger>
+
+          <Popover.Content>
+            <VStack
+              alignment="leading"
+              spacing={componentTokens.transactionRow.textGap}
+              modifiers={[padding({ all: spacing.lg }), frame({ width: 246 })]}
+            >
+              <HStack alignment="center" spacing={5}>
+                <Image
+                  systemName="sparkles"
+                  size={typography.footnote}
+                  color={colors.action}
+                />
+                <Text
+                  modifiers={[
+                    font({ size: typography.fine, weight: 'semibold' }),
+                    foregroundStyle(colors.action),
+                  ]}
+                >
+                  Trinq
+                </Text>
+              </HStack>
+
+              <Text
+                modifiers={[
+                  font({ size: typography.label, weight: 'semibold' }),
+                  foregroundStyle(colors.textPrimary),
+                  fixedSize({ horizontal: false, vertical: true }),
+                  frame({ maxWidth: Infinity, alignment: 'leading' }),
+                ]}
+              >
+                {read.headline}
+              </Text>
+              <Text
+                modifiers={[
+                  font({ size: typography.body, weight: 'medium' }),
+                  foregroundStyle(colors.textSecondary),
+                  fixedSize({ horizontal: false, vertical: true }),
+                  frame({ maxWidth: Infinity, alignment: 'leading' }),
+                ]}
+              >
+                {read.body}
+              </Text>
+            </VStack>
+          </Popover.Content>
+        </Popover>
 
         <HeaderIconButton
           label="Back to Home"
@@ -314,6 +261,21 @@ export function PortfolioScreen() {
           onPress={() => router.back()}
         />
       </HStack>
+
+      {/*
+        Above the cards rather than inside one: it sets the window every figure on
+        this page is measured over, so it cannot belong to any single card.
+      */}
+      <Group modifiers={[padding({ bottom: screenTokens.periodBar.toContent })]}>
+        <NativeSegmentedControl
+          accessibilityLabel="Period"
+          value={period}
+          onChange={setPeriod}
+          options={portfolioPeriods}
+          width={contentWidth}
+          height={screenTokens.periodBar.height}
+        />
+      </Group>
 
       <ValueSummary
         width={contentWidth}
@@ -341,7 +303,7 @@ export function PortfolioScreen() {
       <Section
         title="What it has made"
         width={contentWidth}
-        caption={since ? `Since ${since}` : undefined}
+        caption={periodCaption}
       >
         {/*
           The running total moved up beside the balance, so repeating it here would
@@ -356,20 +318,11 @@ export function PortfolioScreen() {
           />
           <MetricTile
             label="Last paid"
-            symbol="clock"
             value={lastPaid ?? '—'}
             width={sectionColumn}
           />
         </InsetLayer>
       </Section>
-
-      {/* Below the numbers it comments on, and folded away until asked for. */}
-      <PortfolioRead
-        notes={notes}
-        width={contentWidth}
-        isExpanded={isReadExpanded}
-        onExpandedChange={setReadExpanded}
-      />
 
       <Section title="What changed" width={contentWidth}>
         <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>

@@ -19,14 +19,6 @@ export interface PortfolioPillar {
   symbol: SFSymbol;
 }
 
-export interface PortfolioNote {
-  id: string;
-  title: string;
-  body: string;
-  symbol: SFSymbol;
-  tone: 'neutral' | 'positive';
-}
-
 export interface PortfolioSplit {
   total: number;
   readyToUse: number;
@@ -161,62 +153,39 @@ export function totalEarned(transactions: Transaction[]): number {
 }
 
 /**
- * One observation, and at most one thing to consider. A list of five
- * recommendations is a list nobody reads, so the strongest signal wins.
+ * What Trinq makes of the split, in two lines. This used to be a list of notes
+ * filling a card; it now has to fit in a popover, and a popover that needs
+ * scrolling is a card wearing a disguise.
  */
-export function getPortfolioNotes(
+export function getPortfolioRead(
   split: PortfolioSplit,
   strategy: StrategyPreference,
-): PortfolioNote[] {
+): { headline: string; body: string } {
   const profile = resolveRiskProfile(strategy);
-  const horizon = resolveHorizon(strategy);
-  const notes: PortfolioNote[] = [];
 
   if (split.total <= 0) {
-    return [
-      {
-        id: 'empty',
-        title: 'Nothing to arrange yet',
-        body: 'Once you add money, this is where you will see how it is looking after itself.',
-        symbol: 'tray',
-        tone: 'neutral',
-      },
-    ];
+    return {
+      headline: 'Nothing to read yet',
+      body: 'Add money and Trinq will weigh in.',
+    };
   }
 
   if (split.readyShare > 0.4) {
-    notes.push({
-      id: 'idle',
-      title: 'A lot is sitting still',
-      body: `Most of your money is ready to use and is not growing. ${profile.recommendationReason}`,
-      symbol: 'lightbulb',
-      tone: 'neutral',
-    });
-  } else if (split.readyShare < 0.05) {
-    notes.push({
-      id: 'thin',
-      title: 'Almost nothing is spare',
-      body: 'Nearly all of your money is growing. Keeping a little ready makes day-to-day spending easier.',
-      symbol: 'exclamationmark.circle',
-      tone: 'neutral',
-    });
-  } else {
-    notes.push({
-      id: 'balanced',
-      title: 'This looks sensible',
-      body: 'Some money is ready for today and the rest is growing. That is a reasonable place to be.',
-      symbol: 'checkmark.seal',
-      tone: 'positive',
-    });
+    return {
+      headline: 'A lot is sitting still',
+      body: `Most of your money is not growing. ${profile.title} suits money you can leave alone.`,
+    };
   }
 
-  notes.push({
-    id: 'plan',
-    title: `${profile.title} plan`,
-    body: `${profile.accessDescription} ${horizon.explanation}`,
-    symbol: 'target',
-    tone: 'neutral',
-  });
+  if (split.readyShare < 0.05) {
+    return {
+      headline: 'Almost nothing spare',
+      body: 'Nearly all of it is invested. Keep a little cash for day to day.',
+    };
+  }
 
-  return notes;
+  return {
+    headline: 'This looks sensible',
+    body: `Some cash ready, the rest growing on the ${profile.title.toLowerCase()} plan.`,
+  };
 }
