@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 470" width="1280" height="470" role="img"
+     aria-label="Ready to use and Growing: Trinqa's policy engine moves liquidity between them">
+  <title>Ready to use ⇄ Growing</title>
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#EFF3F4"/>
+    </linearGradient>
+    <linearGradient id="barA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#08AFD3"/><stop offset="100%" stop-color="#079FC0"/>
+    </linearGradient>
+    <style>
+      .flowline { stroke-dasharray: 8 12; animation: flow 1.4s linear infinite; }
+      @keyframes flow { to { stroke-dashoffset: -40; } }
+      .backline { stroke-dasharray: 8 12; animation: backflow 2.2s linear infinite; }
+      @keyframes backflow { to { stroke-dashoffset: 40; } }
+      .beadA { offset-path: path("M362 210 H490"); animation: run 3.6s linear infinite; }
+      .beadB { offset-path: path("M792 210 H918"); animation: run 3.6s linear infinite; animation-delay: .5s; }
+      .beadC { offset-path: path("M1080 292 V352 H200 V292"); animation: run 6s linear infinite; animation-delay: 1.2s; }
+      @keyframes run { 0% { offset-distance: 0%; opacity: 0 } 10% { opacity: 1 } 90% { opacity: 1 } 100% { offset-distance: 100%; opacity: 0 } }
+      .barA { transform-origin: 100px 0; animation: barA 9s ease-in-out infinite; }
+      .barB { transform-origin: 940px 0; animation: barB 9s ease-in-out infinite; }
+      @keyframes barA { 0%,100% { transform: scaleX(.42) } 45%,55% { transform: scaleX(.78) } }
+      @keyframes barB { 0%,100% { transform: scaleX(.78) } 45%,55% { transform: scaleX(.42) } }
+      .halo { animation: halo 4s ease-in-out infinite; transform-origin: 640px 210px; }
+      @keyframes halo { 0%,100% { opacity:.25 } 50% { opacity:.7 } }
+      .tick { animation: tick 6s ease-in-out infinite; }
+      .t2 { animation-delay: 2s } .t3 { animation-delay: 4s }
+      @keyframes tick { 0%,100% { opacity:.45 } 18%,26% { opacity:1 } }
+      @media (prefers-reduced-motion: reduce) {
+        .flowline,.backline,.beadA,.beadB,.beadC,.barA,.barB,.halo,.tick { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <rect x="4" y="4" width="1272" height="462" rx="26" fill="url(#card)" stroke="#E1E6E8"/>
+
+  <g font-family="Inter, 'SF Pro Text', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+
+    <!-- user intent inputs -->
+    <g font-size="17" font-weight="600">
+      <g class="tick"><rect x="395" y="42" width="150" height="40" rx="20" fill="#FFFFFF" stroke="#E1E6E8"/><text x="470" y="68" fill="#111111" text-anchor="middle">risk</text></g>
+      <g class="tick t2"><rect x="565" y="42" width="150" height="40" rx="20" fill="#FFFFFF" stroke="#E1E6E8"/><text x="640" y="68" fill="#111111" text-anchor="middle">time horizon</text></g>
+      <g class="tick t3"><rect x="735" y="42" width="150" height="40" rx="20" fill="#FFFFFF" stroke="#E1E6E8"/><text x="810" y="68" fill="#111111" text-anchor="middle">liquidity need</text></g>
+    </g>
+    <g stroke="#E1E6E8" stroke-width="1.5" fill="none">
+      <path d="M470 82 C470 130 560 130 610 168"/>
+      <path d="M640 82 V168"/>
+      <path d="M810 82 C810 130 720 130 670 168"/>
+    </g>
+
+    <!-- policy engine -->
+    <rect class="halo" x="482" y="160" width="316" height="100" rx="24" fill="none" stroke="#08AFD3" stroke-width="2"/>
+    <rect x="490" y="168" width="300" height="84" rx="20" fill="#FFFFFF" stroke="#E1E6E8"/>
+    <text x="640" y="200" font-size="20" font-weight="700" fill="#111111" text-anchor="middle">Allocation policy</text>
+    <text x="640" y="226" font-size="15" font-weight="500" fill="#6C767C" text-anchor="middle">on-chain, user-signed (Soroban)</text>
+
+    <!-- ready to use -->
+    <rect x="60" y="128" width="302" height="164" rx="22" fill="#FFFFFF" stroke="#E1E6E8"/>
+    <circle cx="96" cy="166" r="6" fill="#08AFD3"/>
+    <text x="116" y="172" font-size="22" font-weight="700" fill="#111111">Ready to use</text>
+    <text x="96" y="204" font-size="15" font-weight="500" fill="#6C767C">spendable right now</text>
+    <rect x="96" y="226" width="230" height="12" rx="6" fill="#E7ECED"/>
+    <rect class="barA" x="96" y="226" width="230" height="12" rx="6" fill="url(#barA)"/>
+    <text x="96" y="266" font-size="13" font-weight="600" fill="#6C767C" letter-spacing="1.2">LIQUIDITY TARGET</text>
+
+    <!-- growing -->
+    <rect x="918" y="128" width="302" height="164" rx="22" fill="#FFFFFF" stroke="#E1E6E8"/>
+    <circle cx="954" cy="166" r="6" fill="#079FC0"/>
+    <text x="974" y="172" font-size="22" font-weight="700" fill="#111111">Growing</text>
+    <text x="954" y="204" font-size="15" font-weight="500" fill="#6C767C">eligible yield strategies</text>
+    <rect x="954" y="226" width="230" height="12" rx="6" fill="#E7ECED"/>
+    <rect class="barB" x="954" y="226" width="230" height="12" rx="6" fill="url(#barA)"/>
+    <text x="954" y="266" font-size="13" font-weight="600" fill="#6C767C" letter-spacing="1.2">ALLOCATED</text>
+
+    <!-- forward path -->
+    <g fill="none" stroke="#08AFD3" stroke-width="2">
+      <path class="flowline" d="M362 210 H490"/>
+      <path class="flowline" d="M792 210 H918"/>
+    </g>
+    <circle class="beadA" r="5" fill="#08AFD3"/>
+    <circle class="beadB" r="5" fill="#079FC0"/>
+    <text x="426" y="192" font-size="13" font-weight="600" fill="#6C767C" text-anchor="middle">put to work</text>
+    <text x="855" y="192" font-size="13" font-weight="600" fill="#6C767C" text-anchor="middle">allocate</text>
+
+    <!-- return path -->
+    <path class="backline" d="M1080 292 V352 H200 V292" fill="none" stroke="#079FC0" stroke-width="2"/>
+    <circle class="beadC" r="5" fill="#079FC0"/>
+    <text x="640" y="378" font-size="15" font-weight="600" fill="#111111" text-anchor="middle">unwind only what the payment needs</text>
+
+    <!-- rails -->
+    <text x="640" y="424" font-size="14" font-weight="500" fill="#6C767C" text-anchor="middle" font-family="'SF Mono', ui-monospace, Menlo, monospace">Stellar settlement · SEP-6/10/38 anchor · DeFindex vault · Soroswap route</text>
+  </g>
+</svg>
