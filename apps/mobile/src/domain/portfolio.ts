@@ -107,6 +107,41 @@ export function portfolioSince(transactions: Transaction[]): string | null {
   return new Date(earliest).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
+export type PortfolioPeriod = '7D' | '1M' | '6M' | '1Y';
+
+/** Days each range covers, and how the range reads in a sentence. */
+export const portfolioPeriods: {
+  value: PortfolioPeriod;
+  label: string;
+  days: number;
+  caption: string;
+}[] = [
+  { value: '7D', label: '7D', days: 7, caption: 'Past 7 days' },
+  { value: '1M', label: '1M', days: 30, caption: 'Past month' },
+  { value: '6M', label: '6M', days: 182, caption: 'Past 6 months' },
+  { value: '1Y', label: '1Y', days: 365, caption: 'Past year' },
+];
+
+export function resolvePeriod(period: PortfolioPeriod) {
+  return portfolioPeriods.find((entry) => entry.value === period) ?? portfolioPeriods[0];
+}
+
+/** Payouts inside the chosen window. The headline figure follows the picker. */
+export function earnedWithin(
+  transactions: Transaction[],
+  period: PortfolioPeriod,
+  now: Date = new Date(),
+): number {
+  const cutoff = now.getTime() - resolvePeriod(period).days * 24 * 60 * 60 * 1000;
+  return transactions
+    .filter(
+      (transaction) =>
+        transaction.type === 'yield-earned' &&
+        new Date(transaction.occurredAt).getTime() >= cutoff,
+    )
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+}
+
 /** The most recent payout, for the summary that sits above the history. */
 export function lastEarnedAt(transactions: Transaction[]): string | null {
   const latest = transactions

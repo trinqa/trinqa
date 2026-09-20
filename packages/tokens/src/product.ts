@@ -154,11 +154,13 @@ export const homeTokens = {
     labelToBalance: 5,
     currencyGap: 4,
   },
+  /** Five actions across the content width, so nothing hides behind a menu. */
   shortcuts: {
-    width: 115,
-    height: 64,
-    gap: 4,
-    iconSize: 17,
+    count: 5,
+    height: 58,
+    gap: 6,
+    iconSize: 16,
+    iconToLabel: 6,
   },
   recent: {
     width: 390,
@@ -236,15 +238,34 @@ export const screenTokens = {
     /** Overscroll past this many points on Home releases into Portfolio. */
     pullRevealThreshold: 88,
     pullHintHeight: 34,
-    /** Hero panel: 22 top + label + 7 + amount + 14 + 12 bar + 12 + 128 tray + 18. */
-    heroHeight: 250,
-    valueToShareBar: 14,
-    shareBarHeight: 12,
-    shareBarToTray: 12,
-    /** Inset (4) + tile (58) + gap (4) + tile (58) + inset (4). */
-    splitTrayHeight: 128,
-    earningsTrayHeight: 66,
     sectionGap: 16,
+    earningsTrayHeight: 66,
+  },
+  /**
+   * The value card, shared by Home and Portfolio. One hero, one set of numbers,
+   * one geometry — the two screens open on the same object.
+   */
+  valueCard: {
+    paddingTop: 20,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    labelToAmount: 2,
+    amountToBar: 18,
+    /** Thick enough to carry its own share labels instead of needing a legend. */
+    barHeight: 40,
+    barRadius: 20,
+    barGap: 5,
+    barToColumns: 20,
+    columnGap: 18,
+    columnIconSize: 19,
+    columnIconToLabel: 8,
+    columnLabelToValue: 4,
+    columnValueToDelta: 3,
+    barLabelInset: 11,
+    dividerWidth: 1,
+    dividerHeight: 58,
+    periodTopGap: 18,
+    periodHeight: 32,
   },
   activity: {
     contentWidth: 366,
