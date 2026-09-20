@@ -1,0 +1,53 @@
+/* faq-contact section motion — see README.md for the contract. */
+
+/*
+ * Row polish for the FAQ list. Background hover already exists (Tailwind's
+ * `hover:bg-card` / `hover:bg-card/85`, swapped by the accordion script) —
+ * this only adds a small lift so a row reads as interactive. Transform only,
+ * so it cannot affect layout; the open/close height transition and the
+ * `.faq-chevron` rotate (both `trinqa-faq-motion`) are untouched.
+ */
+#faqs button[aria-controls^="faq-answer"] {
+  transition: transform var(--tq-dur-fast) var(--tq-ease-out);
+}
+
+#faqs button[aria-controls^="faq-answer"]:hover {
+  transform: translateY(-2px);
+}
+
+#faqs button[aria-controls^="faq-answer"]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #faqs button[aria-controls^="faq-answer"] {
+    transition: none;
+  }
+
+  #faqs button[aria-controls^="faq-answer"]:hover {
+    transform: none;
+  }
+}
+
+/*
+ * Waitlist modal form (`trinqa-waitlist-css`): `.wl-input` sets `outline:
+ * none` and only styles `:focus` (a subtle border-color shift), so keyboard
+ * focus loses its visible ring; `#trinqa-waitlist-submit` has a hover state
+ * already but no focus-visible ring either. Both additions are static state
+ * styling, not scroll-driven motion, and do not touch the modal's own
+ * open/close logic in `trinqa-waitlist-js`.
+ */
+.wl-input:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.wl-input:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+#trinqa-waitlist-submit:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}

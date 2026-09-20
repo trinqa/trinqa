@@ -1,0 +1,27 @@
+/* rails section motion — see README.md for the contract. */
+
+/* --- Partner row: pointer-only hover lift -------------------------------- */
+/* Four ramp-provider logos: entrance stagger comes from rails.js via the
+   shared reveal engine (motion.css owns that state). Here we only add a
+   subtle lift on hover, so browsers without a pointer never see it. */
+
+@media (hover: hover) {
+  .tq-motion #tq-partners img {
+    /* Same timing as the foundation's reveal transition, so re-declaring it
+       here (required so the hover transform animates) doesn't shift the
+       entrance cadence. */
+    transition:
+      opacity var(--tq-dur) var(--tq-ease-out),
+      transform var(--tq-dur) var(--tq-ease-out);
+  }
+
+  .tq-motion #tq-partners img:hover {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
+  .tq-motion #tq-partners img {
+    transition: none;
+  }
+}

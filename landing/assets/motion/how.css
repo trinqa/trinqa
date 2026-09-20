@@ -1,0 +1,46 @@
+/* how section motion — see README.md for the contract. */
+
+/*
+ * Reveal timing lives in how.js (tqMotion.reveal); this file only adds the
+ * section's hover treatment. The cards already get a small lift from a rule
+ * baked into the page head (`#services article:hover{transform:...}`) — we
+ * do not touch `transform` on the card so that lift keeps working untouched.
+ */
+
+@media (hover: hover) {
+  /* Soft light wash under the copy (z-index 2) and above the illustration
+     (z-index 0, see trinqa-services-gap-css). Reads as the card catching
+     light rather than a re-skin. */
+  #services article.bg-dark-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.05);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--tq-dur) var(--tq-ease-out);
+  }
+
+  #services article.bg-dark-surface:hover::before {
+    opacity: 1;
+  }
+
+  /* The illustration is locked to `transform: none !important` upstream
+     (trinqa-services-gap-css / trinqa-services-art), so it reacts to hover
+     with brightness instead of movement. */
+  #services article .tq-illu {
+    transition: filter var(--tq-dur) var(--tq-ease-out);
+  }
+
+  #services article:hover .tq-illu {
+    filter: brightness(1.08);
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
+  #services article.bg-dark-surface::before,
+  #services article .tq-illu {
+    transition: none;
+  }
+}
