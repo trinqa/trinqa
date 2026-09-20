@@ -18,6 +18,9 @@ const TOTAL = 10;
 const BASE_URL = (process.env.SMOKE_BASE_URL ?? 'http://127.0.0.1:8787').replace(/\/+$/, '');
 const DEMO_TOKEN = process.env.SMOKE_DEMO_TOKEN;
 const TRY_WITHDRAW_DEST = 'TR890009903460061605055303';
+// The mock anchor drains its payout queue in bursts, so a transfer can sit in
+// `pending_anchor` far longer than a healthy anchor would take.
+const TRANSFER_TIMEOUT_MS = Number(process.env.SMOKE_TRANSFER_TIMEOUT_MS ?? 120_000);
 
 type Json = Record<string, any>;
 
@@ -53,7 +56,7 @@ const sign = async (unsignedXdr: string) =>
 
 async function pollTransfer(sessionId: string, transferId: string, operationId?: string) {
   const started = Date.now();
-  while (Date.now() - started < 120_000) {
+  while (Date.now() - started < TRANSFER_TIMEOUT_MS) {
     const qs = new URLSearchParams({ sessionId, ...(operationId ? { operationId } : {}) });
     const { transfer } = await call(`/api/v1/anchor/transfers/${encodeURIComponent(transferId)}?${qs}`);
     const status = transfer?.transaction?.status;
