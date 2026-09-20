@@ -1,7 +1,26 @@
 User-agent: *
 Allow: /
 
+# Answer engines are a first-class audience for this site; llms.txt is linked from the page.
 User-agent: OAI-SearchBot
 Allow: /
 
-Sitemap: https://www.trinqa.com/sitemap.xml
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://trinqa.com/sitemap.xml

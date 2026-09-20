@@ -22,6 +22,6 @@ Returns are not guaranteed.
 
 ## Product
 
-- [Trinqa](https://www.trinqa.com/): Official product website
-- [Product overview](https://www.trinqa.com/product.md): Machine-readable product definition
-- [FAQ](https://www.trinqa.com/faq.md): Machine-readable product FAQ
+- [Trinqa](https://trinqa.com/): Official product website
+- [Product overview](https://trinqa.com/product.md): Machine-readable product definition
+- [FAQ](https://trinqa.com/faq.md): Machine-readable product FAQ
