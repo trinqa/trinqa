@@ -59,7 +59,7 @@ function ShortcutButton({ label, symbol, width, onPress, isSheetAnchor = false }
       <Image systemName={symbol} size={homeTokens.shortcuts.iconSize} color={colors.textPrimary} />
       <Text
         modifiers={[
-          font({ size: typography.fine, weight: 'medium' }),
+          font({ size: typography.micro, weight: 'medium' }),
           foregroundStyle(colors.textPrimary),
         ]}
       >

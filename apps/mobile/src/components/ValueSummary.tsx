@@ -3,17 +3,14 @@ import {
   background,
   buttonStyle,
   clipShape,
-  fixedSize,
   font,
   foregroundStyle,
   frame,
-  lineLimit,
   padding,
   shapes,
 } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { NativeSegmentedControl } from '@/components/NativeSegmentedControl';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import { hitTargetModifiers } from '@/theme/swiftUi';
@@ -22,7 +19,7 @@ export interface ValueColumn {
   label: string;
   value: string;
   symbol: SFSymbol;
-  /** Share of the total, already formatted. Printed inside the bar, not beside it. */
+  /** Share of the total, printed beside the figure it belongs to. */
   share: string;
   /** What this column did over the period. Absent reads as an em dash. */
   delta?: string;
@@ -40,30 +37,10 @@ interface ValueSummaryProps {
   /** Drawn first and filled; this is the share the bar's blue segment represents. */
   primary: ValueColumn;
   secondary: ValueColumn;
-  /** The range every figure on the card is measured over. */
-  period?: {
-    value: string;
-    options: readonly { label: string; value: string }[];
-    onChange: (next: string) => void;
-  };
 }
 
-/**
- * A bar thick enough to hold its own labels. The thin track needed a legend
- * underneath repeating both figures, which is two rows of chrome to say what the
- * bar already showed.
- */
-function ShareBar({
-  width,
-  primaryShare,
-  primaryLabel,
-  secondaryLabel,
-}: {
-  width: number;
-  primaryShare: number;
-  primaryLabel: string;
-  secondaryLabel: string;
-}) {
+/** Two segments, no labels. The figures they stand for are directly underneath. */
+function ShareBar({ width, primaryShare }: { width: number; primaryShare: number }) {
   const card = screenTokens.valueCard;
   const primaryWidth = Math.max(
     0,
@@ -72,40 +49,17 @@ function ShareBar({
 
   return (
     <HStack spacing={card.barGap} modifiers={[frame({ width, height: card.barHeight })]}>
-      <HStack
-        alignment="center"
+      <Group
         modifiers={[
-          padding({ horizontal: card.barLabelInset }),
           frame({ width: primaryWidth, height: card.barHeight }),
-          background(
-            {
-              type: 'linearGradient',
-              colors: [colors.action, colors.actionPrimaryDarker],
-              startPoint: { x: 0, y: 0 },
-              endPoint: { x: 1, y: 1 },
-            },
-            shapes.roundedRectangle({ cornerRadius: card.barRadius }),
-          ),
+          background(colors.action, shapes.roundedRectangle({ cornerRadius: card.barRadius })),
           clipShape('roundedRectangle', card.barRadius),
         ]}
       >
-        <Text
-          modifiers={[
-            font({ size: typography.caption, weight: 'semibold' }),
-            foregroundStyle(colors.textInverse),
-            lineLimit(1),
-            fixedSize({ horizontal: true, vertical: false }),
-          ]}
-        >
-          {primaryLabel}
-        </Text>
         <Spacer />
-      </HStack>
-
-      <HStack
-        alignment="center"
+      </Group>
+      <Group
         modifiers={[
-          padding({ horizontal: card.barLabelInset }),
           frame({ maxWidth: Infinity, height: card.barHeight }),
           background(
             colors.surfaceLayer,
@@ -115,17 +69,7 @@ function ShareBar({
         ]}
       >
         <Spacer />
-        <Text
-          modifiers={[
-            font({ size: typography.caption, weight: 'semibold' }),
-            foregroundStyle(colors.textSecondary),
-            lineLimit(1),
-            fixedSize({ horizontal: true, vertical: false }),
-          ]}
-        >
-          {secondaryLabel}
-        </Text>
-      </HStack>
+      </Group>
     </HStack>
   );
 }
@@ -134,32 +78,36 @@ function Column({ column, width }: { column: ValueColumn; width: number }) {
   const card = screenTokens.valueCard;
 
   return (
-    <VStack
-      alignment="leading"
-      spacing={0}
-      modifiers={[frame({ width, alignment: 'leading' })]}
-    >
+    <VStack alignment="leading" spacing={0} modifiers={[frame({ width, alignment: 'leading' })]}>
       <HStack alignment="center" spacing={card.columnIconToLabel}>
         <Image
           systemName={column.symbol}
-          size={card.columnIconSize}
+          size={typography.footnote}
           color={colors.textSecondary}
         />
         <Text
           modifiers={[
-            font({ size: typography.body, weight: 'medium' }),
+            font({ size: typography.footnote, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
           {column.label}
         </Text>
         <Spacer />
+        <Text
+          modifiers={[
+            font({ size: typography.fine, weight: 'medium' }),
+            foregroundStyle(colors.textSecondary),
+          ]}
+        >
+          {column.share}
+        </Text>
       </HStack>
 
       <Text
         modifiers={[
           padding({ top: card.columnLabelToValue }),
-          font({ size: typography.label, weight: 'bold' }),
+          font({ size: typography.label, weight: 'semibold' }),
           foregroundStyle(colors.textPrimary),
           frame({ maxWidth: Infinity, alignment: 'leading' }),
         ]}
@@ -170,7 +118,7 @@ function Column({ column, width }: { column: ValueColumn; width: number }) {
       <Text
         modifiers={[
           padding({ top: card.columnValueToDelta }),
-          font({ size: typography.footnote, weight: 'medium' }),
+          font({ size: typography.fine, weight: 'medium' }),
           foregroundStyle(column.delta ? colors.success : colors.textSecondary),
           frame({ maxWidth: Infinity, alignment: 'leading' }),
         ]}
@@ -181,6 +129,10 @@ function Column({ column, width }: { column: ValueColumn; width: number }) {
   );
 }
 
+/**
+ * The balance, the split, and what it did. Home and Portfolio both open on it, so
+ * the pull between them lands on something already read once.
+ */
 export function ValueSummary({
   width,
   label,
@@ -191,7 +143,6 @@ export function ValueSummary({
   onGainPress,
   primary,
   secondary,
-  period,
 }: ValueSummaryProps) {
   const card = screenTokens.valueCard;
   const inner = width - card.paddingHorizontal * 2;
@@ -201,14 +152,10 @@ export function ValueSummary({
   const gainBlock = gain ? (
     <VStack alignment="trailing" spacing={1}>
       <HStack alignment="center" spacing={3}>
-        <Image
-          systemName="arrow.up.right"
-          size={typography.footnote}
-          color={colors.success}
-        />
+        <Image systemName="arrow.up.right" size={typography.footnote} color={colors.success} />
         <Text
           modifiers={[
-            font({ size: typography.sectionTitle, weight: 'semibold' }),
+            font({ size: typography.label, weight: 'semibold' }),
             foregroundStyle(colors.success),
           ]}
         >
@@ -218,7 +165,7 @@ export function ValueSummary({
       {gainPeriod ? (
         <Text
           modifiers={[
-            font({ size: typography.footnote, weight: 'medium' }),
+            font({ size: typography.fine, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
           ]}
         >
@@ -242,12 +189,11 @@ export function ValueSummary({
           frame({ maxWidth: Infinity, alignment: 'topLeading' }),
         ]}
       >
-        {/* Label and amount on the left, the movement on the right, one block. */}
         <HStack alignment="top" modifiers={[frame({ maxWidth: Infinity })]}>
           <VStack alignment="leading" spacing={card.labelToAmount}>
             <Text
               modifiers={[
-                font({ size: typography.body, weight: 'medium' }),
+                font({ size: typography.footnote, weight: 'medium' }),
                 foregroundStyle(colors.textSecondary),
               ]}
             >
@@ -256,7 +202,7 @@ export function ValueSummary({
             <HStack alignment="firstTextBaseline" spacing={componentTokens.layer.gap}>
               <Text
                 modifiers={[
-                  font({ size: typography.amountHero, weight: 'bold' }),
+                  font({ size: typography.amountCurrency, weight: 'bold' }),
                   foregroundStyle(colors.textPrimary),
                 ]}
               >
@@ -282,7 +228,6 @@ export function ValueSummary({
                 buttonStyle('plain'),
                 ...hitTargetModifiers({
                   label: `Gained ${gain} ${gainPeriod ?? ''}`.trim(),
-                  hint: 'What your invested money has earned.',
                   minSize: true,
                   shape: 'roundedRectangle',
                   cornerRadius: componentTokens.surface.controlRadius,
@@ -298,12 +243,7 @@ export function ValueSummary({
         </HStack>
 
         <Group modifiers={[padding({ top: card.amountToBar })]}>
-          <ShareBar
-            width={inner}
-            primaryShare={primaryShare}
-            primaryLabel={primary.share}
-            secondaryLabel={secondary.share}
-          />
+          <ShareBar width={inner} primaryShare={primaryShare} />
         </Group>
 
         <HStack
@@ -315,23 +255,6 @@ export function ValueSummary({
           <Divider modifiers={[frame({ height: card.dividerHeight })]} />
           <Column column={secondary} width={columnWidth} />
         </HStack>
-
-        {/*
-          The range the movement is measured over. Without it the green figure is a
-          number with no period attached, which is the one thing a return must have.
-        */}
-        {period ? (
-          <Group modifiers={[padding({ top: card.periodTopGap })]}>
-            <NativeSegmentedControl
-              accessibilityLabel="Period"
-              value={period.value}
-              onChange={period.onChange}
-              options={period.options}
-              width={inner}
-              height={card.periodHeight}
-            />
-          </Group>
-        ) : null}
       </VStack>
     </SurfacePanel>
   );

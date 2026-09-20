@@ -336,11 +336,6 @@ export function PortfolioScreen() {
           value: `${readyValue} ${capability.symbol}`,
           share: formatSharePercent(split.readyShare),
         }}
-        period={{
-          value: period,
-          options: portfolioPeriods,
-          onChange: (next) => setPeriod(next as PortfolioPeriod),
-        }}
       />
 
       <Section

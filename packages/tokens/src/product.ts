@@ -250,22 +250,24 @@ export const screenTokens = {
     paddingHorizontal: 18,
     paddingBottom: 18,
     labelToAmount: 2,
-    amountToBar: 18,
-    /** Thick enough to carry its own share labels instead of needing a legend. */
-    barHeight: 40,
-    barRadius: 20,
-    barGap: 5,
-    barToColumns: 20,
-    columnGap: 18,
-    columnIconSize: 19,
-    columnIconToLabel: 8,
+    amountToBar: 16,
+    /** Thin track. The shares are printed beside their own figures, not inside it. */
+    barHeight: 12,
+    barRadius: 6,
+    barGap: 3,
+    barToColumns: 18,
+    columnGap: 16,
+    /** Icons sit at the label's own size so they read as part of the word. */
+    columnIconToLabel: 5,
     columnLabelToValue: 4,
     columnValueToDelta: 3,
-    barLabelInset: 11,
     dividerWidth: 1,
-    dividerHeight: 58,
-    periodTopGap: 18,
-    periodHeight: 32,
+    dividerHeight: 54,
+  },
+  /** The range switch, above the cards it governs rather than inside one. */
+  periodBar: {
+    height: 32,
+    toContent: 14,
   },
   activity: {
     contentWidth: 366,

@@ -74,11 +74,6 @@ export function HomeScreen() {
             value: `${cashValue} ${capability.symbol}`,
             share: formatSharePercent(split.readyShare),
           }}
-          period={{
-            value: period,
-            options: portfolioPeriods,
-            onChange: (next) => setPeriod(next as PortfolioPeriod),
-          }}
         />
       </Group>
 
