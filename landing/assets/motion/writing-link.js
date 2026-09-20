@@ -6,7 +6,7 @@
  * their styling.
  */
 (function () {
-  var LINKS = [{ href: '/writing/a-vote-not-a-veto/', label: 'Writing' }];
+  var LINKS = [{ href: '/writing/jev-a-vote-not-a-veto/', label: 'Writing' }];
 
   function setup() {
     var row = document.querySelector('footer .tq-footer-link');

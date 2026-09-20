@@ -28,4 +28,4 @@ Returns are not guaranteed.
 
 ## Writing
 
-- [A vote, not a veto](https://trinqa.com/writing/a-vote-not-a-veto/): How Trinqa uses Jev, TypeSafe's structured decision model, to advise on payout route selection — five of seven scoring factors, gated on confidence, with deterministic cost and speed and a deterministic fallback.
+- [Jev gets a vote, not a veto](https://trinqa.com/writing/jev-a-vote-not-a-veto/): How Trinqa uses Jev, TypeSafe's structured decision model, to advise on payout route selection — five of seven scoring factors, gated on confidence, with deterministic cost and speed and a deterministic fallback.
