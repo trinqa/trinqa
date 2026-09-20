@@ -24,6 +24,8 @@ interface ScreenHeaderProps {
   showProfile?: boolean;
   title?: string;
   showMenu?: boolean;
+  /** Set false for chrome-free headers (processing screens), which show no support/notification actions. */
+  showActions?: boolean;
   onBackPress?: () => void;
 }
 
@@ -68,6 +70,7 @@ export function ScreenHeader({
   showProfile = true,
   title,
   showMenu = false,
+  showActions = true,
   onBackPress,
 }: ScreenHeaderProps) {
   return (
@@ -92,7 +95,7 @@ export function ScreenHeader({
 
       <Spacer />
 
-      {!showBack && !showMenu ? (
+      {showActions && !showBack && !showMenu ? (
         <HStack spacing={componentTokens.headerControl.gap}>
           <HeaderIconButton label="Support" symbol="headphones" />
           <ZStack alignment="topTrailing">

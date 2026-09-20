@@ -13,6 +13,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import { useWindowDimensions } from 'react-native';
 
+import { FlowEmptyState } from '@/components/FlowStates';
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
 import {
@@ -74,6 +75,9 @@ export function HomeRecentGroup() {
             </Text>
 
             <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
+              {recentActivity.length === 0 ? (
+                <FlowEmptyState title="Nothing yet" subtitle="Your latest money movements will show up here." />
+              ) : null}
               {recentActivity.map(({ item, transaction }) => (
                 <LayeredTransactionRow
                   key={item.id}

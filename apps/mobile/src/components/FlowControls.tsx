@@ -40,9 +40,16 @@ interface FlowButtonProps {
   label: string;
   onPress: () => void;
   isDisabled?: boolean;
+  /** Shows a spinner in place of the label and blocks further taps while a request is in flight. */
+  isBusy?: boolean;
 }
 
-export function PrimaryActionButton({ label, onPress, isDisabled = false }: FlowButtonProps) {
+export function PrimaryActionButton({
+  label,
+  onPress,
+  isDisabled = false,
+  isBusy = false,
+}: FlowButtonProps) {
   const action = componentTokens.actionButton;
   const linearGradient = {
     type: 'linearGradient' as const,
@@ -62,14 +69,16 @@ export function PrimaryActionButton({ label, onPress, isDisabled = false }: Flow
     endRadius: screenTokens.addMoney.contentWidth * 0.62,
   };
 
+  const isBlocked = isDisabled || isBusy;
+
   return (
     <Button
-      onPress={onPress}
+      onPress={isBusy ? () => {} : onPress}
       modifiers={[
         buttonStyle('plain'),
-        disabled(isDisabled),
+        disabled(isBlocked),
         opacity(isDisabled ? action.disabledOpacity : 1),
-        accessibilityLabel(label),
+        accessibilityLabel(isBusy ? `${label}, in progress` : label),
       ]}
     >
       <ZStack
@@ -88,14 +97,24 @@ export function PrimaryActionButton({ label, onPress, isDisabled = false }: Flow
         >
           <Spacer />
         </VStack>
-        <Text
-          modifiers={[
-            font({ size: typography.sectionTitle, weight: 'semibold' }),
-            foregroundStyle(colors.textInverse),
-          ]}
-        >
-          {label}
-        </Text>
+        {isBusy ? (
+          <ProgressView
+            modifiers={[
+              progressViewStyle('circular'),
+              controlSize('regular'),
+              tint(colors.textInverse),
+            ]}
+          />
+        ) : (
+          <Text
+            modifiers={[
+              font({ size: typography.sectionTitle, weight: 'semibold' }),
+              foregroundStyle(colors.textInverse),
+            ]}
+          >
+            {label}
+          </Text>
+        )}
       </ZStack>
     </Button>
   );
@@ -186,11 +205,13 @@ interface FlowStepLayoutProps {
   primaryLabel: string;
   title: string;
   isPrimaryDisabled?: boolean;
+  isPrimaryBusy?: boolean;
 }
 
 export function FlowStepLayout({
   children,
   isPrimaryDisabled = false,
+  isPrimaryBusy = false,
   onBack,
   onPrimaryPress,
   primaryLabel,
@@ -211,6 +232,7 @@ export function FlowStepLayout({
         label={primaryLabel}
         onPress={onPrimaryPress}
         isDisabled={isPrimaryDisabled}
+        isBusy={isPrimaryBusy}
       />
     </VStack>
   );
@@ -261,7 +283,8 @@ interface FlowProcessingStateProps {
   steps: readonly FlowProcessingTimelineItem[];
   noticeTitle: string;
   noticeSubtitle: string;
-  onBack: () => void;
+  /** Omitted while the request is in flight, so the user can't step back into Review and re-submit. */
+  onBack?: () => void;
 }
 
 export function FlowProcessingState({
@@ -281,7 +304,13 @@ export function FlowProcessingState({
       modifiers={[frame({ width: screenTokens.addMoney.contentWidth, maxHeight: Infinity })]}
     >
       <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
-        <ScreenHeader showBack title={headerTitle} onBackPress={onBack} />
+        <ScreenHeader
+          showBack={Boolean(onBack)}
+          showProfile={false}
+          showActions={false}
+          title={headerTitle}
+          onBackPress={onBack}
+        />
       </Group>
 
       <VStack alignment="center" spacing={0} modifiers={[padding({ top: screenTokens.flowChrome.processingTop }), frame({ maxWidth: Infinity })]}>
@@ -300,7 +329,6 @@ export function FlowProcessingState({
           ]}
         >
           <ProgressView
-            value={0.68}
             modifiers={[
               progressViewStyle('circular'),
               controlSize('extraLarge'),

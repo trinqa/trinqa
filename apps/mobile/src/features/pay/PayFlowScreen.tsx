@@ -43,7 +43,7 @@ import {
   type FlowProcessingRowState,
 } from '@/components/FlowControls';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { FlowInlineState } from '@/components/FlowStates';
+import { FlowEmptyState, FlowInlineState } from '@/components/FlowStates';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import {
   paymentCurrencies,
@@ -51,7 +51,7 @@ import {
   quickPaymentAmounts,
 } from '@/data/mocks/pay';
 import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
-import { errorMessage } from '@/services/apiErrors';
+import { describeCode, errorMessage } from '@/services/apiErrors';
 import {
   useRecipientAccount,
   type RecipientAccount,
@@ -293,6 +293,9 @@ function RecipientStep({
           Recent
         </Text>
         <VStack spacing={payment.recipientRowGap} modifiers={[padding({ top: 8 })]}>
+          {paymentRecipients.length === 0 ? (
+            <FlowEmptyState title="No recent recipients" subtitle="People you pay will show up here." />
+          ) : null}
           {paymentRecipients.map((recipient) => (
             <RecipientRow
               key={recipient.id}
@@ -341,6 +344,7 @@ function PaymentAmountSummary({
   recipientLabel,
   recipientState,
   onAddMoney,
+  blockedReason,
 }: {
   intent: PaymentIntent;
   quote: PaymentQuote;
@@ -348,6 +352,7 @@ function PaymentAmountSummary({
   recipientLabel: string;
   recipientState: RecipientAccountState;
   onAddMoney: () => void;
+  blockedReason: string | null;
 }) {
   const ready = Boolean(quoteState.data);
   return (
@@ -370,7 +375,15 @@ function PaymentAmountSummary({
           <Divider />
           <FlowInfoRow
             label="Total deducted"
-            value={ready ? formatTry(quote.debitAmount) : quoteState.loading ? 'Getting a live quote…' : '—'}
+            value={
+              ready
+                ? formatTry(quote.debitAmount)
+                : blockedReason
+                  ? 'Unavailable'
+                  : quoteState.loading
+                    ? 'Getting a live quote…'
+                    : '—'
+            }
           />
           <HStack spacing={20} modifiers={[frame({ maxWidth: Infinity })]}>
             <FlowInfoRow label="Fee" value={ready ? formatTry(quote.fee) : '—'} />
@@ -378,7 +391,13 @@ function PaymentAmountSummary({
           </HStack>
         </VStack>
       </FlowCard>
-      {recipientState.loading ? (
+      {blockedReason ? (
+        <FlowInlineState
+          symbol="exclamationmark.circle"
+          title={`${intent.receiveCurrency} payouts aren’t live yet`}
+          subtitle={describeCode(blockedReason)}
+        />
+      ) : recipientState.loading ? (
         <FlowInlineState
           symbol="clock"
           title={`Preparing ${intent.recipient.name}’s account`}
@@ -387,13 +406,20 @@ function PaymentAmountSummary({
       ) : recipientState.error ? (
         <FlowInlineState
           symbol="exclamationmark.circle"
+          tone="danger"
           title={`We could not prepare ${intent.recipient.name}’s account`}
           subtitle={recipientState.error}
         />
       ) : quoteState.error ? (
         <VStack spacing={8}>
-          <FlowInlineState symbol="exclamationmark.circle" title="Quote unavailable" subtitle={quoteState.error} />
-          {/insufficient/i.test(quoteState.error) ? (
+          <FlowInlineState
+            symbol="exclamationmark.circle"
+            tone="danger"
+            title="Quote unavailable"
+            subtitle={quoteState.error}
+            onRetry={quoteState.retry}
+          />
+          {quoteState.code === 'INSUFFICIENT_BALANCE' ? (
             <SecondaryActionButton label="Add Money" onPress={onAddMoney} />
           ) : null}
         </VStack>
@@ -470,6 +496,7 @@ function ReviewStep({
   settlementAmount,
   settlementAsset,
   error,
+  isSubmitting,
 }: {
   intent: PaymentIntent;
   onBack: () => void;
@@ -479,6 +506,7 @@ function ReviewStep({
   settlementAmount: string | null;
   settlementAsset: string | null;
   error?: string | null;
+  isSubmitting: boolean;
 }) {
   // Show what the backend quoted as moving; the picked currency is only the user's unit.
   const sendingAmount =
@@ -491,6 +519,7 @@ function ReviewStep({
       primaryLabel="Confirm"
       onPrimaryPress={onConfirm}
       isPrimaryDisabled={quote.status !== 'ready' || !recipient}
+      isPrimaryBusy={isSubmitting}
     >
       <VStack
         alignment="leading"
@@ -587,7 +616,7 @@ function ReviewStep({
           />
         )}
         {error ? (
-          <FlowInlineState symbol="exclamationmark.circle" title="Payment failed" subtitle={error} />
+          <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Payment failed" subtitle={error} />
         ) : null}
       </VStack>
     </FlowStepLayout>
@@ -604,6 +633,7 @@ export function PayFlowScreen() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('initiated');
   const [earnApprovalPresented, setEarnApprovalPresented] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Snapshot of what the confirmed quote actually moved, so success cannot name a different asset.
   const [sentAmount, setSentAmount] = useState<string | null>(null);
   const paymentId = useMemo(
@@ -680,7 +710,7 @@ export function PayFlowScreen() {
     }
     if (step === 'amount') setStep('recipient');
     if (step === 'review') setStep('amount');
-    if (step === 'processing') setStep('review');
+    // 'processing' has no back: the payment is already in flight.
   };
 
   const finishAtHome = () => router.replace('/');
@@ -778,6 +808,7 @@ export function PayFlowScreen() {
               recipientLabel={recipientLabel}
               recipientState={recipientState}
               onAddMoney={() => router.push('/add-money')}
+              blockedReason={blocked}
             />
           )}
           title="Pay"
@@ -790,13 +821,16 @@ export function PayFlowScreen() {
           error={submitError}
           intent={intent}
           onBack={goBack}
+          isSubmitting={isSubmitting}
           onConfirm={() => {
             const live = liveQuote.data;
             const resolved = recipientState.data;
-            if (!live || !resolved) return;
+            // No recipient, no payment: it must never fall back to the sender's own account.
+            if (!live || !resolved || isSubmitting) return;
             setSubmitError(null);
+            setIsSubmitting(true);
             setSentAmount(settlementAmount);
-            setPaymentStatus('sending');
+            setPaymentStatus('initiated');
             setStep('processing');
             void (async () => {
               try {
@@ -807,6 +841,7 @@ export function PayFlowScreen() {
                   amount,
                   currency,
                   approveEarnUnwind: quote.earnContribution > 0,
+                  onStage: setPaymentStatus,
                 });
                 setPaymentStatus('completed');
                 setStep('success');
@@ -814,6 +849,8 @@ export function PayFlowScreen() {
                 setSubmitError(errorMessage(err));
                 setPaymentStatus('failed');
                 setStep('review');
+              } finally {
+                setIsSubmitting(false);
               }
             })();
           }}
@@ -831,9 +868,8 @@ export function PayFlowScreen() {
           supportingLines={['This usually takes a moment.']}
           symbol="paperplane.fill"
           steps={processingSteps}
-          noticeTitle="You can close this screen"
-          noticeSubtitle="We’ll notify you when it’s complete."
-          onBack={goBack}
+          noticeTitle="Keep this screen open"
+          noticeSubtitle="We’ll move you on as soon as the recipient is credited."
         />
       ) : null}
 

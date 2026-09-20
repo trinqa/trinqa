@@ -60,13 +60,31 @@ function isExpiring(expiresAt: string | undefined, marginMs = 30_000) {
   return Number.isFinite(t) && Date.now() > t - marginMs;
 }
 
+/**
+ * The money already moved by the time we refresh — a failed read must not be reported
+ * as a failed transfer. The next screen that reads the ledger picks the balances up.
+ */
+async function refreshLedgerQuietly() {
+  try {
+    await refreshLedger();
+  } catch {
+    // Balances stay stale until the next successful refresh.
+  }
+}
+
+/** Stages the Add Money processing timeline reflects, in order. */
+export type AddMoneyStage = 'initiated' | 'transfer' | 'convert' | 'balance';
+
 export async function executeAddMoney(params: {
   accountId: string;
   live: AddMoneyLiveQuote;
   amount: number;
   currency: string;
   sourceId: string;
+  onStage?: (stage: AddMoneyStage) => void;
 }) {
+  const stage = (next: AddMoneyStage) => params.onStage?.(next);
+  stage('initiated');
   // The anchor rejects expired quotes; refresh rather than failing the deposit.
   const live = isExpiring(params.live.quote.expires_at)
     ? await quoteAddMoney({ amount: params.amount, currency: params.currency, sourceId: params.sourceId })
@@ -81,9 +99,12 @@ export async function executeAddMoney(params: {
   if (!transferId) {
     throw new BackendApiError('ADAPTER_UNAVAILABLE', 'Deposit did not return a transfer id', 502);
   }
+  stage('transfer');
   await api.demoSimulateBank(live.sessionId, transferId);
+  stage('convert');
   await pollTransfer(live.sessionId, transferId, deposit.operationId);
-  await refreshLedger();
+  stage('balance');
+  await refreshLedgerQuietly();
 }
 
 /** Live USDC payment quote for the Pay review; `executePay` builds against the same quote. */
@@ -138,6 +159,9 @@ export async function quotePay(params: {
   return { quote };
 }
 
+/** Stages the Pay processing timeline reflects, in order. */
+export type PayStage = 'initiated' | 'converting' | 'sending' | 'completed';
+
 export async function executePay(params: {
   accountId: string;
   recipientAccount: string;
@@ -145,7 +169,10 @@ export async function executePay(params: {
   amount: number;
   currency: string;
   approveEarnUnwind: boolean;
+  onStage?: (stage: PayStage) => void;
 }) {
+  const stage = (next: PayStage) => params.onStage?.(next);
+  stage('initiated');
   const live = isExpiring(params.live.quote.expiresAt)
     ? await quotePay({
         accountId: params.accountId,
@@ -154,12 +181,15 @@ export async function executePay(params: {
         currency: params.currency,
       })
     : params.live;
+  stage('converting');
   const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
+  stage('sending');
   const result = await executeBuiltPayment(built);
   if ('successful' in result && result.successful === false) {
     throw new BackendApiError('PAYMENT_FAILED', 'Payment submission failed', 502);
   }
-  await refreshLedger();
+  stage('completed');
+  await refreshLedgerQuietly();
 }
 
 /** Live TRY cash-out quote: `tryAmount` is what lands in the bank; the BFF prices the USDC debit and fee. */
@@ -193,6 +223,9 @@ export async function quoteWithdrawTry(params: {
   return { sessionId, quote };
 }
 
+/** Stages the Withdraw processing timeline reflects, in order. */
+export type WithdrawStage = 'initiated' | 'unwinding' | 'converting' | 'sending' | 'completed';
+
 export async function executeWithdrawTry(params: {
   accountId: string;
   live: WithdrawLiveQuote;
@@ -200,7 +233,10 @@ export async function executeWithdrawTry(params: {
   currency: string;
   dest?: string;
   approveEarnUnwind: boolean;
+  onStage?: (stage: WithdrawStage) => void;
 }) {
+  const stage = (next: WithdrawStage) => params.onStage?.(next);
+  stage(params.approveEarnUnwind ? 'unwinding' : 'initiated');
   // Quotes are single-use and expire after a few minutes; refresh a stale one instead of failing.
   const live = isExpiring(params.live.quote.expiresAt)
     ? await quoteWithdrawTry({
@@ -210,13 +246,16 @@ export async function executeWithdrawTry(params: {
         dest: params.dest,
       })
     : params.live;
+  stage('converting');
   const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
+  stage('sending');
   await executeBuiltPayment(built);
   const transferId = built.anchorSession?.transferId;
   if (transferId) {
     await pollTransfer(live.sessionId, transferId, built.operationId);
   }
-  await refreshLedger();
+  stage('completed');
+  await refreshLedgerQuietly();
 }
 
 /**
@@ -253,6 +292,9 @@ function targetTimestamp(horizon: PutToWorkHorizonId, date: Date) {
   return now + 365 * 24 * 3600;
 }
 
+/** Stages the Put to Work processing timeline reflects, in order. */
+export type PutToWorkStage = 'policy' | 'depositing' | 'completed';
+
 export async function executePutToWork(params: {
   accountId: string;
   amount: number;
@@ -260,7 +302,10 @@ export async function executePutToWork(params: {
   horizon: PutToWorkHorizonId;
   targetDate: Date;
   capabilities: BackendCapabilities | null;
+  onStage?: (stage: PutToWorkStage) => void;
 }): Promise<{ deposited: boolean }> {
+  const stage = (next: PutToWorkStage) => params.onStage?.(next);
+  stage('policy');
   const builtPolicy = await api.policyBuild({
     action: 'set_policy',
     accountId: params.accountId,
@@ -279,10 +324,11 @@ export async function executePutToWork(params: {
   }
 
   if (earnUnavailable(params.capabilities)) {
-    await refreshLedger();
+    await refreshLedgerQuietly();
     return { deposited: false };
   }
 
+  stage('depositing');
   const { strategies } = await api.yieldStrategies();
   const strategy = strategies[0];
   if (!strategy) {
@@ -305,6 +351,7 @@ export async function executePutToWork(params: {
   if (!executed.successful) {
     throw new BackendApiError('ADAPTER_UNAVAILABLE', 'Yield deposit failed', 502);
   }
-  await refreshLedger();
+  stage('completed');
+  await refreshLedgerQuietly();
   return { deposited: true };
 }

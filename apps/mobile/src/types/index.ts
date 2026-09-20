@@ -74,7 +74,7 @@ export type AddMoneyStep = 'network' | 'amount' | 'review' | 'processing' | 'suc
 
 export type PutToWorkRiskId = 'stable' | 'balanced' | 'growth';
 export type PutToWorkHorizonId = 'anytime' | 'seven-days' | 'thirty-days' | 'date';
-export type PutToWorkStep = 'strategy' | 'amount' | 'review' | 'success';
+export type PutToWorkStep = 'strategy' | 'amount' | 'review' | 'processing' | 'success';
 export type PutToWorkOrigin = 'add-money' | 'wallet' | 'earn';
 
 export interface PutToWorkRiskProfile {
