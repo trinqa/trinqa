@@ -1,6 +1,11 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { env, isPushWatcherEnabled, resolveOperationsDataDir } from './config/env.js';
+import {
+  env,
+  isPushWatcherEnabled,
+  resolveCorsOrigins,
+  resolveOperationsDataDir,
+} from './config/env.js';
 import { StellarService } from './services/stellar.service.js';
 import { TrMockAnchorAdapter } from './adapters/tr-mock-anchor.adapter.js';
 import { DefindexYieldAdapter } from './adapters/defindex-yield.adapter.js';
@@ -26,6 +31,7 @@ import { registerAccountRoutes } from './routes/v1/accounts.js';
 import { registerTransactionRoutes } from './routes/v1/transactions.js';
 import { registerSwapRoutes } from './routes/v1/swaps.js';
 import { registerWaitlistRoutes } from './routes/v1/waitlist.js';
+import { createWaitlistStore } from './services/waitlist-store.js';
 import { createAnchorRegistry } from './services/anchor-registry.service.js';
 import { registerAnchorDirectoryRoutes } from './routes/v1/anchors.js';
 import { RoutePlanner } from './services/route-planner.service.js';
@@ -47,20 +53,11 @@ export async function buildApp() {
   const app = Fastify({ logger: env.NODE_ENV !== 'test' });
 
   await app.register(cors, {
-    origin: [
-      'http://127.0.0.1:4180',
-      'http://localhost:4180',
-      'http://127.0.0.1:4173',
-      'http://localhost:4173',
-      'http://127.0.0.1:8080',
-      'http://localhost:8080',
-      'http://127.0.0.1:3000',
-      'http://localhost:3000',
-      // fallback: allow any localhost/127.0.0.1 port in dev
-      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
-    ],
+    // The landing page calls this API from https://trinqa.com, so the browser
+    // needs that origin echoed back; localhost stays allowed for development.
+    origin: resolveCorsOrigins(env),
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-waitlist-token'],
     credentials: false,
   });
 
@@ -73,6 +70,7 @@ export async function buildApp() {
   const quotes = new QuoteStore();
   const operations = createOperationStore(resolveOperationsDataDir());
   const anchorSessions = new AnchorSessionStore();
+  const waitlist = createWaitlistStore(resolveOperationsDataDir(), env.DATABASE_URL);
   const wallets = CustodialWallets.fromConfig(env, stellar);
   const pushTokens = createPushTokenRegistry(resolveOperationsDataDir());
   const pushSender = createPushSender(pushTokens, { logger: app.log });
@@ -122,10 +120,13 @@ export async function buildApp() {
   registerAccountRoutes(app, stellar);
   registerTransactionRoutes(app, stellar);
   registerSwapRoutes(app, soroswap);
-  registerWaitlistRoutes(app, resolveOperationsDataDir());
+  registerWaitlistRoutes(app, waitlist, { adminToken: env.WAITLIST_ADMIN_TOKEN });
   registerAnchorDirectoryRoutes(app, anchorRegistry);
   registerRouteRoutes(app, routePlanner);
   registerNotificationRoutes(app, pushTokens, wallets);
+
+  // Release the waitlist connection pool with the server.
+  app.addHook('onClose', async () => waitlist.close());
 
   // The one event source that works with the app closed: the ledger itself.
   const paymentWatcher = new IncomingPaymentWatcher(
@@ -156,6 +157,7 @@ export async function buildApp() {
     paymentExecution,
     operations,
     anchorSessions,
+    waitlist,
     anchorRegistry,
     routePlanner,
     routeAdvisor,

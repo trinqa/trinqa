@@ -119,6 +119,22 @@ key the token would land on the shared demo account.
 
 Sending goes through Expo's push service; see [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md).
 
+## Waitlist
+
+Public signup from the landing page. Entries go to managed PostgreSQL when
+`DATABASE_URL` is set, and to `.data/waitlist.json` otherwise. The address is
+normalised to lower case, so one person is one row.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/waitlist` | `{ email, name?, source? }` → `201` new, `200` when already joined |
+| GET | `/api/v1/waitlist/count` | Number of signups |
+| GET | `/api/v1/waitlist/export` | Every signup, as JSON or `?format=csv`. Needs `x-waitlist-token`; `404` when `WAITLIST_ADMIN_TOKEN` is unset |
+
+The browser calls this cross-origin, so the caller's origin must be in the CORS list:
+`https://trinqa.com`, `https://www.trinqa.com`, any localhost port, plus anything in
+`CORS_ORIGINS` (comma separated).
+
 ## Transactions
 
 | Method | Path | Description |
