@@ -38,9 +38,9 @@ export function PortfolioPullHint({ onPress }: { onPress: () => void }) {
       <HStack
         alignment="center"
         spacing={6}
-        modifiers={[
-          frame({ maxWidth: Infinity }),
-        ]}
+        // Leading, or the 44pt hit box centres the row and it drifts away from the
+        // title it sits under.
+        modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
       >
         <Image
           systemName="chevron.down"

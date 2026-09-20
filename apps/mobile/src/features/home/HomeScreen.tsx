@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
 import { Group } from '@expo/ui/swift-ui';
 import { padding } from '@expo/ui/swift-ui/modifiers';
@@ -9,7 +9,6 @@ import { HomeRecentGroup } from '@/components/HomeRecentGroup';
 import { PortfolioPullHint } from '@/components/PortfolioPullHint';
 import { ShortcutRow } from '@/components/ShortcutRow';
 import { TabHeader } from '@/components/TabHeader';
-import { NativeSegmentedControl } from '@/components/NativeSegmentedControl';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { ValueSummary } from '@/components/ValueSummary';
 import { currencyCapability } from '@/data/capabilities';
@@ -18,7 +17,6 @@ import { formatAmountNumber, formatLedgerMoney, toDisplayAmount } from '@/domain
 import {
   earnedWithin,
   getPortfolioSplit,
-  portfolioPeriods,
   resolvePeriod,
   type PortfolioPeriod,
 } from '@/domain/portfolio';
@@ -29,7 +27,9 @@ export function HomeScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const { account, balances, transactions } = useMockAppState();
-  const [period, setPeriod] = useState<PortfolioPeriod>('1M');
+  // Home shows one window and does not offer to change it. Portfolio is where the
+  // range is a question; here it is just the caption on a single figure.
+  const period: PortfolioPeriod = '1M';
 
   const split = getPortfolioSplit(balances);
   const capability = currencyCapability(account.displayCurrency);
@@ -54,27 +54,8 @@ export function HomeScreen() {
         <PortfolioPullHint onPress={openPortfolio} />
       </Group>
 
-      {/* The window every figure below is measured over. */}
-      <Group
-        modifiers={[
-          padding({
-            top: screenTokens.tabHeader.toContent,
-            bottom: screenTokens.periodBar.toContent,
-          }),
-        ]}
-      >
-        <NativeSegmentedControl
-          accessibilityLabel="Period"
-          value={period}
-          onChange={setPeriod}
-          options={portfolioPeriods}
-          width={contentWidth}
-          height={screenTokens.periodBar.height}
-        />
-      </Group>
-
       {/* The same card Portfolio opens with, so the pull lands somewhere recognisable. */}
-      <Group>
+      <Group modifiers={[padding({ top: screenTokens.wallet.headerToBalance })]}>
         <ValueSummary
           width={contentWidth}
           label="Total value"

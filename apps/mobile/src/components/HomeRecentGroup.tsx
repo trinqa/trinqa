@@ -1,8 +1,9 @@
 import { useState } from 'react';
 
-import { Group, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, Group, HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
+  buttonStyle,
   font,
   foregroundStyle,
   frame,
@@ -11,6 +12,7 @@ import {
   shapes,
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
+import { useRouter } from 'expo-router';
 import { useWindowDimensions } from 'react-native';
 
 import { FlowEmptyState } from '@/components/FlowStates';
@@ -23,11 +25,13 @@ import {
   transactionStatusSymbol,
 } from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import { colors, componentTokens, homeTokens, spacing, typography } from '@/theme';
 import type { Transaction } from '@/types';
 
 /** Recent grouped card follows the reference's narrow outer inset and compact rows. */
 export function HomeRecentGroup() {
+  const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const { transactions } = useMockAppState();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -70,9 +74,51 @@ export function HomeRecentGroup() {
               frame({ width: homeTokens.recent.width, alignment: 'leading' }),
             ]}
           >
-            <Text modifiers={[font({ size: typography.kicker, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
-              Recent
-            </Text>
+            {/*
+              Recent is three rows and then a dead end. It is not a place to filter
+              from — Activity already does that, with its own segments and a full
+              dated list — so what it owes the reader is a way through to it.
+            */}
+            <HStack alignment="center" modifiers={[frame({ maxWidth: Infinity })]}>
+              <Text
+                modifiers={[
+                  font({ size: typography.kicker, weight: 'semibold' }),
+                  foregroundStyle(colors.textPrimary),
+                ]}
+              >
+                Recent
+              </Text>
+              <Spacer />
+              <Button
+                onPress={() => router.push('/activity')}
+                modifiers={[
+                  buttonStyle('plain'),
+                  ...hitTargetModifiers({
+                    label: 'See all activity',
+                    minSize: true,
+                    shape: 'roundedRectangle',
+                    cornerRadius: componentTokens.surface.controlRadius,
+                    press: 'opacity',
+                  }),
+                ]}
+              >
+                <HStack alignment="center" spacing={3}>
+                  <Text
+                    modifiers={[
+                      font({ size: typography.footnote, weight: 'semibold' }),
+                      foregroundStyle(colors.action),
+                    ]}
+                  >
+                    See all
+                  </Text>
+                  <Image
+                    systemName="chevron.right"
+                    size={typography.micro}
+                    color={colors.action}
+                  />
+                </HStack>
+              </Button>
+            </HStack>
 
             <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
               {recentActivity.length === 0 ? (
