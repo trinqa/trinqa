@@ -8,6 +8,7 @@
     "dev:backend": "pnpm --dir backend dev",
     "dev": "sh -c 'pnpm --dir backend dev & npm --prefix apps/mobile start; wait'",
     "build:mobile": "npm --prefix apps/mobile run typecheck",
-    "build:backend": "pnpm --dir backend build"
+    "build:backend": "pnpm --dir backend build",
+    "assets:readme": "pnpm --dir backend exec tsx ../scripts/build-readme-assets.ts"
   }
 }

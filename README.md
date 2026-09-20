@@ -369,6 +369,14 @@ product/      component-level composition
 
 Brand action colour `#08AFD3`. Run the explorer with `npm run dev:web` to browse the inventory, contrast audit and component matrix.
 
+The animated artwork at the top of this file is generated from the same package — colours, type scale, radii, spacing, opacities and even the animation timings are read from `@trinqa/tokens`, never hand-picked:
+
+```bash
+npm run assets:readme    # → .github/assets/{banner,flow}-{light,dark}.svg
+```
+
+The light surfaces come from `semanticColor.surface`, the dark ones from the wallet surface family (`walletColors`), and every loop is a multiple of the product's 1400 ms processing beat.
+
 <br/>
 
 ## 📚 Docs
