@@ -595,7 +595,11 @@ header a[aria-label="Trinqa"]:focus-visible .tq-logo-word>span{
 </div>
 
 <script id="trinqa-waitlist-js">(function(){
-  var BACKEND = (location.hostname === 'localhost' ? 'http://localhost:8787' : 'http://127.0.0.1:8787') + '/api/v1/waitlist';
+  // Production talks to the deployed API; only a local page talks to a local backend.
+  var API_ORIGIN = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8787'
+    : 'https://api.trinqa.com';
+  var BACKEND = API_ORIGIN + '/api/v1/waitlist';
 
   function setup(){
     // Find all CTA anchors (href=index.html, no img child)
@@ -658,7 +662,7 @@ header a[aria-label="Trinqa"]:focus-visible .tq-logo-word>span{
       fetch(BACKEND, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ email: email, name: name || undefined })
+        body: JSON.stringify({ email: email, name: name || undefined, source: 'landing' })
       })
       .then(function(r){ return r.json(); })
       .then(function(data){
