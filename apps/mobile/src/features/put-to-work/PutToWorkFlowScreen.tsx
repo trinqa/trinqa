@@ -19,6 +19,7 @@ import {
   background,
   buttonStyle,
   clipShape,
+  contentShape,
   font,
   foregroundStyle,
   frame,
@@ -140,6 +141,9 @@ function StrategyOption({
         modifiers={[
           padding({ horizontal: 14 }),
           frame({ width: flow.contentWidth, height: flow.strategyRowHeight }),
+          // The row's fill sits on the Button, not on this label, so without a hit shape
+          // only the text and the checkmark answer a tap — not the padding or the Spacer.
+          contentShape(shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius })),
         ]}
       >
         <VStack alignment="leading" spacing={3}>
