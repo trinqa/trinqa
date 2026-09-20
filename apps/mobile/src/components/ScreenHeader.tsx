@@ -1,11 +1,10 @@
-import { Button, HStack, Spacer, Text } from '@expo/ui/swift-ui';
+import { Button, HStack, Image, Spacer, Text, ZStack } from '@expo/ui/swift-ui';
 import {
   background,
   buttonStyle,
   font,
   foregroundStyle,
   frame,
-  labelStyle,
   shapes,
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
@@ -22,7 +21,11 @@ interface ScreenHeaderProps {
   onBackPress?: () => void;
 }
 
-function HeaderIconButton({
+/**
+ * 44pt circle whose whole disc is the hit target. `label` + `systemImage` +
+ * `iconOnly` keeps the AX/hit box on the glyph (14pt) even when the chrome is 44.
+ */
+export function HeaderIconButton({
   label,
   symbol,
   onPress,
@@ -31,27 +34,34 @@ function HeaderIconButton({
   symbol: SFSymbol;
   onPress?: () => void;
 }) {
+  const size = componentTokens.headerControl.size;
+
   return (
     <Button
-      label={label}
-      systemImage={symbol}
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        labelStyle('iconOnly'),
-        ...hitTargetModifiers({ label, shape: 'circle' }),
-        frame({
-          width: componentTokens.headerControl.size,
-          height: componentTokens.headerControl.size,
-        }),
-        background(colors.surface, shapes.circle()),
-        strokeBorder({
-          content: colors.borderStrong,
-          style: { lineWidth: componentTokens.surface.borderWidth },
-          shape: 'circle',
-        }),
+        ...hitTargetModifiers({ label, shape: 'circle', press: 'opacity' }),
       ]}
-    />
+    >
+      <ZStack
+        modifiers={[
+          frame({ width: size, height: size }),
+          background(colors.surface, shapes.circle()),
+          strokeBorder({
+            content: colors.borderStrong,
+            style: { lineWidth: componentTokens.surface.borderWidth },
+            shape: 'circle',
+          }),
+        ]}
+      >
+        <Image
+          systemName={symbol}
+          size={componentTokens.headerControl.symbolSize}
+          color={colors.textPrimary}
+        />
+      </ZStack>
+    </Button>
   );
 }
 

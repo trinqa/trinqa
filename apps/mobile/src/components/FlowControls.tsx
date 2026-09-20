@@ -17,7 +17,6 @@ import {
   font,
   foregroundStyle,
   frame,
-  labelStyle,
   disabled,
   opacity,
   padding,
@@ -31,7 +30,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { ScreenHeader } from '@/components/ScreenHeader';
+import { HeaderIconButton, ScreenHeader } from '@/components/ScreenHeader';
 import { colors, componentTokens, screenTokens, shortcutShadow, typography, spacing } from '@/theme';
 import { cardChromeModifiers, hitTargetModifiers } from '@/theme/swiftUi';
 
@@ -81,6 +80,7 @@ export function PrimaryActionButton({
           label: isBusy ? `${label}, in progress` : label,
           shape: 'roundedRectangle',
           cornerRadius: action.radius,
+          press: 'full',
         }),
         frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
       ]}
@@ -179,6 +179,7 @@ export function FlowQuickAmountButton({
           minSize: true,
           shape: 'roundedRectangle',
           cornerRadius: componentTokens.surface.controlRadius,
+          press: 'opacity',
         }),
         frame({ width: buttonWidth, height: flow.quickAmountHeight }),
         // Selected = cyan border on white surface only; no blue fill.
@@ -423,23 +424,7 @@ export function FlowSuccessState({
     >
       <HStack modifiers={[frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size })]}>
         <Spacer />
-        <Button
-          label="Close"
-          systemImage="xmark"
-          onPress={onClose}
-          modifiers={[
-            buttonStyle('plain'),
-            labelStyle('iconOnly'),
-            ...hitTargetModifiers({ label: 'Close', shape: 'circle' }),
-            frame({ width: componentTokens.headerControl.size, height: componentTokens.headerControl.size }),
-            background(colors.surface, shapes.circle()),
-            strokeBorder({
-              content: colors.borderStrong,
-              style: { lineWidth: componentTokens.surface.borderWidth },
-              shape: 'circle',
-            }),
-          ]}
-        />
+        <HeaderIconButton label="Close" symbol="xmark" onPress={onClose} />
       </HStack>
 
       <VStack alignment="center" spacing={0} modifiers={[padding({ top: screenTokens.flowChrome.successTop }), frame({ maxWidth: Infinity })]}>
@@ -511,6 +496,7 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
           label,
           shape: 'roundedRectangle',
           cornerRadius: action.radius,
+          press: 'full',
         }),
         frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
         background(colors.surface, shapes.roundedRectangle({ cornerRadius: action.radius })),

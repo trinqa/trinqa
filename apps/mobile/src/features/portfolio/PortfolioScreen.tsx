@@ -7,7 +7,6 @@ import {
   font,
   foregroundStyle,
   frame,
-  labelStyle,
   padding,
   shapes,
   strokeBorder,
@@ -17,6 +16,7 @@ import { useWindowDimensions } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { InsetLayer } from '@/components/InsetLayer';
+import { HeaderIconButton } from '@/components/ScreenHeader';
 import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
 import { MetricTile } from '@/components/MetricTile';
 import { SurfacePanel } from '@/components/SurfacePanel';
@@ -200,6 +200,7 @@ function TrayAction({
           label,
           shape: 'roundedRectangle',
           cornerRadius: radius,
+          press: 'full',
         }),
       ]}
     >
@@ -315,25 +316,10 @@ export function PortfolioScreen() {
 
         <Spacer />
 
-        <Button
+        <HeaderIconButton
           label="Back to Home"
-          systemImage="chevron.down"
+          symbol="chevron.down"
           onPress={() => router.back()}
-          modifiers={[
-            buttonStyle('plain'),
-            labelStyle('iconOnly'),
-            ...hitTargetModifiers({ label: 'Back to Home', shape: 'circle' }),
-            frame({
-              width: componentTokens.headerControl.size,
-              height: componentTokens.headerControl.size,
-            }),
-            background(colors.surface, shapes.circle()),
-            strokeBorder({
-              content: colors.borderStrong,
-              style: { lineWidth: componentTokens.surface.borderWidth },
-              shape: 'circle',
-            }),
-          ]}
         />
       </HStack>
 
