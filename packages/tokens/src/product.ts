@@ -264,6 +264,20 @@ export const screenTokens = {
     dividerWidth: 1,
     dividerHeight: 54,
   },
+  /**
+   * One gap between a tab's title and whatever it says first. Home, Earn and
+   * Activity had drifted to 29, 36 and 22 points apart, which read as three
+   * different headers wearing the same type.
+   */
+  tabHeader: {
+    toContent: 16,
+    /**
+     * When the first thing under the title is tappable, its 44pt hit box already
+     * contributes about twelve points of air above the text. Subtract them, or the
+     * row sits visibly lower than the plain sentence Earn and Activity open with.
+     */
+    toTappableContent: 4,
+  },
   /** The range switch, above the cards it governs rather than inside one. */
   periodBar: {
     height: 32,

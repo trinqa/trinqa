@@ -50,13 +50,15 @@ export function HomeScreen() {
         <TabHeader title="Home" />
       </Group>
 
-      <PortfolioPullHint onPress={openPortfolio} />
+      <Group modifiers={[padding({ top: screenTokens.tabHeader.toTappableContent })]}>
+        <PortfolioPullHint onPress={openPortfolio} />
+      </Group>
 
       {/* The window every figure below is measured over. */}
       <Group
         modifiers={[
           padding({
-            top: screenTokens.wallet.headerToBalance,
+            top: screenTokens.tabHeader.toContent,
             bottom: screenTokens.periodBar.toContent,
           }),
         ]}

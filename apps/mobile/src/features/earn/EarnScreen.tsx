@@ -76,7 +76,7 @@ export function EarnScreen() {
         alignment="leading"
         spacing={4}
         modifiers={[
-          padding({ top: earn.headlineTopGap }),
+          padding({ top: screenTokens.tabHeader.toContent }),
           frame({ width: contentWidth, alignment: 'leading' }),
         ]}
       >

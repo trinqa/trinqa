@@ -52,7 +52,7 @@ export function ActivityScreen() {
 
         <Text
           modifiers={[
-            padding({ top: activity.headerToTitle }),
+            padding({ top: screenTokens.tabHeader.toContent }),
             font({ size: typography.body, weight: 'medium' }),
             foregroundStyle(colors.textSecondary),
             frame({ maxWidth: Infinity, alignment: 'leading' }),

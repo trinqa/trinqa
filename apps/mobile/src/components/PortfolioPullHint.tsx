@@ -39,7 +39,7 @@ export function PortfolioPullHint({ onPress }: { onPress: () => void }) {
         alignment="center"
         spacing={6}
         modifiers={[
-          frame({ maxWidth: Infinity, height: screenTokens.portfolio.pullHintHeight }),
+          frame({ maxWidth: Infinity }),
         ]}
       >
         <Image
