@@ -243,8 +243,6 @@ export const screenTokens = {
     shareBarToTray: 12,
     /** Inset (4) + tile (58) + gap (4) + tile (58) + inset (4). */
     splitTrayHeight: 128,
-    /** Three tray rows: two tile rows plus the action. */
-    pillarTrayHeight: 176,
     earningsTrayHeight: 66,
     sectionGap: 16,
   },

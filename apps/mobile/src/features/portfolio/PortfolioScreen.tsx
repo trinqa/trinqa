@@ -1,16 +1,20 @@
-import { Button, Group, HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, DisclosureGroup, Group, HStack, Image, Popover, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
+  fixedSize,
   font,
   foregroundStyle,
   frame,
   padding,
   shapes,
   strokeBorder,
+  tint,
 } from '@expo/ui/swift-ui/modifiers';
+import { useState } from 'react';
+
 import { useRouter } from 'expo-router';
 import { useWindowDimensions } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
@@ -26,13 +30,13 @@ import { formatSharePercent } from '@/domain/balance';
 import { formatAmountNumber, formatLedgerMoney, toDisplayAmount } from '@/domain/money';
 import {
   getPortfolioNotes,
-  getPortfolioPillars,
   getPortfolioSplit,
   portfolioChanges,
+  lastEarnedAt,
+  portfolioSince,
   resolveRiskProfile,
   totalEarned,
   type PortfolioNote,
-  type PortfolioPillar,
 } from '@/domain/portfolio';
 import {
   transactionStatusColor,
@@ -50,10 +54,13 @@ import { hitTargetModifiers } from '@/theme/swiftUi';
 function Section({
   title,
   width,
+  caption,
   children,
 }: {
   title: string;
   width: number;
+  /** Right-aligned context for the title, e.g. the period a figure covers. */
+  caption?: string;
   children: React.ReactNode;
 }) {
   const recent = homeTokens.recent;
@@ -72,14 +79,27 @@ function Section({
           frame({ maxWidth: Infinity, alignment: 'leading' }),
         ]}
       >
-        <Text
-          modifiers={[
-            font({ size: typography.kicker, weight: 'semibold' }),
-            foregroundStyle(colors.textPrimary),
-          ]}
-        >
-          {title}
-        </Text>
+        <HStack alignment="firstTextBaseline" modifiers={[frame({ maxWidth: Infinity })]}>
+          <Text
+            modifiers={[
+              font({ size: typography.kicker, weight: 'semibold' }),
+              foregroundStyle(colors.textPrimary),
+            ]}
+          >
+            {title}
+          </Text>
+          <Spacer />
+          {caption ? (
+            <Text
+              modifiers={[
+                font({ size: typography.footnote, weight: 'medium' }),
+                foregroundStyle(colors.textSecondary),
+              ]}
+            >
+              {caption}
+            </Text>
+          ) : null}
+        </HStack>
         {children}
       </VStack>
     </SurfacePanel>
@@ -128,108 +148,6 @@ function SplitBar({ width, growingShare }: { width: number; growingShare: number
   );
 }
 
-function PillarTile({ pillar, width }: { pillar: PortfolioPillar; width: number }) {
-  return (
-    <VStack
-      alignment="leading"
-      spacing={componentTokens.metricCard.textGap}
-      modifiers={[
-        padding({ horizontal: componentTokens.transactionRow.horizontalPadding }),
-        frame({
-          width,
-          height: screenTokens.wallet.metricTileHeight,
-          alignment: 'leading',
-        }),
-        background(
-          colors.surface,
-          shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-        ),
-      ]}
-    >
-      <HStack alignment="center" spacing={5}>
-        <Image systemName={pillar.symbol} size={typography.fine} color={colors.textSecondary} />
-        <Text
-          modifiers={[
-            font({ size: typography.footnote, weight: 'medium' }),
-            foregroundStyle(colors.textSecondary),
-          ]}
-        >
-          {pillar.label}
-        </Text>
-        <Spacer />
-      </HStack>
-
-      <Text
-        modifiers={[
-          font({ size: typography.label, weight: 'semibold' }),
-          foregroundStyle(colors.textPrimary),
-          frame({ maxWidth: Infinity, alignment: 'leading' }),
-        ]}
-      >
-        {pillar.value}
-      </Text>
-    </VStack>
-  );
-}
-
-/**
- * A white tile in the tray, like the ones above it, with the accent carried by the
- * label rather than a fill. Portfolio is a screen for reading: a full-width blue
- * slab here out-shouted the balance it was meant to explain. The one filled accent
- * on this page is the split bar, which is data.
- */
-function TrayAction({
-  label,
-  symbol,
-  width,
-  onPress,
-}: {
-  label: string;
-  symbol: SFSymbol;
-  width: number;
-  onPress: () => void;
-}) {
-  const radius = componentTokens.surface.cardRadius;
-
-  return (
-    <Button
-      onPress={onPress}
-      modifiers={[
-        buttonStyle('plain'),
-        ...hitTargetModifiers({
-          label,
-          shape: 'roundedRectangle',
-          cornerRadius: radius,
-          press: 'full',
-        }),
-      ]}
-    >
-      <HStack
-        alignment="center"
-        spacing={6}
-        modifiers={[
-          padding({ horizontal: componentTokens.transactionRow.horizontalPadding }),
-          frame({ width, height: screenTokens.wallet.balanceActionHeight }),
-          background(colors.surface, shapes.roundedRectangle({ cornerRadius: radius })),
-          clipShape('roundedRectangle', radius),
-        ]}
-      >
-        <Image systemName={symbol} size={typography.caption} color={colors.action} />
-        <Text
-          modifiers={[
-            font({ size: typography.footnote, weight: 'semibold' }),
-            foregroundStyle(colors.action),
-          ]}
-        >
-          {label}
-        </Text>
-        <Spacer />
-        <Image systemName="chevron.right" size={typography.fine} color={colors.textSecondary} />
-      </HStack>
-    </Button>
-  );
-}
-
 function NoteRow({ note }: { note: PortfolioNote }) {
   const tint = note.tone === 'positive' ? colors.success : colors.textSecondary;
 
@@ -264,6 +182,141 @@ function NoteRow({ note }: { note: PortfolioNote }) {
   );
 }
 
+/**
+ * The one warm number on the page. The split below says where the money sits;
+ * this says what it did, which is the part anyone actually wants to see, so it
+ * rides beside the total rather than waiting three sections down.
+ *
+ * It explains itself in a popover instead of a permanent caption — a line of
+ * small print under the balance would cost more attention than the figure earns.
+ */
+function GainBadge({
+  value,
+  isOpen,
+  onToggle,
+}: {
+  value: string;
+  isOpen: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <Popover
+      isPresented={isOpen}
+      onIsPresentedChange={onToggle}
+      arrowEdge="top"
+    >
+      <Popover.Trigger>
+        <Button
+          onPress={() => onToggle(true)}
+          modifiers={[
+            buttonStyle('plain'),
+            ...hitTargetModifiers({
+              label: `Earned ${value}`,
+              hint: 'What your invested money has made.',
+              minSize: true,
+              shape: 'roundedRectangle',
+              cornerRadius: componentTokens.surface.controlRadius,
+              press: 'opacity',
+            }),
+          ]}
+        >
+          <HStack alignment="center" spacing={3}>
+            <Image
+              systemName="arrow.up.right"
+              size={typography.footnote}
+              color={colors.success}
+            />
+            <Text
+              modifiers={[
+                font({ size: typography.sectionTitle, weight: 'semibold' }),
+                foregroundStyle(colors.success),
+              ]}
+            >
+              {value}
+            </Text>
+          </HStack>
+        </Button>
+      </Popover.Trigger>
+
+      <Popover.Content>
+        <Group modifiers={[padding({ all: spacing.lg }), frame({ width: 232 })]}>
+          <Text
+            modifiers={[
+              font({ size: typography.body, weight: 'medium' }),
+              foregroundStyle(colors.textPrimary),
+              // Without this the popover sizes to one line and clips the rest.
+              fixedSize({ horizontal: false, vertical: true }),
+              frame({ maxWidth: Infinity, alignment: 'leading' }),
+            ]}
+          >
+            Earned by your invested money. Already counted in the total.
+          </Text>
+        </Group>
+      </Popover.Content>
+    </Popover>
+  );
+}
+
+/**
+ * Trinqa's read on the portfolio, folded away behind one line. The notes were a
+ * standing wall of text that pushed the history off the screen; as a disclosure
+ * they are there for whoever wants them and invisible to everyone else. The
+ * expansion is SwiftUI's own, so it animates without anything to hand-tune.
+ */
+function PortfolioRead({ notes, width }: { notes: PortfolioNote[]; width: number }) {
+  const [isExpanded, setExpanded] = useState(false);
+
+  return (
+    <SurfacePanel width={width}>
+      <VStack
+        alignment="leading"
+        spacing={0}
+        modifiers={[
+          padding({
+            vertical: spacing.md,
+            horizontal: homeTokens.recent.horizontalPadding,
+          }),
+          frame({ maxWidth: Infinity, alignment: 'leading' }),
+        ]}
+      >
+        <DisclosureGroup
+          isExpanded={isExpanded}
+          onIsExpandedChange={setExpanded}
+          modifiers={[tint(colors.action)]}
+        >
+          <DisclosureGroup.Label>
+            <HStack alignment="center" spacing={spacing.sm}>
+              <Image
+                systemName="sparkles"
+                size={typography.sectionTitle}
+                color={colors.action}
+              />
+              <Text
+                modifiers={[
+                  font({ size: typography.kicker, weight: 'semibold' }),
+                  foregroundStyle(colors.textPrimary),
+                ]}
+              >
+                Trinqa's read
+              </Text>
+            </HStack>
+          </DisclosureGroup.Label>
+
+          <VStack
+            alignment="leading"
+            spacing={spacing.lg}
+            modifiers={[padding({ top: spacing.md }), frame({ maxWidth: Infinity })]}
+          >
+            {notes.map((note) => (
+              <NoteRow key={note.id} note={note} />
+            ))}
+          </VStack>
+        </DisclosureGroup>
+      </VStack>
+    </SurfacePanel>
+  );
+}
+
 export function PortfolioScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
@@ -283,13 +336,16 @@ export function PortfolioScreen() {
   const sectionColumn = Math.floor((sectionInner - layer.inset * 2 - layer.gap) / 2);
   const sectionFull = sectionInner - layer.inset * 2;
 
+  const [isGainOpen, setGainOpen] = useState(false);
+
   const capability = currencyCapability(account.displayCurrency);
   const split = getPortfolioSplit(balances);
-  const pillars = getPortfolioPillars(strategy);
   const notes = getPortfolioNotes(split, strategy);
   const changes = portfolioChanges(transactions);
   const profile = resolveRiskProfile(strategy);
   const earned = totalEarned(transactions);
+  const since = portfolioSince(transactions);
+  const lastPaid = lastEarnedAt(transactions);
 
   const totalValue = formatAmountNumber(toDisplayAmount(split.total, account));
   const growingValue = formatAmountNumber(toDisplayAmount(split.growing, account));
@@ -373,7 +429,14 @@ export function PortfolioScreen() {
             >
               {capability.symbol}
             </Text>
+
             <Spacer />
+
+            <GainBadge
+              value={formatLedgerMoney(earned, account)}
+              isOpen={isGainOpen}
+              onToggle={setGainOpen}
+            />
           </HStack>
 
           <Group modifiers={[padding({ top: portfolio.valueToShareBar })]}>
@@ -383,13 +446,15 @@ export function PortfolioScreen() {
           <Group modifiers={[padding({ top: portfolio.shareBarToTray })]}>
             <InsetLayer height={portfolio.splitTrayHeight}>
               <MetricTile
-                label="Growing"
+                label="Invested"
+                symbol="lock.fill"
                 trailingLabel={formatSharePercent(split.growingShare)}
                 value={`${growingValue} ${capability.symbol}`}
                 width={heroTrayFull}
               />
               <MetricTile
-                label="Ready to use"
+                label="Cash"
+                symbol="banknote.fill"
                 trailingLabel={formatSharePercent(split.readyShare)}
                 value={`${readyValue} ${capability.symbol}`}
                 width={heroTrayFull}
@@ -399,45 +464,28 @@ export function PortfolioScreen() {
         </VStack>
       </SurfacePanel>
 
-      {/* Strategy, risk, horizon and liquidity — none of them named that way. */}
-      <Section title="How it is being looked after" width={contentWidth}>
-        <InsetLayer height={portfolio.pillarTrayHeight}>
-          <HStack alignment="center" spacing={layer.gap}>
-            <PillarTile pillar={pillars[0]} width={sectionColumn} />
-            <PillarTile pillar={pillars[1]} width={sectionColumn} />
-          </HStack>
-          <HStack alignment="center" spacing={layer.gap}>
-            <PillarTile pillar={pillars[2]} width={sectionColumn} />
-            <PillarTile pillar={pillars[3]} width={sectionColumn} />
-          </HStack>
-          <TrayAction
-            label="Change plan"
-            symbol="slider.horizontal.3"
-            width={sectionFull}
-            onPress={() => router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })}
-          />
-        </InsetLayer>
-      </Section>
+      <PortfolioRead notes={notes} width={contentWidth} />
 
-      <Section title="What we make of it" width={contentWidth}>
-        <VStack alignment="leading" spacing={spacing.lg}>
-          {notes.map((note) => (
-            <NoteRow key={note.id} note={note} />
-          ))}
-        </VStack>
-      </Section>
-
-      <Section title="What it has made" width={contentWidth}>
+      <Section
+        title="What it has made"
+        width={contentWidth}
+        caption={since ? `Since ${since}` : undefined}
+      >
+        {/*
+          The running total moved up beside the balance, so repeating it here would
+          be the same number twice on one screen. What this card can add instead is
+          the rate it earns at and when it last paid.
+        */}
         <InsetLayer axis="horizontal" height={portfolio.earningsTrayHeight}>
-          <MetricTile
-            label="Earned so far"
-            value={formatLedgerMoney(earned, account)}
-            width={sectionColumn}
-            valueColor={colors.success}
-          />
           <MetricTile
             label="Yearly return"
             value={`${profile.estimatedApy.toFixed(1)}%`}
+            width={sectionColumn}
+          />
+          <MetricTile
+            label="Last paid"
+            symbol="clock"
+            value={lastPaid ?? '—'}
             width={sectionColumn}
           />
         </InsetLayer>

@@ -1,4 +1,4 @@
-import { HStack, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
   background,
   font,
@@ -8,6 +8,8 @@ import {
   shapes,
 } from '@expo/ui/swift-ui/modifiers';
 
+import type { SFSymbol } from 'sf-symbols-typescript';
+
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 interface MetricTileProps {
@@ -16,6 +18,8 @@ interface MetricTileProps {
   width: number;
   /** Small right-aligned figure beside the label, e.g. a share of the total. */
   trailingLabel?: string;
+  /** Sits immediately after the label. Carries the tile's character — spendable, locked away. */
+  symbol?: SFSymbol;
   valueColor?: string;
 }
 
@@ -28,6 +32,7 @@ export function MetricTile({
   value,
   width,
   trailingLabel,
+  symbol,
   valueColor = colors.textPrimary,
 }: MetricTileProps) {
   return (
@@ -47,7 +52,7 @@ export function MetricTile({
         ),
       ]}
     >
-      <HStack alignment="firstTextBaseline" spacing={componentTokens.layer.gap}>
+      <HStack alignment="center" spacing={5}>
         <Text
           modifiers={[
             font({ size: typography.footnote, weight: 'medium' }),
@@ -56,6 +61,9 @@ export function MetricTile({
         >
           {label}
         </Text>
+        {symbol ? (
+          <Image systemName={symbol} size={typography.fine} color={colors.textSecondary} />
+        ) : null}
         <Spacer />
         {trailingLabel ? (
           <Text

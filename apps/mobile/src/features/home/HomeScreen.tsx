@@ -43,9 +43,11 @@ export function HomeScreen() {
           totalValue={totalValue}
           currencySymbol={capability.symbol}
           width={contentWidth}
-          leftLabel="Ready to use"
+          leftLabel="Cash"
+          leftSymbol="banknote.fill"
           leftValue={readyToUseValue}
-          rightLabel="Growing"
+          rightLabel="Invested"
+          rightSymbol="lock.fill"
           rightValue={growingValue}
           onMoveToGrow={() =>
             router.push({ pathname: '/put-to-work', params: { origin: 'wallet' } })

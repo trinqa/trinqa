@@ -93,6 +93,32 @@ export function portfolioChanges(transactions: Transaction[]): Transaction[] {
   return transactions.filter((transaction) => portfolioChangeTypes.has(transaction.type)).slice(0, 4);
 }
 
+/**
+ * When this portfolio started doing anything. Earnings mean little without the
+ * stretch of time they were earned over, so the summary is dated rather than
+ * floating free above the history.
+ */
+export function portfolioSince(transactions: Transaction[]): string | null {
+  const earliest = transactions.reduce<string | null>((oldest, transaction) => {
+    if (!oldest) return transaction.occurredAt;
+    return transaction.occurredAt < oldest ? transaction.occurredAt : oldest;
+  }, null);
+  if (!earliest) return null;
+  return new Date(earliest).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+/** The most recent payout, for the summary that sits above the history. */
+export function lastEarnedAt(transactions: Transaction[]): string | null {
+  const latest = transactions
+    .filter((transaction) => transaction.type === 'yield-earned')
+    .reduce<string | null>((newest, transaction) => {
+      if (!newest) return transaction.occurredAt;
+      return transaction.occurredAt > newest ? transaction.occurredAt : newest;
+    }, null);
+  if (!latest) return null;
+  return new Date(latest).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export function totalEarned(transactions: Transaction[]): number {
   return transactions
     .filter((transaction) => transaction.type === 'yield-earned')

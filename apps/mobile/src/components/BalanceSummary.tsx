@@ -14,6 +14,7 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { InsetLayer } from '@/components/InsetLayer';
+import { MetricTile } from '@/components/MetricTile';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
 import { hitTargetModifiers } from '@/theme/swiftUi';
 
@@ -23,60 +24,12 @@ interface BalanceSummaryProps {
   width: number;
   leftLabel: string;
   leftValue: string;
+  leftSymbol?: SFSymbol;
   rightLabel: string;
   rightValue: string;
+  rightSymbol?: SFSymbol;
   onMoveToGrow: () => void;
   onTakeMoneyOut: () => void;
-}
-
-function MetricTile({
-  label,
-  value,
-  width,
-  currencySymbol,
-}: {
-  label: string;
-  value: string;
-  width: number;
-  currencySymbol: string;
-}) {
-  return (
-    <VStack
-      alignment="leading"
-      spacing={componentTokens.metricCard.textGap}
-      modifiers={[
-        padding({ horizontal: componentTokens.transactionRow.horizontalPadding }),
-        frame({
-          width,
-          height: screenTokens.wallet.metricTileHeight,
-          alignment: 'leading',
-        }),
-        background(
-          colors.surface,
-          shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-        ),
-      ]}
-    >
-      <Text
-        modifiers={[
-          font({ size: typography.footnote, weight: 'medium' }),
-          foregroundStyle(colors.textSecondary),
-          frame({ maxWidth: Infinity, alignment: 'leading' }),
-        ]}
-      >
-        {label}
-      </Text>
-      <Text
-        modifiers={[
-          font({ size: typography.label, weight: 'semibold' }),
-          foregroundStyle(colors.textPrimary),
-          frame({ maxWidth: Infinity, alignment: 'leading' }),
-        ]}
-      >
-        {value} {currencySymbol}
-      </Text>
-    </VStack>
-  );
 }
 
 /**
@@ -155,8 +108,10 @@ export function BalanceSummary({
   width,
   leftLabel,
   leftValue,
+  leftSymbol,
   rightLabel,
   rightValue,
+  rightSymbol,
   onMoveToGrow,
   onTakeMoneyOut,
 }: BalanceSummaryProps) {
@@ -225,15 +180,15 @@ export function BalanceSummary({
             <HStack alignment="center" spacing={layer.gap}>
               <MetricTile
                 label={leftLabel}
-                value={leftValue}
+                symbol={leftSymbol}
+                value={`${leftValue} ${currencySymbol}`}
                 width={columnWidth}
-                currencySymbol={currencySymbol}
               />
               <MetricTile
                 label={rightLabel}
-                value={rightValue}
+                symbol={rightSymbol}
+                value={`${rightValue} ${currencySymbol}`}
                 width={columnWidth}
-                currencySymbol={currencySymbol}
               />
             </HStack>
 

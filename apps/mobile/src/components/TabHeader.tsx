@@ -88,6 +88,16 @@ export function TabHeader({ title }: TabHeaderProps) {
           }),
         ]}
       >
+        {/*
+          The plan used to sit on Portfolio as a four-tile block plus a button, which
+          was the most crowded thing on a screen meant for reading. It is a setting,
+          not a reading, so it lives with the other settings.
+        */}
+        <Button
+          label="Edit plan"
+          systemImage="slider.horizontal.3"
+          onPress={() => router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })}
+        />
         <Button
           label="Account details"
           systemImage="person.text.rectangle"
