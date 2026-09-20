@@ -33,6 +33,10 @@ import { NoopAdvisor } from './services/route-advisor.js';
 import { createRouteAdvisorFromEnv } from './adapters/jev-advisor.js';
 import { registerRouteRoutes } from './routes/v1/routes.js';
 import { DEFAULT_ADVISOR_MIN_CONFIDENCE } from './domain/route.js';
+import { createPushTokenRegistry } from './services/push-tokens.service.js';
+import { createPushSender } from './services/push-sender.service.js';
+import { registerNotificationRoutes } from './routes/v1/notifications.js';
+import { CustodialWallets } from './services/custodial-wallet.service.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: env.NODE_ENV !== 'test' });
@@ -64,6 +68,9 @@ export async function buildApp() {
   const quotes = new QuoteStore();
   const operations = createOperationStore(resolveOperationsDataDir());
   const anchorSessions = new AnchorSessionStore();
+  const wallets = CustodialWallets.fromConfig(env, stellar);
+  const pushTokens = createPushTokenRegistry(resolveOperationsDataDir());
+  const pushSender = createPushSender(pushTokens, { logger: app.log });
   const yieldSvc = new YieldService(defindex, policy, operations, stellar);
   const paymentExecution = new PaymentExecutionService(
     env,
@@ -99,7 +106,7 @@ export async function buildApp() {
 
   registerHealthRoutes(app, stellar, anchor, defindex, soroswap, policy);
   registerCapabilitiesRoutes(app, capabilities);
-  registerDemoRoutes(app, stellar, anchor, anchorSessions);
+  registerDemoRoutes(app, stellar, anchor, anchorSessions, wallets);
   registerPolicyRoutes(app, policy);
   registerYieldRoutes(app, yieldSvc);
   registerPaymentRoutes(app, paymentRouter, paymentExecution);
@@ -112,6 +119,7 @@ export async function buildApp() {
   registerWaitlistRoutes(app, resolveOperationsDataDir());
   registerAnchorDirectoryRoutes(app, anchorRegistry);
   registerRouteRoutes(app, routePlanner);
+  registerNotificationRoutes(app, pushTokens, wallets);
 
   app.get('/', async () => ({ service: 'trinqa-backend', api: '/api/v1/health' }));
 
@@ -131,5 +139,7 @@ export async function buildApp() {
     anchorRegistry,
     routePlanner,
     routeAdvisor,
+    pushTokens,
+    pushSender,
   };
 }
