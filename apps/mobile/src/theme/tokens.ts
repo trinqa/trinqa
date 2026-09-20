@@ -9,6 +9,7 @@ export {
   borders,
   colors,
   componentTokens,
+  deepColors,
   motion,
   radius,
   spacing,

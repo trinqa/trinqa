@@ -1,10 +1,4 @@
-import {
-  Button,
-  HStack,
-  Spacer,
-  Text,
-  ZStack,
-} from '@expo/ui/swift-ui';
+import { Button, HStack, Spacer, Text } from '@expo/ui/swift-ui';
 import {
   background,
   buttonStyle,
@@ -24,8 +18,6 @@ interface ScreenHeaderProps {
   showProfile?: boolean;
   title?: string;
   showMenu?: boolean;
-  /** Set false for chrome-free headers (processing screens), which show no support/notification actions. */
-  showActions?: boolean;
   onBackPress?: () => void;
 }
 
@@ -70,7 +62,6 @@ export function ScreenHeader({
   showProfile = true,
   title,
   showMenu = false,
-  showActions = true,
   onBackPress,
 }: ScreenHeaderProps) {
   return (
@@ -94,25 +85,6 @@ export function ScreenHeader({
       ) : null}
 
       <Spacer />
-
-      {showActions && !showBack && !showMenu ? (
-        <HStack spacing={componentTokens.headerControl.gap}>
-          <HeaderIconButton label="Support" symbol="headphones" />
-          <ZStack alignment="topTrailing">
-            <HeaderIconButton label="Notifications, 4 unread" symbol="bell" />
-            <Text
-              modifiers={[
-                font({ size: typography.micro, weight: 'bold' }),
-                foregroundStyle(colors.textInverse),
-                frame({ width: 16, height: 16 }),
-                background(colors.danger, shapes.circle()),
-              ]}
-            >
-              4
-            </Text>
-          </ZStack>
-        </HStack>
-      ) : null}
 
       {showMenu ? <HeaderIconButton label="More options" symbol="ellipsis" /> : null}
     </HStack>

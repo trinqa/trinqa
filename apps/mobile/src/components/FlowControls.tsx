@@ -307,7 +307,6 @@ export function FlowProcessingState({
         <ScreenHeader
           showBack={Boolean(onBack)}
           showProfile={false}
-          showActions={false}
           title={headerTitle}
           onBackPress={onBack}
         />

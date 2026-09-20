@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+
 import { Group } from '@expo/ui/swift-ui';
 import { padding } from '@expo/ui/swift-ui/modifiers';
 import { useRouter } from 'expo-router';
@@ -5,8 +7,9 @@ import { useWindowDimensions } from 'react-native';
 
 import { BalanceSummary } from '@/components/BalanceSummary';
 import { HomeRecentGroup } from '@/components/HomeRecentGroup';
+import { PortfolioPullHint } from '@/components/PortfolioPullHint';
 import { ShortcutRow } from '@/components/ShortcutRow';
-import { ScreenHeader } from '@/components/ScreenHeader';
+import { TabHeader } from '@/components/TabHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { currencyCapability } from '@/data/capabilities';
 import { getPortfolioTotals } from '@/domain/balance';
@@ -25,10 +28,12 @@ export function HomeScreen() {
   const readyToUseValue = formatAmountNumber(toDisplayAmount(portfolio.readyToUse, account));
   const growingValue = formatAmountNumber(toDisplayAmount(portfolio.growing, account));
 
+  const openPortfolio = useCallback(() => router.push('/portfolio'), [router]);
+
   return (
-    <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
+    <SwiftUIScreenShell sectionGap={0} bottomPadding={180} onPullPastTop={openPortfolio}>
       <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
-        <ScreenHeader title="Home" />
+        <TabHeader title="Home" />
       </Group>
 
       <Group modifiers={[padding({ top: screenTokens.wallet.headerToBalance })]}>
@@ -58,6 +63,8 @@ export function HomeScreen() {
       <Group modifiers={[padding({ top: homeTokens.layout.shortcutRecentGap })]}>
         <HomeRecentGroup />
       </Group>
+
+      <PortfolioPullHint onPress={openPortfolio} />
     </SwiftUIScreenShell>
   );
 }

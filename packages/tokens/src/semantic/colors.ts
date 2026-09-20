@@ -45,4 +45,20 @@ export const semanticColor = {
     merchantLogo: primitiveColor.gray111,
     merchantLogoAccent: primitiveColor.orangeFF9900,
   },
+  /**
+   * Deep mode. Portfolio is the only in-app surface that uses it: pulling down from
+   * Home swaps the chrome so the shift into a management view is felt, not read.
+   * Borrowed from the welcome screen so it lands as the same brand, not a new one.
+   */
+  deep: {
+    canvas: primitiveColor.gray0A,
+    surface: primitiveColor.gray1414,
+    surfaceLayer: primitiveColor.gray1C,
+    border: primitiveColor.gray2E,
+    textPrimary: primitiveColor.white,
+    textSecondary: primitiveColor.grayA1,
+    textTertiary: primitiveColor.gray737,
+    success: primitiveColor.green00D691,
+    successMuted: primitiveColor.greenD69122,
+  },
 } as const;

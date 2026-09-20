@@ -1,8 +1,11 @@
 import { useSyncExternalStore } from 'react';
 
+import { isOfflineDemo } from '@/config/env';
 import {
   mockAccountIdentity,
+  mockInitialBalances,
   mockInitialStrategy,
+  mockInitialTransactions,
 } from '@/data/mocks/appFixtures';
 import { convertToTry } from '@/domain/money';
 import { api } from '@/services/api';
@@ -123,6 +126,19 @@ export async function refreshLedger() {
 }
 
 export async function bootstrapAccount() {
+  // Design/offline mode short-circuits the backend so screens render from fixtures.
+  if (isOfflineDemo()) {
+    emit({
+      ...state,
+      account: mockAccountIdentity,
+      balances: mockInitialBalances,
+      strategy: mockInitialStrategy,
+      transactions: mockInitialTransactions,
+      backendError: null,
+    });
+    return;
+  }
+
   const health = await api.health();
   const capabilities = await api.capabilities();
   const { accountId } = await connectSigner(capabilities);

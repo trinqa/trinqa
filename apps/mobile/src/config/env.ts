@@ -30,3 +30,11 @@ export function getOptionalAccountId(): string | undefined {
 export function getPayRecipient(): string | undefined {
   return optionalGAddress(process.env.EXPO_PUBLIC_PAY_RECIPIENT);
 }
+
+/**
+ * Design/offline mode. Seeds the app from local fixtures instead of calling the
+ * backend, so screens can be reviewed without a demo token. Opt-in only.
+ */
+export function isOfflineDemo(): boolean {
+  return process.env.EXPO_PUBLIC_OFFLINE_DEMO?.trim() === '1';
+}

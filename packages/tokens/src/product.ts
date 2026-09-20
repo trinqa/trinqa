@@ -2,6 +2,7 @@ import { primitiveColor } from './primitives/color';
 import { primitiveOpacity } from './primitives/opacity';
 import { primitiveShadow } from './primitives/shadow';
 import { radius as canonicalRadius } from './canonical';
+import { semanticColor } from './semantic/colors';
 
 export {
   borders,
@@ -36,6 +37,23 @@ export const colors = {
   merchantLogo: primitiveColor.gray111,
   merchantLogoAccent: primitiveColor.orangeFF9900,
   merchantLogoWarm: primitiveColor.orangeFF6A00,
+} as const;
+
+/**
+ * Portfolio's chrome. Same names as `colors` so a component can take one palette
+ * object and render in either mode without branching on a theme flag.
+ */
+export const deepColors = {
+  background: semanticColor.deep.canvas,
+  surface: semanticColor.deep.surface,
+  surfaceLayer: semanticColor.deep.surfaceLayer,
+  textPrimary: semanticColor.deep.textPrimary,
+  textSecondary: semanticColor.deep.textSecondary,
+  textTertiary: semanticColor.deep.textTertiary,
+  borderStrong: semanticColor.deep.border,
+  action: colors.action,
+  success: semanticColor.deep.success,
+  successMuted: semanticColor.deep.successMuted,
 } as const;
 
 const cardRadius = canonicalRadius.card;
@@ -165,12 +183,16 @@ export const screenTokens = {
   wallet: {
     contentWidth: 366,
     headerToBalance: 15,
-    balanceHeight: 192,
+    /** 22 top + label + 7 + amount + 12 + 114 layer + 18 bottom. */
+    balanceHeight: 216,
     balancePaddingTop: 22,
     balancePaddingHorizontal: 16,
     balanceTitleToValue: 7,
     balanceValueToMetrics: 12,
-    metricLayerHeight: 66,
+    /** Inset (4) + tile row (58) + gap (4) + action row (44) + inset (4). */
+    metricLayerHeight: 114,
+    metricTileHeight: 58,
+    balanceActionHeight: 44,
     detailsTopGap: 14,
     detailsHorizontalPadding: 16,
     detailsTopPadding: 22,
@@ -219,6 +241,22 @@ export const screenTokens = {
     lowerPanelPadding: 16,
     pickerHeight: 44,
     pickerToRowsGap: 18,
+  },
+  portfolio: {
+    contentWidth: 366,
+    /** Overscroll past this many points on Home releases into Portfolio. */
+    pullRevealThreshold: 88,
+    pullHintHeight: 34,
+    headerToValue: 18,
+    valueToShare: 10,
+    shareBarHeight: 12,
+    shareToPillars: 22,
+    pillarHeight: 74,
+    pillarGap: 8,
+    sectionGap: 22,
+    cardPadding: 16,
+    changeRowHeight: 62,
+    changeRowGap: 8,
   },
   activity: {
     contentWidth: 366,

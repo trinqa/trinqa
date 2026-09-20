@@ -15,6 +15,11 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="onboarding" options={{ animation: motion.navigation.onboarding }} />
+        {/* Pulled down from Home, so it comes back up from the bottom and keeps Home behind it. */}
+        <Stack.Screen
+          name="portfolio"
+          options={{ presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }}
+        />
         <Stack.Screen name="receive" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
         <Stack.Screen name="account-details" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
         <Stack.Screen name="settings" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />

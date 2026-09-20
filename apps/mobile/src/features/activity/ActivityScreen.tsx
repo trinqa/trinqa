@@ -7,7 +7,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { ActivitySegmentPicker } from '@/components/ActivitySegmentPicker';
 import { ActivityTimeline } from '@/components/ActivityTimeline';
 import { FlowEmptyState } from '@/components/FlowStates';
-import { ScreenHeader } from '@/components/ScreenHeader';
+import { TabHeader } from '@/components/TabHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
 import { toActivityListItem, transactionSection } from '@/domain/transactionPresentation';
@@ -47,7 +47,7 @@ export function ActivityScreen() {
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
       <VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
         <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
-          <ScreenHeader title="Activity" />
+          <TabHeader title="Activity" />
         </Group>
 
         <Text

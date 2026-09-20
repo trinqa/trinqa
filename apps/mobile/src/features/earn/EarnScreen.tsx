@@ -8,7 +8,7 @@ import { ActivityChart } from '@/components/ActivityChart';
 import { EarnDetailsPanel } from '@/components/EarnDetailsPanel';
 import { FlowInlineState } from '@/components/FlowStates';
 import { MetricCard } from '@/components/MetricCard';
-import { ScreenHeader } from '@/components/ScreenHeader';
+import { TabHeader } from '@/components/TabHeader';
 import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
 import { TransactionDetailsSheet } from '@/components/TransactionDetailsSheet';
 import { earnChartPoints } from '@/data/mocks/earnAnalytics';
@@ -63,7 +63,7 @@ export function EarnScreen() {
   return (
     <SwiftUIScreenShell sectionGap={0} bottomPadding={180}>
       <Group modifiers={[padding({ horizontal: spacing.headerTop })]}>
-        <ScreenHeader title="Earn" />
+        <TabHeader title="Earn" />
       </Group>
 
       <VStack

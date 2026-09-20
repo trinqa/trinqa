@@ -1,17 +1,17 @@
-import { useState } from 'react';
-
-import { Button, Group, HStack, Text, VStack } from '@expo/ui/swift-ui';
+import { Button, Group, HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel,
   background,
   buttonStyle,
+  clipShape,
   font,
   foregroundStyle,
   frame,
-  labelStyle,
   padding,
   shapes,
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
+import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { InsetLayer } from '@/components/InsetLayer';
@@ -19,12 +19,14 @@ import { colors, componentTokens, screenTokens, typography } from '@/theme';
 
 interface BalanceSummaryProps {
   currencySymbol?: string;
-  totalLabel: string;
   totalValue: string;
+  width: number;
   leftLabel: string;
   leftValue: string;
   rightLabel: string;
   rightValue: string;
+  onMoveToGrow: () => void;
+  onTakeMoneyOut: () => void;
 }
 
 function MetricTile({
@@ -41,41 +43,125 @@ function MetricTile({
   return (
     <VStack
       alignment="leading"
-      spacing={4}
+      spacing={componentTokens.metricCard.textGap}
       modifiers={[
-        frame({ width, height: 58 }),
+        padding({ horizontal: componentTokens.transactionRow.horizontalPadding }),
+        frame({
+          width,
+          height: screenTokens.wallet.metricTileHeight,
+          alignment: 'leading',
+        }),
         background(
           colors.surface,
           shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
         ),
       ]}
     >
-      <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>{label}</Text>
-      <Text modifiers={[font({ size: typography.label, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+      <Text
+        modifiers={[
+          font({ size: typography.footnote, weight: 'medium' }),
+          foregroundStyle(colors.textSecondary),
+          frame({ maxWidth: Infinity, alignment: 'leading' }),
+        ]}
+      >
+        {label}
+      </Text>
+      <Text
+        modifiers={[
+          font({ size: typography.label, weight: 'semibold' }),
+          foregroundStyle(colors.textPrimary),
+          frame({ maxWidth: Infinity, alignment: 'leading' }),
+        ]}
+      >
         {value} {currencySymbol}
       </Text>
     </VStack>
   );
 }
 
+/**
+ * The two moves that change where money sits. `Move to grow` is the only cyan on Home:
+ * it is the one decision the product wants made, and it sits beside the idle amount
+ * that prompts it. `Take money out` stays a plain surface so the pair reads as
+ * one suggestion and one escape hatch, not two equal buttons.
+ */
+function BalanceAction({
+  label,
+  symbol,
+  tone,
+  width,
+  onPress,
+}: {
+  label: string;
+  symbol: SFSymbol;
+  tone: 'accent' | 'neutral';
+  width: number;
+  onPress: () => void;
+}) {
+  const isAccent = tone === 'accent';
+  const fill = isAccent ? colors.action : colors.surface;
+  const ink = isAccent ? colors.textInverse : colors.textPrimary;
+  const radius = componentTokens.surface.cardRadius;
+
+  return (
+    <Button
+      onPress={onPress}
+      modifiers={[buttonStyle('plain'), accessibilityLabel(label)]}
+    >
+      <HStack
+        alignment="center"
+        spacing={componentTokens.headerControl.gap}
+        modifiers={[
+          frame({ width, height: screenTokens.wallet.balanceActionHeight }),
+          background(fill, shapes.roundedRectangle({ cornerRadius: radius })),
+          clipShape('roundedRectangle', radius),
+          ...(isAccent
+            ? []
+            : [
+                strokeBorder({
+                  content: colors.borderStrong,
+                  style: { lineWidth: componentTokens.surface.borderWidth },
+                  shape: 'roundedRectangle' as const,
+                  cornerRadius: radius,
+                }),
+              ]),
+        ]}
+      >
+        <Image systemName={symbol} size={typography.caption} color={ink} />
+        <Text
+          modifiers={[
+            font({ size: typography.footnote, weight: 'semibold' }),
+            foregroundStyle(ink),
+          ]}
+        >
+          {label}
+        </Text>
+      </HStack>
+    </Button>
+  );
+}
+
 export function BalanceSummary({
   currencySymbol = '$',
-  totalLabel,
   totalValue,
+  width,
   leftLabel,
   leftValue,
   rightLabel,
   rightValue,
+  onMoveToGrow,
+  onTakeMoneyOut,
 }: BalanceSummaryProps) {
-  const [balanceVisible, setBalanceVisible] = useState(true);
-  const displayValue = balanceVisible ? totalValue : '••••••';
   const wallet = screenTokens.wallet;
-  // Two tiles filling the panel: 159pt each on the 402pt design canvas, wider on larger phones.
-  const tileWidth = Math.floor((wallet.contentWidth - wallet.balancePaddingHorizontal * 2 - 16) / 2);
+  const layer = componentTokens.layer;
+  // Everything inside the inset layer shares one column width, so the tiles above
+  // and the actions below line up on the same two edges.
+  const innerWidth = width - wallet.balancePaddingHorizontal * 2 - layer.inset * 2;
+  const columnWidth = Math.floor((innerWidth - layer.gap) / 2);
 
   return (
     <SurfacePanel
-      width={wallet.contentWidth}
+      width={width}
       height={wallet.balanceHeight}
       cornerRadius={componentTokens.surface.panelRadius}
     >
@@ -90,69 +176,75 @@ export function BalanceSummary({
           frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'topLeading' }),
         ]}
       >
-        <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-          {totalLabel}
+        <Text
+          modifiers={[
+            font({ size: typography.footnote, weight: 'medium' }),
+            foregroundStyle(colors.textSecondary),
+          ]}
+        >
+          Total money
         </Text>
 
         <HStack
-          alignment="center"
-          spacing={8}
+          alignment="firstTextBaseline"
+          spacing={layer.gap}
           modifiers={[
             padding({ top: wallet.balanceTitleToValue }),
-            frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size }),
+            frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
-          <HStack
-            alignment="firstTextBaseline"
-            spacing={4}
-            modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
-          >
-            <Text
-              modifiers={[
-                font({ size: typography.amountCurrency, weight: 'bold' }),
-                foregroundStyle(colors.textPrimary),
-              ]}
-            >
-              {displayValue}
-            </Text>
-            <Text
-              modifiers={[
-                font({ size: typography.label, weight: 'medium' }),
-                foregroundStyle(colors.textSecondary),
-              ]}
-            >
-              {currencySymbol}
-            </Text>
-          </HStack>
-
-          <Button
-            label={balanceVisible ? 'Hide balance' : 'Show balance'}
-            systemImage={balanceVisible ? 'eye.slash' : 'eye'}
-            onPress={() => setBalanceVisible((visible) => !visible)}
+          <Text
             modifiers={[
-              buttonStyle('plain'),
-              labelStyle('iconOnly'),
-              frame({
-                width: componentTokens.headerControl.size,
-                height: componentTokens.headerControl.size,
-              }),
-              background(colors.surface, shapes.circle()),
-              strokeBorder({
-                content: colors.borderStrong,
-                style: { lineWidth: componentTokens.surface.borderWidth },
-                shape: 'circle',
-              }),
+              font({ size: typography.amountCurrency, weight: 'bold' }),
+              foregroundStyle(colors.textPrimary),
             ]}
-          />
+          >
+            {totalValue}
+          </Text>
+          <Text
+            modifiers={[
+              font({ size: typography.label, weight: 'medium' }),
+              foregroundStyle(colors.textSecondary),
+            ]}
+          >
+            {currencySymbol}
+          </Text>
+          <Spacer />
         </HStack>
 
         <Group modifiers={[padding({ top: wallet.balanceValueToMetrics })]}>
-          <InsetLayer
-            axis="horizontal"
-            height={wallet.metricLayerHeight}
-          >
-            <MetricTile label={leftLabel} value={leftValue} width={tileWidth} currencySymbol={currencySymbol} />
-            <MetricTile label={rightLabel} value={rightValue} width={tileWidth} currencySymbol={currencySymbol} />
+          <InsetLayer height={wallet.metricLayerHeight}>
+            <HStack alignment="center" spacing={layer.gap}>
+              <MetricTile
+                label={leftLabel}
+                value={leftValue}
+                width={columnWidth}
+                currencySymbol={currencySymbol}
+              />
+              <MetricTile
+                label={rightLabel}
+                value={rightValue}
+                width={columnWidth}
+                currencySymbol={currencySymbol}
+              />
+            </HStack>
+
+            <HStack alignment="center" spacing={layer.gap}>
+              <BalanceAction
+                label="Move to grow"
+                symbol="arrow.up.right"
+                tone="accent"
+                width={columnWidth}
+                onPress={onMoveToGrow}
+              />
+              <BalanceAction
+                label="Take money out"
+                symbol="arrow.down.to.line"
+                tone="neutral"
+                width={columnWidth}
+                onPress={onTakeMoneyOut}
+              />
+            </HStack>
           </InsetLayer>
         </Group>
       </VStack>

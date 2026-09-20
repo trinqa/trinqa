@@ -1,20 +1,23 @@
 ---
-description: Use canonical Trinqa tokens from Home/Wallet/Earn/Activity. Do not invent sizes or colors.
+description: Use canonical Trinqa tokens from Home/Earn/Activity. Do not invent sizes or colors.
 globs: apps/mobile/**/*.{ts,tsx},apps/web/**/*.{ts,tsx},packages/tokens/**/*.ts
 alwaysApply: false
 ---
 
 # Trinqa tokens
 
-Source of truth: Home, Wallet, Earn, Activity.
+Source of truth: Home, Earn, Activity. Wallet tab is gone.
 
 - Import `typography`, `spacing`, `radius`, `colors`, `motion` from `@/theme` or `@trinqa/tokens`.
-- Type roles: `pageTitle 30`, `amountHero 32`, `amountDisplay 25`, `amountCurrency 22` (Title 2 hero), `sectionTitle 17` (header / primary CTA), `kicker 16` (section name), `label 15` (row title, list amount, currency beside 22), `body 14` (supporting sentence), `caption 13`, `footnote 12` (hero label, date), `fine 11` (status), `micro 10`.
+- Visible UI is `@expo/ui/swift-ui`. Do not invent RN layout for these screens.
+- Type roles: `pageTitle 30` (tab titles Home/Earn/Activity), `amountHero 32` (defined, unused on Home), `amountDisplay 25`, `amountCurrency 22` (Home total / Earn headline), `sectionTitle 17` (flow header / primary CTA), `kicker 16` (section name), `label 15` (row title, list amount, currency beside 22), `body 14` (supporting sentence), `caption 13`, `footnote 12` (metric label, date, shortcut), `fine 11` (status), `micro 10`.
 - Weights: medium / semibold / bold only. RN StyleSheet uses `typeWeightRn` (`500/600/700`). Do not use regular/400.
-- Home hierarchy: hero label `footnote`, currency `label`, amount `amountCurrency`; section `kicker` semibold; rows `label`/`footnote`; status `fine`.
+- Tab chrome: left `pageTitle` bold, right 44 profile circle. Profile `Menu` owns Account details + Settings. No support/notification icons.
+- Home hero: `amountCurrency` + `label` currency; gray `InsetLayer` holds Ready to use / Growing plus Move to grow / Take money out. No hide-balance control. No wallet illustration.
+- Home shortcuts: Add money / Pay / More. More is Withdraw + Receive only.
 - Status: `colors.success` `#20AD2B`, `colors.danger` `#FF3B30`, `colors.pending` `#787878`. Never use named `'red'`/`'green'`.
-- Surfaces stay the extracted stack: canvas `#F3F3F3`, elevated `surface` `#FFFFFF`, muted `surfaceSecondary` `#F5F5F5`, inset `surfaceLayer` `#F2F2F2`. Do not flatten this by painting buttons with the muted fill.
+- Surfaces: canvas `#F3F3F3`, elevated `surface` `#FFFFFF`, muted `surfaceSecondary` `#F5F5F5`, inset `surfaceLayer` `#F2F2F2`. Do not flatten this by painting buttons with the muted fill. Inset padding is `componentTokens.layer.inset` (4).
 - No pure black `#000000`. Ink is `#111111`.
 - CTA cyan (`colors.action*`) is excluded from palette work. Do not replace it with a new brand color.
-- Do not add new font sizes, hex values, or radii in screens. Wallet illustration colors stay in `walletColors`.
+- Do not add new font sizes, hex values, or radii in screens. `walletColors` is leftover illustration palette — do not use it on current screens.
 - Native navigation, BottomSheet, and tab motion stay system-owned. Use `motion.press|selection|contentChange|processing` only for micro-motion.
