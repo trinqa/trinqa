@@ -120,6 +120,7 @@ function StrategyOption({
           label: `${profile.title}, ${profile.riskLabel}, ${profile.estimatedApy.toFixed(1)} percent yearly return`,
           shape: 'roundedRectangle',
           cornerRadius: componentTokens.surface.cardRadius,
+          press: 'opacity',
         }),
         ...(selected ? [accessibilityAddTraits(['isSelected'])] : []),
         frame({ width: flow.contentWidth, height: flow.strategyRowHeight }),

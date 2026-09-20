@@ -1,0 +1,11 @@
+{
+  "name": "trinqa-press",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "private": true,
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

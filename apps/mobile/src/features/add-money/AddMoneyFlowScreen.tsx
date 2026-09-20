@@ -384,6 +384,7 @@ function NetworkStep({
                 label: `${network.displayName}, mock supported network`,
                 shape: 'roundedRectangle',
                 cornerRadius: componentTokens.surface.cardRadius,
+                press: 'opacity',
               }),
               frame({ width: screenTokens.addMoney.contentWidth, height: 60 }),
               background(colors.surface, shapes.roundedRectangle({ cornerRadius: 14 })),

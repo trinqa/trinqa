@@ -113,7 +113,7 @@ export const borders = {
 } as const;
 
 export const motion = {
-  press: { duration: 80, scale: 0.98, opacity: 0.92 },
+  press: { duration: 80, releaseDuration: 120, scale: 0.98, opacity: 0.92 },
   /**
    * The chevron on Home's Portfolio hint. A periodic SF Symbol bounce rather than a
    * loop: it nudges, pauses, nudges again, so it reads as an invitation instead of

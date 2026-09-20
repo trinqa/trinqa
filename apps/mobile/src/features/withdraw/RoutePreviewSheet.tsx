@@ -171,6 +171,7 @@ function PreviewRow({
           hint: 'Opens the details.',
           shape: 'roundedRectangle',
           cornerRadius: row.radius,
+          press: 'opacity',
         }),
         frame({ width: flow.contentWidth, height: row.height }),
         ...cardChromeModifiers(row.radius),

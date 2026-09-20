@@ -112,6 +112,7 @@ function BalanceAction({
           label,
           shape: 'roundedRectangle',
           cornerRadius: radius,
+          press: 'full',
         }),
       ]}
     >

@@ -31,6 +31,7 @@ export function PortfolioPullHint({ onPress }: { onPress: () => void }) {
           label: 'Portfolio',
           hint: 'Opens your portfolio. You can also pull down from the top of this screen.',
           minSize: true,
+          press: 'opacity',
         }),
       ]}
     >

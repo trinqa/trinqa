@@ -295,6 +295,7 @@ function DestinationRow({
           label: `${destination.name}, ${destination.detail}`,
           shape: 'roundedRectangle',
           cornerRadius: row.radius,
+          press: 'opacity',
         }),
         frame({ width: screenTokens.withdrawalFlow.contentWidth, height: row.height }),
         ...cardChromeModifiers(row.radius),
@@ -400,6 +401,7 @@ function NewBankAccountSheet({
               label: 'Add new bank account',
               shape: 'roundedRectangle',
               cornerRadius: componentTokens.surface.controlRadius,
+              press: 'opacity',
             }),
             frame({ width: flow.contentWidth, height: componentTokens.headerControl.size }),
             background(

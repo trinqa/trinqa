@@ -66,6 +66,7 @@ export function FlowInlineState({
               minSize: true,
               shape: 'roundedRectangle',
               cornerRadius: componentTokens.surface.controlRadius,
+              press: 'opacity',
             }),
             padding({ horizontal: 12, vertical: 7 }),
             background(colors.surface, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius })),

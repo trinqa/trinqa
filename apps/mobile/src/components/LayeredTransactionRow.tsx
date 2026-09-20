@@ -171,6 +171,7 @@ export function LayeredTransactionRow({
             ...hitTargetModifiers({
               label: `${title}, ${amount}, ${meta ?? subtitle}`,
               hint,
+              press: 'opacity',
             }),
             frame({ maxWidth: Infinity }),
           ]}

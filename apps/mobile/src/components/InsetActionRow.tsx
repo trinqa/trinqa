@@ -67,6 +67,7 @@ export function InsetActionRow({
           label,
           shape: 'roundedRectangle',
           cornerRadius: componentTokens.surface.cardRadius,
+          press: 'opacity',
         }),
       ]}
     >

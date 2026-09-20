@@ -81,6 +81,7 @@ export function LayeredInfoBar({
               label: trailingText,
               hint: trailingHint,
               minSize: true,
+              press: 'opacity',
             }),
           ]}
         >

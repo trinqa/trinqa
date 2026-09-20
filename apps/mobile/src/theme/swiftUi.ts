@@ -4,6 +4,7 @@ import {
   background,
   clipShape,
   contentShape,
+  createModifier,
   font,
   foregroundStyle,
   frame,
@@ -14,7 +15,18 @@ import {
   type ViewModifier,
 } from '@expo/ui/swift-ui/modifiers';
 
-import { colors, componentTokens, radius, spacing, typography } from '@/theme';
+import { colors, componentTokens, motion, radius, spacing, typography } from '@/theme';
+
+/** Native ButtonStyle registered by `modules/trinqa-press`. */
+export function pressFeedback(kind: 'full' | 'opacity'): ViewModifier {
+  return createModifier('pressFeedback', {
+    scale: motion.press.scale,
+    opacity: motion.press.opacity,
+    durationIn: motion.press.duration / 1000,
+    durationOut: motion.press.releaseDuration / 1000,
+    includeScale: kind === 'full',
+  });
+}
 
 type HitShape = 'rectangle' | 'circle' | 'roundedRectangle';
 
@@ -28,6 +40,7 @@ export function hitTargetModifiers({
   minSize = false,
   shape = 'rectangle',
   cornerRadius,
+  press,
 }: {
   label: string;
   hint?: string;
@@ -35,6 +48,8 @@ export function hitTargetModifiers({
   minSize?: boolean;
   shape?: HitShape;
   cornerRadius?: number;
+  /** Omit on system Menu / Picker / bordered buttons. */
+  press?: 'full' | 'opacity';
 }): ViewModifier[] {
   const size = componentTokens.tapTarget.size;
   const shapeModifier =
@@ -53,6 +68,7 @@ export function hitTargetModifiers({
     ...(hint ? [accessibilityHint(hint)] : []),
     ...(minSize ? [frame({ minWidth: size, minHeight: size })] : []),
     shapeModifier,
+    ...(press ? [pressFeedback(press)] : []),
   ];
 }
 

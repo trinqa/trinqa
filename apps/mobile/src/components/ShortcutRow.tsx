@@ -73,6 +73,7 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
           label,
           shape: 'roundedRectangle',
           cornerRadius: componentTokens.surface.controlRadius,
+          press: 'full',
         }),
         ...cardModifiers,
       ]}

@@ -45,6 +45,7 @@ function SourceSelectionRow({
           label: `${option.title}. ${option.subtitle}`,
           shape: 'roundedRectangle',
           cornerRadius: row.radius,
+          press: 'opacity',
         }),
         frame({ width: screenTokens.addMoney.contentWidth, height: row.height }),
         background(colors.surface, shapes.roundedRectangle({ cornerRadius: row.radius })),
@@ -122,6 +123,7 @@ export function AddMoneySourceSheet({ anchor }: AddMoneySourceSheetProps) {
               label: 'Add money',
               shape: 'roundedRectangle',
               cornerRadius: componentTokens.surface.controlRadius,
+              press: 'full',
             }),
           ]}
         >
