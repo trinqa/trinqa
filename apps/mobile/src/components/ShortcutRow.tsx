@@ -4,10 +4,12 @@ import {
   background,
   buttonStyle,
   clipShape,
+  contentShape,
   font,
   foregroundStyle,
   frame,
   shadow,
+  shapes,
   strokeBorder,
 } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
@@ -44,11 +46,16 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
     <VStack
       alignment="center"
       spacing={8}
-      modifiers={
-        isSheetAnchor
+      modifiers={[
+        ...(isSheetAnchor
           ? cardModifiers
-          : [frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height })]
-      }
+          : [frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height })]),
+        // In the non-anchor branch the card chrome is on the Button, which is hit-tested
+        // against its label only — so the tile's empty space needs an explicit hit shape.
+        contentShape(
+          shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius }),
+        ),
+      ]}
     >
       <Image systemName={symbol} size={homeTokens.shortcuts.iconSize} color={colors.textPrimary} />
       <Text

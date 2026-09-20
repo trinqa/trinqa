@@ -3,6 +3,7 @@ import {
   Group,
   HStack,
   Image,
+  Label,
   ProgressView,
   Spacer,
   Text,
@@ -14,6 +15,7 @@ import {
   background,
   buttonStyle,
   clipShape,
+  contentShape,
   controlSize,
   font,
   foregroundStyle,
@@ -171,7 +173,6 @@ export function FlowQuickAmountButton({
       modifiers={[
         buttonStyle('plain'),
         accessibilityLabel(`Set amount to ${label}`),
-        frame({ width: buttonWidth, height: flow.quickAmountHeight }),
         // Selected = cyan border on white surface only; no blue fill.
         background(
           colors.surface,
@@ -186,10 +187,16 @@ export function FlowQuickAmountButton({
         }),
       ]}
     >
+      {/* The chip size sits on the label, not the Button: a Button is hit-tested against what
+          its label draws, so a frame on the Button leaves everything but the digits dead. */}
       <Text
         modifiers={[
           font({ size: typography.footnote, weight: selected ? 'semibold' : 'medium' }),
           foregroundStyle(selected ? colors.action : colors.textPrimary),
+          frame({ width: buttonWidth, height: flow.quickAmountHeight }),
+          contentShape(
+            shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius }),
+          ),
         ]}
       >
         {label}
@@ -416,13 +423,9 @@ export function FlowSuccessState({
       <HStack modifiers={[frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size })]}>
         <Spacer />
         <Button
-          label="Close"
-          systemImage="xmark"
           onPress={onClose}
           modifiers={[
             buttonStyle('plain'),
-            labelStyle('iconOnly'),
-            frame({ width: componentTokens.headerControl.size, height: componentTokens.headerControl.size }),
             background(colors.surface, shapes.circle()),
             strokeBorder({
               content: colors.borderStrong,
@@ -430,7 +433,19 @@ export function FlowSuccessState({
               shape: 'circle',
             }),
           ]}
-        />
+        >
+          {/* Circle size and hit shape on the label, since the Button's own chrome is not
+              part of what the button hit-tests. */}
+          <Label
+            title="Close"
+            systemImage="xmark"
+            modifiers={[
+              labelStyle('iconOnly'),
+              frame({ width: componentTokens.headerControl.size, height: componentTokens.headerControl.size }),
+              contentShape(shapes.circle()),
+            ]}
+          />
+        </Button>
       </HStack>
 
       <VStack alignment="center" spacing={0} modifiers={[padding({ top: screenTokens.flowChrome.successTop }), frame({ maxWidth: Infinity })]}>
@@ -499,7 +514,6 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
         disabled(isDisabled),
         opacity(isDisabled ? action.disabledOpacity : 1),
         accessibilityLabel(label),
-        frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
         background(colors.surface, shapes.roundedRectangle({ cornerRadius: action.radius })),
         clipShape('roundedRectangle', action.radius),
         // Shadow matches Home shortcut buttons (Add Money / Pay / More) — shortcutShadow token.
@@ -510,7 +524,15 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
         }),
       ]}
     >
-      <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+      {/* Button size sits on the label so the whole pill takes taps, not just the word. */}
+      <Text
+        modifiers={[
+          font({ size: typography.sectionTitle, weight: 'semibold' }),
+          foregroundStyle(colors.textPrimary),
+          frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
+          contentShape(shapes.roundedRectangle({ cornerRadius: action.radius })),
+        ]}
+      >
         {label}
       </Text>
     </Button>
