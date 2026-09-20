@@ -18,6 +18,7 @@ export default function RootLayout() {
         <Stack.Screen name="receive" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
         <Stack.Screen name="account-details" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
         <Stack.Screen name="settings" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
+        <Stack.Screen name="anchors" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
         <Stack.Screen
           name="add-money"
           options={{

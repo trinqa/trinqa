@@ -219,6 +219,26 @@ export async function executeWithdrawTry(params: {
   await refreshLedger();
 }
 
+/**
+ * Plain wording for the allocation policy contract's refusal reasons, keyed by the `reason`
+ * the backend puts in `details`. Reasons that are not listed keep the backend's own message:
+ * we only restate what we can describe accurately.
+ */
+const POLICY_DENIED_COPY: Record<string, string> = {
+  AutomationPaused: 'Growing money is paused on your account, so this money was not moved.',
+  StrategyNotAllowed:
+    'Your saved plan does not allow this way of growing money, so this money was not moved.',
+};
+
+function rethrowPolicyDenied(err: unknown): never {
+  if (err instanceof BackendApiError && err.code === 'POLICY_DENIED') {
+    const reason = (err.details as { reason?: string } | undefined)?.reason;
+    const copy = reason ? POLICY_DENIED_COPY[reason] : undefined;
+    if (copy) throw new BackendApiError(err.code, copy, err.status, err.details);
+  }
+  throw err;
+}
+
 function riskProfile(id: PutToWorkRiskId) {
   if (id === 'stable') return 0;
   if (id === 'growth') return 2;
@@ -272,11 +292,14 @@ export async function executePutToWork(params: {
       503,
     );
   }
-  const builtDeposit = await api.yieldDepositBuild({
-    accountId: params.accountId,
-    strategyId: strategy.id,
-    amount: stellarAmount(params.amount),
-  });
+  // The build simulates the policy contract, so the user's own policy can refuse it here.
+  const builtDeposit = await api
+    .yieldDepositBuild({
+      accountId: params.accountId,
+      strategyId: strategy.id,
+      amount: stellarAmount(params.amount),
+    })
+    .catch(rethrowPolicyDenied);
   const signedDeposit = await signXdr(builtDeposit.unsignedXdr);
   const executed = await api.yieldExecute(builtDeposit.operationId, signedDeposit);
   if (!executed.successful) {
