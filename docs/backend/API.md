@@ -87,6 +87,7 @@ Never returns secrets. Disabled routes return `403`.
 | POST | `/api/v1/demo/sep10` | SEP-10 + opaque `sessionId` |
 | POST | `/api/v1/demo/anchor/simulate-bank-transfer` | Mock bank credit for SEP-6 deposit |
 | POST | `/api/v1/demo/trustline/usdc` | Add USDC trustline for the demo account |
+| POST | `/api/v1/demo/contacts` | Accounts for the seeded demo contacts (`{ ids }` → funded account per id, idempotent) |
 
 ## Transactions
 

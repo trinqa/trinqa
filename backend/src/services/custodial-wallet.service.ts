@@ -44,6 +44,13 @@ export function isWalletKey(value: unknown): value is string {
   return typeof value === 'string' && WALLET_KEY_PATTERN.test(value);
 }
 
+/** Contact ids come from the app's seeded contact list, e.g. "ana-souza". */
+const CONTACT_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+export function isContactId(value: unknown): value is string {
+  return typeof value === 'string' && CONTACT_ID_PATTERN.test(value);
+}
+
 export interface ProvisionResult {
   account: string;
   created: boolean;
@@ -87,15 +94,33 @@ export class CustodialWallets {
 
   signerFor(walletKey: string): AccountSigner {
     if (!isWalletKey(walletKey)) throw new Error('Invalid wallet key');
-    const seed = createHmac('sha256', this.masterSecret)
-      .update(`trinqa-wallet-v1:${walletKey}`)
-      .digest();
+    return this.derive(`trinqa-wallet-v1:${walletKey}`);
+  }
+
+  /**
+   * A demo recipient (the seeded contacts the app ships with). Same master, separate
+   * namespace, so a contact's account is stable but is never a device's wallet.
+   */
+  contactSigner(contactId: string): AccountSigner {
+    if (!isContactId(contactId)) throw new Error('Invalid contact id');
+    return this.derive(`trinqa-contact-v1:${contactId}`);
+  }
+
+  private derive(label: string): AccountSigner {
+    const seed = createHmac('sha256', this.masterSecret).update(label).digest();
     return new KeypairSigner(Keypair.fromRawEd25519Seed(seed), this.stellar.networkPassphrase);
   }
 
   /** Idempotent: fund with friendbot if the account is new, then make sure it holds a USDC trustline. */
   async provision(walletKey: string): Promise<ProvisionResult> {
-    const signer = this.signerFor(walletKey);
+    return this.provisionSigner(this.signerFor(walletKey));
+  }
+
+  async provisionContact(contactId: string): Promise<ProvisionResult> {
+    return this.provisionSigner(this.contactSigner(contactId));
+  }
+
+  private async provisionSigner(signer: AccountSigner): Promise<ProvisionResult> {
     const account = signer.publicKey;
 
     let created = false;

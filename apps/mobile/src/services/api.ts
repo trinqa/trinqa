@@ -7,6 +7,7 @@ import type {
   BackendHealth,
   BalanceLine,
   BuiltPaymentResponse,
+  DemoContact,
   ExecuteStepResponse,
   PaymentQuoteResponse,
   PolicyView,
@@ -65,6 +66,12 @@ export const api = {
       '/api/v1/demo/wallets',
       { method: 'POST', body: JSON.stringify(existingKey ? { walletKey: existingKey } : {}) },
     ),
+  /** Resolves the seeded contacts to real testnet accounts; funds them on the first call. */
+  demoContacts: (ids: string[]) =>
+    request<{ contacts: DemoContact[]; network: string }>('/api/v1/demo/contacts', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
   demoSep10: () =>
     request<{ sessionId: string; expiresAt: string }>('/api/v1/demo/sep10', { method: 'POST' }),
   demoSign: (unsignedXdr: string) =>

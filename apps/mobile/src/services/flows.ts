@@ -6,7 +6,6 @@ import {
   earnUnavailableReason,
   ensureAnchorSession,
   executeBuiltPayment,
-  payRecipientOrSelf,
   pollTransfer,
   signXdr,
   stellarAmount,
@@ -94,9 +93,26 @@ export interface PayLiveQuote {
 
 export async function quotePay(params: {
   accountId: string;
+  /** The recipient's Stellar account. Resolve it with `recipientAccount` before quoting. */
+  recipientAccount: string;
   amount: number;
   currency: string;
 }): Promise<PayLiveQuote> {
+  if (!params.recipientAccount) {
+    throw new BackendApiError(
+      'RECIPIENT_UNRESOLVED',
+      'We could not prepare this contact’s account, so the payment cannot be sent.',
+      422,
+    );
+  }
+  // Paying yourself is never what the user asked for; refuse instead of moving money in a circle.
+  if (params.recipientAccount === params.accountId) {
+    throw new BackendApiError(
+      'RECIPIENT_IS_SENDER',
+      'This payment would go back to your own account, so it was stopped.',
+      422,
+    );
+  }
   if (params.currency === 'BRL') {
     throw new BackendApiError(
       'NO_SUPPORTED_PAYOUT_RAIL',
@@ -114,7 +130,7 @@ export async function quotePay(params: {
   const receiveCurrency = params.currency === 'USD' ? 'USDC' : params.currency;
   const { quote } = await api.paymentsQuote({
     fromAccount: params.accountId,
-    recipient: payRecipientOrSelf(params.accountId),
+    recipient: params.recipientAccount,
     receiveAmount: stellarAmount(params.amount),
     receiveCurrency,
     balanceSource: 'available',
@@ -124,13 +140,19 @@ export async function quotePay(params: {
 
 export async function executePay(params: {
   accountId: string;
+  recipientAccount: string;
   live: PayLiveQuote;
   amount: number;
   currency: string;
   approveEarnUnwind: boolean;
 }) {
   const live = isExpiring(params.live.quote.expiresAt)
-    ? await quotePay({ accountId: params.accountId, amount: params.amount, currency: params.currency })
+    ? await quotePay({
+        accountId: params.accountId,
+        recipientAccount: params.recipientAccount,
+        amount: params.amount,
+        currency: params.currency,
+      })
     : params.live;
   const built = await api.paymentsBuild(live.quote.quoteId, params.accountId, params.approveEarnUnwind);
   const result = await executeBuiltPayment(built);
