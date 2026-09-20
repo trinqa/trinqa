@@ -15,10 +15,15 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="onboarding" options={{ animation: motion.navigation.onboarding }} />
-        {/* Pulled down from Home, so it comes back up from the bottom and keeps Home behind it. */}
+        {/*
+          A whole page, not a sheet: Home is replaced rather than covered, and the tab
+          bar goes with it, which is what makes Portfolio read as a different mode.
+          The transition is a fade because the pull is downward and react-native-screens
+          has no slide_from_top — sliding up from the bottom would fight the gesture.
+        */}
         <Stack.Screen
           name="portfolio"
-          options={{ presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }}
+          options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}
         />
         <Stack.Screen name="receive" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />
         <Stack.Screen name="account-details" options={{ animation: motion.navigation.flowPush, gestureEnabled: true }} />

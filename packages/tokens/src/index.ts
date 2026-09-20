@@ -20,7 +20,6 @@ export {
   chartTokens,
   colors,
   componentTokens,
-  deepColors,
   homeTokens,
   motion,
   radius,

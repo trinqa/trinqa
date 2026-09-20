@@ -16,7 +16,12 @@ import { useRouter } from 'expo-router';
 import { useWindowDimensions } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
-import { DeepScreenShell } from '@/components/DeepScreenShell';
+import { InsetLayer } from '@/components/InsetLayer';
+import { LayeredTransactionRow } from '@/components/LayeredTransactionRow';
+import { MetricTile } from '@/components/MetricTile';
+import { SurfacePanel } from '@/components/SurfacePanel';
+import { SwiftUIScreenShell } from '@/components/SwiftUIScreenShell';
+import { currencyCapability } from '@/data/capabilities';
 import { formatSharePercent } from '@/domain/balance';
 import { formatAmountNumber, formatLedgerMoney, toDisplayAmount } from '@/domain/money';
 import {
@@ -29,87 +34,76 @@ import {
   type PortfolioNote,
   type PortfolioPillar,
 } from '@/domain/portfolio';
-import { currencyCapability } from '@/data/capabilities';
-import { useMockAppState } from '@/state/mockAppState';
 import {
-  componentTokens,
-  deepColors,
-  screenTokens,
-  spacing,
-  typography,
-} from '@/theme';
-
-function DeepCard({
-  children,
-  width,
-  padded = true,
-}: {
-  children: React.ReactNode;
-  width: number;
-  padded?: boolean;
-}) {
-  return (
-    <VStack
-      alignment="leading"
-      spacing={spacing.md}
-      modifiers={[
-        ...(padded ? [padding({ all: screenTokens.portfolio.cardPadding })] : []),
-        frame({ width, alignment: 'leading' }),
-        background(
-          deepColors.surface,
-          shapes.roundedRectangle({ cornerRadius: componentTokens.surface.panelRadius }),
-        ),
-        strokeBorder({
-          content: deepColors.borderStrong,
-          style: { lineWidth: componentTokens.surface.borderWidth },
-          shape: 'roundedRectangle',
-          cornerRadius: componentTokens.surface.panelRadius,
-        }),
-      ]}
-    >
-      {children}
-    </VStack>
-  );
-}
-
-function SectionTitle({ children }: { children: string }) {
-  return (
-    <Text
-      modifiers={[
-        font({ size: typography.kicker, weight: 'semibold' }),
-        foregroundStyle(deepColors.textPrimary),
-        frame({ maxWidth: Infinity, alignment: 'leading' }),
-      ]}
-    >
-      {children}
-    </Text>
-  );
-}
+  transactionStatusColor,
+  transactionStatusLabel,
+  transactionStatusSymbol,
+} from '@/domain/transactionPresentation';
+import { useMockAppState } from '@/state/mockAppState';
+import { colors, componentTokens, homeTokens, screenTokens, spacing, typography } from '@/theme';
 
 /**
- * Where the money sits, as one bar rather than a pie. Two segments is the whole
- * story here, and a bar can be read at a glance without a legend.
+ * A titled white panel. Same recipe as Home's Recent card, so the two screens
+ * stack their sections identically instead of each inventing a container.
  */
-function SplitBar({
+function Section({
+  title,
   width,
-  growingShare,
+  children,
 }: {
+  title: string;
   width: number;
-  growingShare: number;
+  children: React.ReactNode;
 }) {
+  const recent = homeTokens.recent;
+
+  return (
+    <SurfacePanel width={width}>
+      <VStack
+        alignment="leading"
+        spacing={recent.titleRowsGap}
+        modifiers={[
+          padding({
+            top: recent.topPadding,
+            bottom: recent.bottomPadding,
+            horizontal: recent.horizontalPadding,
+          }),
+          frame({ maxWidth: Infinity, alignment: 'leading' }),
+        ]}
+      >
+        <Text
+          modifiers={[
+            font({ size: typography.kicker, weight: 'semibold' }),
+            foregroundStyle(colors.textPrimary),
+          ]}
+        >
+          {title}
+        </Text>
+        {children}
+      </VStack>
+    </SurfacePanel>
+  );
+}
+
+/** Where the money sits, as one bar. Two segments need no legend of their own. */
+function SplitBar({ width, growingShare }: { width: number; growingShare: number }) {
   const track = screenTokens.portfolio.shareBarHeight;
+  const radius = track / 2;
   const growingWidth = Math.max(0, Math.min(width, Math.round(width * growingShare)));
 
   return (
     <HStack
       spacing={2}
-      modifiers={[frame({ width, height: track }), accessibilityLabel('Split between growing and ready to use')]}
+      modifiers={[
+        frame({ width, height: track }),
+        accessibilityLabel(`${formatSharePercent(growingShare)} growing, the rest ready to use`),
+      ]}
     >
       <Group
         modifiers={[
           frame({ width: growingWidth, height: track }),
-          background(deepColors.action, shapes.roundedRectangle({ cornerRadius: track / 2 })),
-          clipShape('roundedRectangle', track / 2),
+          background(colors.action, shapes.roundedRectangle({ cornerRadius: radius })),
+          clipShape('roundedRectangle', radius),
         ]}
       >
         <Spacer />
@@ -117,43 +111,18 @@ function SplitBar({
       <Group
         modifiers={[
           frame({ maxWidth: Infinity, height: track }),
-          background(
-            deepColors.track,
-            shapes.roundedRectangle({ cornerRadius: track / 2 }),
-          ),
-          clipShape('roundedRectangle', track / 2),
+          background(colors.surfaceLayer, shapes.roundedRectangle({ cornerRadius: radius })),
+          clipShape('roundedRectangle', radius),
+          strokeBorder({
+            content: colors.borderStrong,
+            style: { lineWidth: componentTokens.surface.borderWidth },
+            shape: 'roundedRectangle' as const,
+            cornerRadius: radius,
+          }),
         ]}
       >
         <Spacer />
       </Group>
-    </HStack>
-  );
-}
-
-function LegendDot({ color, label, value }: { color: string; label: string; value: string }) {
-  return (
-    <HStack alignment="center" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-      <Group
-        modifiers={[frame({ width: 8, height: 8 }), background(color, shapes.circle())]}
-      >
-        <Spacer />
-      </Group>
-      <Text
-        modifiers={[
-          font({ size: typography.footnote, weight: 'medium' }),
-          foregroundStyle(deepColors.textSecondary),
-        ]}
-      >
-        {label}
-      </Text>
-      <Text
-        modifiers={[
-          font({ size: typography.footnote, weight: 'semibold' }),
-          foregroundStyle(deepColors.textPrimary),
-        ]}
-      >
-        {value}
-      </Text>
     </HStack>
   );
 }
@@ -164,33 +133,35 @@ function PillarTile({ pillar, width }: { pillar: PortfolioPillar; width: number 
       alignment="leading"
       spacing={componentTokens.metricCard.textGap}
       modifiers={[
-        padding({ all: spacing.md }),
+        padding({ horizontal: componentTokens.transactionRow.horizontalPadding }),
         frame({
           width,
-          height: screenTokens.portfolio.pillarHeight,
-          alignment: 'topLeading',
+          height: screenTokens.wallet.metricTileHeight,
+          alignment: 'leading',
         }),
         background(
-          deepColors.surfaceLayer,
+          colors.surface,
           shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
         ),
       ]}
     >
-      <HStack alignment="center" spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
-        <Image systemName={pillar.symbol} size={typography.footnote} color={deepColors.textTertiary} />
+      <HStack alignment="center" spacing={5}>
+        <Image systemName={pillar.symbol} size={typography.fine} color={colors.textSecondary} />
         <Text
           modifiers={[
             font({ size: typography.footnote, weight: 'medium' }),
-            foregroundStyle(deepColors.textSecondary),
+            foregroundStyle(colors.textSecondary),
           ]}
         >
           {pillar.label}
         </Text>
+        <Spacer />
       </HStack>
+
       <Text
         modifiers={[
           font({ size: typography.label, weight: 'semibold' }),
-          foregroundStyle(deepColors.textPrimary),
+          foregroundStyle(colors.textPrimary),
           frame({ maxWidth: Infinity, alignment: 'leading' }),
         ]}
       >
@@ -200,17 +171,68 @@ function PillarTile({ pillar, width }: { pillar: PortfolioPillar; width: number 
   );
 }
 
-function NoteRow({ note }: { note: PortfolioNote }) {
-  const tint = note.tone === 'positive' ? deepColors.success : deepColors.textSecondary;
+/**
+ * A white tile in the tray, like the ones above it, with the accent carried by the
+ * label rather than a fill. Portfolio is a screen for reading: a full-width blue
+ * slab here out-shouted the balance it was meant to explain. The one filled accent
+ * on this page is the split bar, which is data.
+ */
+function TrayAction({
+  label,
+  symbol,
+  width,
+  onPress,
+}: {
+  label: string;
+  symbol: SFSymbol;
+  width: number;
+  onPress: () => void;
+}) {
+  const radius = componentTokens.surface.cardRadius;
 
   return (
-    <HStack alignment="top" spacing={spacing.md} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
+    <Button onPress={onPress} modifiers={[buttonStyle('plain'), accessibilityLabel(label)]}>
+      <HStack
+        alignment="center"
+        spacing={6}
+        modifiers={[
+          padding({ horizontal: componentTokens.transactionRow.horizontalPadding }),
+          frame({ width, height: screenTokens.wallet.balanceActionHeight }),
+          background(colors.surface, shapes.roundedRectangle({ cornerRadius: radius })),
+          clipShape('roundedRectangle', radius),
+        ]}
+      >
+        <Image systemName={symbol} size={typography.caption} color={colors.action} />
+        <Text
+          modifiers={[
+            font({ size: typography.footnote, weight: 'semibold' }),
+            foregroundStyle(colors.action),
+          ]}
+        >
+          {label}
+        </Text>
+        <Spacer />
+        <Image systemName="chevron.right" size={typography.fine} color={colors.textSecondary} />
+      </HStack>
+    </Button>
+  );
+}
+
+function NoteRow({ note }: { note: PortfolioNote }) {
+  const tint = note.tone === 'positive' ? colors.success : colors.textSecondary;
+
+  return (
+    <HStack
+      alignment="top"
+      spacing={componentTokens.transactionRow.contentGap}
+      modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}
+    >
       <Image systemName={note.symbol} size={typography.sectionTitle} color={tint} />
       <VStack alignment="leading" spacing={componentTokens.transactionRow.textGap}>
         <Text
           modifiers={[
             font({ size: typography.label, weight: 'semibold' }),
-            foregroundStyle(deepColors.textPrimary),
+            foregroundStyle(colors.textPrimary),
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
@@ -219,7 +241,7 @@ function NoteRow({ note }: { note: PortfolioNote }) {
         <Text
           modifiers={[
             font({ size: typography.body, weight: 'medium' }),
-            foregroundStyle(deepColors.textSecondary),
+            foregroundStyle(colors.textSecondary),
             frame({ maxWidth: Infinity, alignment: 'leading' }),
           ]}
         >
@@ -230,81 +252,24 @@ function NoteRow({ note }: { note: PortfolioNote }) {
   );
 }
 
-function ChangeRow({
-  title,
-  subtitle,
-  amount,
-  symbol,
-}: {
-  title: string;
-  subtitle: string;
-  amount: string;
-  symbol: SFSymbol;
-}) {
-  return (
-    <HStack
-      alignment="center"
-      spacing={componentTokens.transactionRow.contentGap}
-      modifiers={[frame({ maxWidth: Infinity, height: screenTokens.portfolio.changeRowHeight })]}
-    >
-      <Group
-        modifiers={[
-          frame({
-            width: componentTokens.transactionRow.iconSize,
-            height: componentTokens.transactionRow.iconSize,
-          }),
-          background(deepColors.surfaceLayer, shapes.circle()),
-        ]}
-      >
-        <Image
-          systemName={symbol}
-          size={componentTokens.transactionRow.symbolSize}
-          color={deepColors.textSecondary}
-        />
-      </Group>
-
-      <VStack alignment="leading" spacing={componentTokens.transactionRow.textGap}>
-        <Text
-          modifiers={[
-            font({ size: typography.label, weight: 'semibold' }),
-            foregroundStyle(deepColors.textPrimary),
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          modifiers={[
-            font({ size: typography.footnote, weight: 'medium' }),
-            foregroundStyle(deepColors.textSecondary),
-          ]}
-        >
-          {subtitle}
-        </Text>
-      </VStack>
-
-      <Spacer />
-
-      <Text
-        modifiers={[
-          font({ size: typography.label, weight: 'semibold' }),
-          foregroundStyle(deepColors.textPrimary),
-        ]}
-      >
-        {amount}
-      </Text>
-    </HStack>
-  );
-}
-
 export function PortfolioScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const { account, balances, strategy, transactions } = useMockAppState();
 
-  const contentWidth = windowWidth - spacing.screenHorizontal * 2;
+  const wallet = screenTokens.wallet;
   const portfolio = screenTokens.portfolio;
-  const innerWidth = contentWidth - portfolio.cardPadding * 2;
-  const pillarWidth = Math.floor((innerWidth - portfolio.pillarGap) / 2);
+  const layer = componentTokens.layer;
+
+  const contentWidth = windowWidth - spacing.screenHorizontal * 2;
+  // The hero borrows Home's balance geometry; the sections borrow Recent's, which
+  // is slightly narrower inside. Each tray is measured against its own panel so
+  // nothing sits a couple of points off the column above it.
+  const heroInner = contentWidth - wallet.balancePaddingHorizontal * 2;
+  const heroTrayFull = heroInner - layer.inset * 2;
+  const sectionInner = contentWidth - homeTokens.recent.horizontalPadding * 2;
+  const sectionColumn = Math.floor((sectionInner - layer.inset * 2 - layer.gap) / 2);
+  const sectionFull = sectionInner - layer.inset * 2;
 
   const capability = currencyCapability(account.displayCurrency);
   const split = getPortfolioSplit(balances);
@@ -319,16 +284,19 @@ export function PortfolioScreen() {
   const readyValue = formatAmountNumber(toDisplayAmount(split.readyToUse, account));
 
   return (
-    <DeepScreenShell sectionGap={portfolio.sectionGap} bottomPadding={spacing.scrollBottom}>
+    <SwiftUIScreenShell sectionGap={portfolio.sectionGap} bottomPadding={spacing.scrollBottom}>
       <HStack
         alignment="center"
         spacing={componentTokens.headerControl.gap}
-        modifiers={[frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size })]}
+        modifiers={[
+          padding({ horizontal: spacing.headerTop }),
+          frame({ maxWidth: Infinity, minHeight: componentTokens.headerControl.size }),
+        ]}
       >
         <Text
           modifiers={[
             font({ size: typography.pageTitle, weight: 'bold' }),
-            foregroundStyle(deepColors.textPrimary),
+            foregroundStyle(colors.textPrimary),
           ]}
         >
           Portfolio
@@ -347,9 +315,9 @@ export function PortfolioScreen() {
               width: componentTokens.headerControl.size,
               height: componentTokens.headerControl.size,
             }),
-            background(deepColors.surface, shapes.circle()),
+            background(colors.surface, shapes.circle()),
             strokeBorder({
-              content: deepColors.borderStrong,
+              content: colors.borderStrong,
               style: { lineWidth: componentTokens.surface.borderWidth },
               shape: 'circle',
             }),
@@ -357,162 +325,133 @@ export function PortfolioScreen() {
         />
       </HStack>
 
-      {/* Value and split: "where is my money". */}
-      <DeepCard width={contentWidth}>
-        <Text
+      {/* The same panel Home opens with, answering "where is it" instead of "how much". */}
+      <SurfacePanel
+        width={contentWidth}
+        height={portfolio.heroHeight}
+        cornerRadius={componentTokens.surface.panelRadius}
+      >
+        <VStack
+          alignment="leading"
+          spacing={0}
           modifiers={[
-            font({ size: typography.footnote, weight: 'medium' }),
-            foregroundStyle(deepColors.textSecondary),
+            padding({
+              top: wallet.balancePaddingTop,
+              horizontal: wallet.balancePaddingHorizontal,
+            }),
+            frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: 'topLeading' }),
           ]}
         >
-          Everything you have
-        </Text>
-
-        <HStack alignment="firstTextBaseline" spacing={componentTokens.layer.gap}>
           <Text
             modifiers={[
-              font({ size: typography.amountHero, weight: 'bold' }),
-              foregroundStyle(deepColors.textPrimary),
+              font({ size: typography.footnote, weight: 'medium' }),
+              foregroundStyle(colors.textSecondary),
             ]}
           >
-            {totalValue}
+            Everything you have
           </Text>
-          <Text
+
+          <HStack
+            alignment="firstTextBaseline"
+            spacing={layer.gap}
             modifiers={[
-              font({ size: typography.label, weight: 'medium' }),
-              foregroundStyle(deepColors.textSecondary),
+              padding({ top: wallet.balanceTitleToValue }),
+              frame({ maxWidth: Infinity, alignment: 'leading' }),
             ]}
           >
-            {capability.symbol}
-          </Text>
-          <Spacer />
-        </HStack>
-
-        <SplitBar width={innerWidth} growingShare={split.growingShare} />
-
-        <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity })]}>
-          <LegendDot
-            color={deepColors.action}
-            label={`Growing · ${formatSharePercent(split.growingShare)}`}
-            value={`${growingValue} ${capability.symbol}`}
-          />
-          <LegendDot
-            color={deepColors.track}
-            label={`Ready to use · ${formatSharePercent(split.readyShare)}`}
-            value={`${readyValue} ${capability.symbol}`}
-          />
-        </VStack>
-      </DeepCard>
-
-      {/* Strategy, risk, time horizon, liquidity — never in those words. */}
-      <VStack alignment="leading" spacing={spacing.md} modifiers={[frame({ maxWidth: Infinity })]}>
-        <SectionTitle>How it is being looked after</SectionTitle>
-        <DeepCard width={contentWidth}>
-          <HStack spacing={portfolio.pillarGap}>
-            <PillarTile pillar={pillars[0]} width={pillarWidth} />
-            <PillarTile pillar={pillars[1]} width={pillarWidth} />
-          </HStack>
-          <HStack spacing={portfolio.pillarGap}>
-            <PillarTile pillar={pillars[2]} width={pillarWidth} />
-            <PillarTile pillar={pillars[3]} width={pillarWidth} />
-          </HStack>
-
-          <Button
-            onPress={() => router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })}
-            modifiers={[buttonStyle('plain'), accessibilityLabel('Change plan')]}
-          >
-            <HStack
-              alignment="center"
-              spacing={6}
+            <Text
               modifiers={[
-                frame({ width: innerWidth, height: screenTokens.wallet.balanceActionHeight }),
-                background(
-                  deepColors.action,
-                  shapes.roundedRectangle({ cornerRadius: componentTokens.surface.cardRadius }),
-                ),
-                clipShape('roundedRectangle', componentTokens.surface.cardRadius),
+                font({ size: typography.amountCurrency, weight: 'bold' }),
+                foregroundStyle(colors.textPrimary),
               ]}
             >
-              <Text
-                modifiers={[
-                  font({ size: typography.footnote, weight: 'semibold' }),
-                  foregroundStyle(deepColors.textPrimary),
-                ]}
-              >
-                Change plan
-              </Text>
-            </HStack>
-          </Button>
-        </DeepCard>
-      </VStack>
+              {totalValue}
+            </Text>
+            <Text
+              modifiers={[
+                font({ size: typography.label, weight: 'medium' }),
+                foregroundStyle(colors.textSecondary),
+              ]}
+            >
+              {capability.symbol}
+            </Text>
+            <Spacer />
+          </HStack>
 
-      {/* What we make of it. */}
-      <VStack alignment="leading" spacing={spacing.md} modifiers={[frame({ maxWidth: Infinity })]}>
-        <SectionTitle>What we make of it</SectionTitle>
-        <DeepCard width={contentWidth}>
+          <Group modifiers={[padding({ top: portfolio.valueToShareBar })]}>
+            <SplitBar width={heroInner} growingShare={split.growingShare} />
+          </Group>
+
+          <Group modifiers={[padding({ top: portfolio.shareBarToTray })]}>
+            <InsetLayer height={portfolio.splitTrayHeight}>
+              <MetricTile
+                label="Growing"
+                trailingLabel={formatSharePercent(split.growingShare)}
+                value={`${growingValue} ${capability.symbol}`}
+                width={heroTrayFull}
+              />
+              <MetricTile
+                label="Ready to use"
+                trailingLabel={formatSharePercent(split.readyShare)}
+                value={`${readyValue} ${capability.symbol}`}
+                width={heroTrayFull}
+              />
+            </InsetLayer>
+          </Group>
+        </VStack>
+      </SurfacePanel>
+
+      {/* Strategy, risk, horizon and liquidity — none of them named that way. */}
+      <Section title="How it is being looked after" width={contentWidth}>
+        <InsetLayer height={portfolio.pillarTrayHeight}>
+          <HStack alignment="center" spacing={layer.gap}>
+            <PillarTile pillar={pillars[0]} width={sectionColumn} />
+            <PillarTile pillar={pillars[1]} width={sectionColumn} />
+          </HStack>
+          <HStack alignment="center" spacing={layer.gap}>
+            <PillarTile pillar={pillars[2]} width={sectionColumn} />
+            <PillarTile pillar={pillars[3]} width={sectionColumn} />
+          </HStack>
+          <TrayAction
+            label="Change plan"
+            symbol="slider.horizontal.3"
+            width={sectionFull}
+            onPress={() => router.push({ pathname: '/put-to-work', params: { origin: 'earn' } })}
+          />
+        </InsetLayer>
+      </Section>
+
+      <Section title="What we make of it" width={contentWidth}>
+        <VStack alignment="leading" spacing={spacing.lg}>
           {notes.map((note) => (
             <NoteRow key={note.id} note={note} />
           ))}
-        </DeepCard>
-      </VStack>
+        </VStack>
+      </Section>
 
-      {/* Earnings summary, pointing at Earn rather than repeating it. */}
-      <VStack alignment="leading" spacing={spacing.md} modifiers={[frame({ maxWidth: Infinity })]}>
-        <SectionTitle>What it has made</SectionTitle>
-        <DeepCard width={contentWidth}>
-          <HStack alignment="center" spacing={spacing.md} modifiers={[frame({ maxWidth: Infinity })]}>
-            <VStack alignment="leading" spacing={componentTokens.transactionRow.textGap}>
-              <Text
-                modifiers={[
-                  font({ size: typography.footnote, weight: 'medium' }),
-                  foregroundStyle(deepColors.textSecondary),
-                ]}
-              >
-                Earned so far
-              </Text>
-              <Text
-                modifiers={[
-                  font({ size: typography.amountDisplay, weight: 'bold' }),
-                  foregroundStyle(deepColors.success),
-                ]}
-              >
-                {formatLedgerMoney(earned, account)}
-              </Text>
-            </VStack>
+      <Section title="What it has made" width={contentWidth}>
+        <InsetLayer axis="horizontal" height={portfolio.earningsTrayHeight}>
+          <MetricTile
+            label="Earned so far"
+            value={formatLedgerMoney(earned, account)}
+            width={sectionColumn}
+            valueColor={colors.success}
+          />
+          <MetricTile
+            label="Yearly return"
+            value={`${profile.estimatedApy.toFixed(1)}%`}
+            width={sectionColumn}
+          />
+        </InsetLayer>
+      </Section>
 
-            <Spacer />
-
-            <VStack alignment="trailing" spacing={componentTokens.transactionRow.textGap}>
-              <Text
-                modifiers={[
-                  font({ size: typography.footnote, weight: 'medium' }),
-                  foregroundStyle(deepColors.textSecondary),
-                ]}
-              >
-                Yearly return
-              </Text>
-              <Text
-                modifiers={[
-                  font({ size: typography.label, weight: 'semibold' }),
-                  foregroundStyle(deepColors.textPrimary),
-                ]}
-              >
-                {profile.estimatedApy.toFixed(1)}%
-              </Text>
-            </VStack>
-          </HStack>
-        </DeepCard>
-      </VStack>
-
-      {/* Only the movements that rearranged the portfolio. */}
-      <VStack alignment="leading" spacing={spacing.md} modifiers={[frame({ maxWidth: Infinity })]}>
-        <SectionTitle>What changed</SectionTitle>
-        <DeepCard width={contentWidth}>
+      <Section title="What changed" width={contentWidth}>
+        <VStack alignment="leading" spacing={componentTokens.transactionRow.rowGap}>
           {changes.length === 0 ? (
             <Text
               modifiers={[
                 font({ size: typography.body, weight: 'medium' }),
-                foregroundStyle(deepColors.textSecondary),
+                foregroundStyle(colors.textSecondary),
                 frame({ maxWidth: Infinity, alignment: 'leading' }),
               ]}
             >
@@ -520,17 +459,31 @@ export function PortfolioScreen() {
             </Text>
           ) : (
             changes.map((change) => (
-              <ChangeRow
+              <LayeredTransactionRow
                 key={change.id}
                 title={change.title}
                 subtitle={change.subtitle}
                 amount={`${formatAmountNumber(change.amount)} ${currencyCapability(change.currency).symbol}`}
+                meta={new Date(change.occurredAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
                 symbol={change.symbol ?? 'arrow.triangle.2.circlepath'}
+                footerLeadingText={transactionStatusLabel(change.status)}
+                footerSymbol={transactionStatusSymbol(change.status)}
+                footerLeadingColor={transactionStatusColor(change.status)}
+                footerTrailingText="Details"
+                onFooterPress={() =>
+                  router.push({ pathname: '/activity', params: { transactionId: change.id } })
+                }
+                onPress={() =>
+                  router.push({ pathname: '/activity', params: { transactionId: change.id } })
+                }
               />
             ))
           )}
-        </DeepCard>
-      </VStack>
-    </DeepScreenShell>
+        </VStack>
+      </Section>
+    </SwiftUIScreenShell>
   );
 }

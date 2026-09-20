@@ -15,8 +15,9 @@ Source of truth: Home, Portfolio, Earn, Activity. Wallet tab is gone.
 - Tab chrome is `TabHeader`: left `pageTitle` bold, right 44 profile circle. Profile `Menu` owns Account details + Settings. No support/notification icons. Flow screens keep `ScreenHeader` (back button + `sectionTitle`); the two are not interchangeable.
 - One content width per screen: `windowWidth - spacing.screenHorizontal * 2`. Do not give a screen a second gutter by framing a child at a different fixed width.
 - Accent budget is 60-30-10: canvas + white surfaces 60, ink + `surfaceLayer` insets 30, and **one** cyan primary per screen for the 10. On Home that one is `Move to grow`; the shortcut row stays neutral.
-- Portfolio is not a tab. It is reached by pulling Home past `screenTokens.portfolio.pullRevealThreshold`, plus the `PortfolioPullHint` button for anyone who never finds the gesture. It is a modal route, so Home stays behind it.
-- Portfolio renders in `deepColors`, never `colors`. Deep mode exists only there. Bar tracks use `deepColors.track` — `surfaceLayer` does not clear `surface` on dark.
+- Portfolio is not a tab. It is reached by pulling Home past `screenTokens.portfolio.pullRevealThreshold`, plus the `PortfolioPullHint` button for anyone who never finds the gesture. It is a `fullScreenModal`, so the page is replaced and the tab bar goes with it — that swap is what signals the change of mode. The transition is `fade`: the gesture is downward and react-native-screens has no `slide_from_top`.
+- Portfolio is built from Home's own parts — `SurfacePanel`, `InsetLayer`, `MetricTile`, `LayeredTransactionRow` — and uses `colors` like every other screen. There is no dark mode anywhere except the welcome screen's local palette.
+- On a screen for reading rather than acting, the accent belongs to the data, not to a button. Portfolio's only fill is the split bar; `Change plan` is a white tray tile with a blue label.
 - Strategy, risk, time horizon and liquidity are never printed in those words. Use the plain-language copy already written on `PutToWorkRiskProfile` / `PutToWorkHorizon` (`title`, `riskLabel`, `accessLabel`, `accessDescription`, `explanation`).
 - Transaction status has three states, not two: `Done` / `On its way` / `Didn't go through`, coloured `success` / `pending` / `danger`.
 - Home hero: `amountCurrency` + `label` currency; gray `InsetLayer` holds Ready to use / Growing plus Move to grow / Take money out. No hide-balance control. No wallet illustration.
@@ -24,6 +25,6 @@ Source of truth: Home, Portfolio, Earn, Activity. Wallet tab is gone.
 - Status: `colors.success` `#20AD2B`, `colors.danger` `#FF3B30`, `colors.pending` `#787878`. Never use named `'red'`/`'green'`.
 - Surfaces: canvas `#F3F3F3`, elevated `surface` `#FFFFFF`, muted `surfaceSecondary` `#F5F5F5`, inset `surfaceLayer` `#F2F2F2`. Do not flatten this by painting buttons with the muted fill. Inset padding is `componentTokens.layer.inset` (4).
 - No pure black `#000000`. Ink is `#111111`.
-- CTA cyan (`colors.action*`) is excluded from palette work. Do not replace it with a new brand color.
+- Accent is iOS systemBlue `#007AFF` (`colors.action*`), the same tint the native tab bar and system links already use. It replaced a cyan that failed contrast against white (2.60) and fought the tab bar for the eye. Do not introduce a second accent hue.
 - Do not add new font sizes, hex values, or radii in screens. `walletColors` is leftover illustration palette — do not use it on current screens.
 - Native navigation, BottomSheet, and tab motion stay system-owned. Use `motion.press|selection|contentChange|processing` only for micro-motion.

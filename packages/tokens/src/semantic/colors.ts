@@ -25,15 +25,15 @@ export const semanticColor = {
     strong: primitiveColor.grayE5,
   },
   action: {
-    primary: primitiveColor.cyan08AFD3,
-    primaryDark: primitiveColor.cyan08A7CA,
-    primaryDarker: primitiveColor.cyan079FC0,
-    highlight: primitiveColor.cyan08AFD3,
+    primary: primitiveColor.blue007AFF,
+    primaryDark: primitiveColor.blue0074F2,
+    primaryDarker: primitiveColor.blue006EE6,
+    highlight: primitiveColor.blue007AFF,
   },
   accent: {
     unusedBlue: primitiveColor.blue2F6BFF,
     muted: primitiveColor.blueD9E8FF,
-    chartFill: primitiveColor.cyan08AFD31F,
+    chartFill: primitiveColor.blue007AFF1F,
   },
   status: {
     success: primitiveColor.green20AD2B,
@@ -44,23 +44,5 @@ export const semanticColor = {
   brand: {
     merchantLogo: primitiveColor.gray111,
     merchantLogoAccent: primitiveColor.orangeFF9900,
-  },
-  /**
-   * Deep mode. Portfolio is the only in-app surface that uses it: pulling down from
-   * Home swaps the chrome so the shift into a management view is felt, not read.
-   * Borrowed from the welcome screen so it lands as the same brand, not a new one.
-   */
-  deep: {
-    canvas: primitiveColor.gray0A,
-    surface: primitiveColor.gray1414,
-    surfaceLayer: primitiveColor.gray1C,
-    /** Unfilled half of a proportion bar. Must clear `surface`, not sit on it. */
-    track: primitiveColor.gray3F,
-    border: primitiveColor.gray2E,
-    textPrimary: primitiveColor.white,
-    textSecondary: primitiveColor.grayA1,
-    textTertiary: primitiveColor.gray737,
-    success: primitiveColor.green00D691,
-    successMuted: primitiveColor.greenD69122,
   },
 } as const;

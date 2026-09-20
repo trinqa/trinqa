@@ -2,7 +2,6 @@ import { primitiveColor } from './primitives/color';
 import { primitiveOpacity } from './primitives/opacity';
 import { primitiveShadow } from './primitives/shadow';
 import { radius as canonicalRadius } from './canonical';
-import { semanticColor } from './semantic/colors';
 
 export {
   borders,
@@ -26,9 +25,9 @@ export const colors = {
   textSecondary: primitiveColor.gray787,
   textInverse: primitiveColor.walletTextF6,
   borderStrong: primitiveColor.grayE5,
-  action: primitiveColor.cyan08AFD3,
-  actionPrimaryDark: primitiveColor.cyan08A7CA,
-  actionPrimaryDarker: primitiveColor.cyan079FC0,
+  action: primitiveColor.blue007AFF,
+  actionPrimaryDark: primitiveColor.blue0074F2,
+  actionPrimaryDarker: primitiveColor.blue006EE6,
   selection: primitiveColor.blueD9E8FF,
   success: primitiveColor.green20AD2B,
   successMuted: primitiveColor.greenEDF8E8,
@@ -39,23 +38,6 @@ export const colors = {
   merchantLogoWarm: primitiveColor.orangeFF6A00,
 } as const;
 
-/**
- * Portfolio's chrome. Same names as `colors` so a component can take one palette
- * object and render in either mode without branching on a theme flag.
- */
-export const deepColors = {
-  background: semanticColor.deep.canvas,
-  surface: semanticColor.deep.surface,
-  surfaceLayer: semanticColor.deep.surfaceLayer,
-  track: semanticColor.deep.track,
-  textPrimary: semanticColor.deep.textPrimary,
-  textSecondary: semanticColor.deep.textSecondary,
-  textTertiary: semanticColor.deep.textTertiary,
-  borderStrong: semanticColor.deep.border,
-  action: colors.action,
-  success: semanticColor.deep.success,
-  successMuted: semanticColor.deep.successMuted,
-} as const;
 
 const cardRadius = canonicalRadius.card;
 const insetLayerPadding = 4;
@@ -244,20 +226,20 @@ export const screenTokens = {
     pickerToRowsGap: 18,
   },
   portfolio: {
-    contentWidth: 366,
     /** Overscroll past this many points on Home releases into Portfolio. */
     pullRevealThreshold: 88,
     pullHintHeight: 34,
-    headerToValue: 18,
-    valueToShare: 10,
+    /** Hero panel: 22 top + label + 7 + amount + 14 + 12 bar + 12 + 128 tray + 18. */
+    heroHeight: 250,
+    valueToShareBar: 14,
     shareBarHeight: 12,
-    shareToPillars: 22,
-    pillarHeight: 74,
-    pillarGap: 8,
-    sectionGap: 22,
-    cardPadding: 16,
-    changeRowHeight: 62,
-    changeRowGap: 8,
+    shareBarToTray: 12,
+    /** Inset (4) + tile (58) + gap (4) + tile (58) + inset (4). */
+    splitTrayHeight: 128,
+    /** Three tray rows: two tile rows plus the action. */
+    pillarTrayHeight: 176,
+    earningsTrayHeight: 66,
+    sectionGap: 16,
   },
   activity: {
     contentWidth: 366,
@@ -349,7 +331,7 @@ export const walletColors = {
 export const walletShadow = primitiveShadow.wallet;
 
 export const chartTokens = {
-  areaFill: primitiveColor.cyan08AFD31F,
+  areaFill: primitiveColor.blue007AFF1F,
   line: colors.action,
   scaleX: 1.13,
   scaleY: 0.8,
