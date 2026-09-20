@@ -21,6 +21,8 @@ export interface RegisterDeviceInput {
 export interface PushTokenRegistry {
   register(input: RegisterDeviceInput): Promise<DeviceToken>;
   listByAccount(accountId: string): Promise<DeviceToken[]>;
+  /** Every account with at least one device — the set the background watcher polls for. */
+  listAccounts(): Promise<string[]>;
   remove(expoPushToken: string): Promise<boolean>;
   removeMany(expoPushTokens: readonly string[]): Promise<number>;
 }
@@ -55,6 +57,10 @@ function toRecord(input: RegisterDeviceInput): DeviceToken {
   };
 }
 
+function distinctAccounts(devices: Iterable<DeviceToken>): string[] {
+  return [...new Set([...devices].map((d) => d.accountId))];
+}
+
 function sortByAccount(devices: Iterable<DeviceToken>, accountId: string): DeviceToken[] {
   return [...devices]
     .filter((d) => d.accountId === accountId)
@@ -74,6 +80,10 @@ export class MemoryPushTokenRegistry implements PushTokenRegistry {
 
   async listByAccount(accountId: string): Promise<DeviceToken[]> {
     return sortByAccount(this.devices.values(), accountId);
+  }
+
+  async listAccounts(): Promise<string[]> {
+    return distinctAccounts(this.devices.values());
   }
 
   async remove(expoPushToken: string): Promise<boolean> {
@@ -133,6 +143,11 @@ export class JsonFilePushTokenRegistry implements PushTokenRegistry {
   async listByAccount(accountId: string): Promise<DeviceToken[]> {
     this.ensureLoaded();
     return sortByAccount(this.devices.values(), accountId);
+  }
+
+  async listAccounts(): Promise<string[]> {
+    this.ensureLoaded();
+    return distinctAccounts(this.devices.values());
   }
 
   async remove(expoPushToken: string): Promise<boolean> {
