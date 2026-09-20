@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { env, resolveOperationsDataDir } from './config/env.js';
+import { env, isPushWatcherEnabled, resolveOperationsDataDir } from './config/env.js';
 import { StellarService } from './services/stellar.service.js';
 import { TrMockAnchorAdapter } from './adapters/tr-mock-anchor.adapter.js';
 import { DefindexYieldAdapter } from './adapters/defindex-yield.adapter.js';
@@ -36,6 +36,11 @@ import { DEFAULT_ADVISOR_MIN_CONFIDENCE } from './domain/route.js';
 import { createPushTokenRegistry } from './services/push-tokens.service.js';
 import { createPushSender } from './services/push-sender.service.js';
 import { registerNotificationRoutes } from './routes/v1/notifications.js';
+import {
+  IncomingPaymentWatcher,
+  createHorizonPaymentSource,
+} from './services/incoming-payment-watcher.service.js';
+import { createHorizonCursorStore } from './services/horizon-cursor-store.js';
 import { CustodialWallets } from './services/custodial-wallet.service.js';
 
 export async function buildApp() {
@@ -71,7 +76,7 @@ export async function buildApp() {
   const wallets = CustodialWallets.fromConfig(env, stellar);
   const pushTokens = createPushTokenRegistry(resolveOperationsDataDir());
   const pushSender = createPushSender(pushTokens, { logger: app.log });
-  const yieldSvc = new YieldService(defindex, policy, operations, stellar);
+  const yieldSvc = new YieldService(defindex, policy, operations, stellar, pushSender);
   const paymentExecution = new PaymentExecutionService(
     env,
     stellar,
@@ -82,6 +87,7 @@ export async function buildApp() {
     yieldSvc,
     quotes,
     operations,
+    pushSender,
   );
   // Phase 2 routing: every anchor behind one directory, Jev as an optional advisor.
   const anchorRegistry = createAnchorRegistry(env, anchor);
@@ -112,7 +118,7 @@ export async function buildApp() {
   registerPaymentRoutes(app, paymentRouter, paymentExecution);
   registerOperationRoutes(app, operations);
   registerActivityRoutes(app, operations);
-  registerAnchorRoutes(app, anchor, anchorSessions, operations);
+  registerAnchorRoutes(app, anchor, anchorSessions, operations, pushSender);
   registerAccountRoutes(app, stellar);
   registerTransactionRoutes(app, stellar);
   registerSwapRoutes(app, soroswap);
@@ -120,6 +126,20 @@ export async function buildApp() {
   registerAnchorDirectoryRoutes(app, anchorRegistry);
   registerRouteRoutes(app, routePlanner);
   registerNotificationRoutes(app, pushTokens, wallets);
+
+  // The one event source that works with the app closed: the ledger itself.
+  const paymentWatcher = new IncomingPaymentWatcher(
+    pushTokens,
+    pushSender,
+    createHorizonPaymentSource(stellar),
+    createHorizonCursorStore(resolveOperationsDataDir()),
+    { code: env.usdcAssetCode, issuer: env.USDC_ISSUER },
+    { intervalMs: env.PUSH_WATCHER_INTERVAL_MS, logger: app.log },
+  );
+  if (isPushWatcherEnabled(env)) {
+    paymentWatcher.start();
+    app.addHook('onClose', async () => paymentWatcher.stop());
+  }
 
   app.get('/', async () => ({ service: 'trinqa-backend', api: '/api/v1/health' }));
 
@@ -141,5 +161,6 @@ export async function buildApp() {
     routeAdvisor,
     pushTokens,
     pushSender,
+    paymentWatcher,
   };
 }

@@ -4,11 +4,42 @@ import type { TrMockAnchorAdapter } from '../../adapters/tr-mock-anchor.adapter.
 import { env } from '../../config/env.js';
 import { ApiError } from '../../domain/api-errors.js';
 import type { AnchorSessionStore } from '../../services/anchor-session-store.service.js';
+import type { Operation, OperationStatus } from '../../domain/operation.js';
 import type { OperationStore } from '../../services/operation-store.js';
 import { recordOperation } from '../../services/operation-store.js';
+import type { PushSender } from '../../services/push-sender.service.js';
+import {
+  anchorDepositCompleted,
+  anchorTransferFailed,
+  anchorWithdrawCompleted,
+} from '../../services/notification-copy.js';
 import { sendApiError } from './http-errors.js';
 
 const sessionIdSchema = z.string().uuid();
+
+/**
+ * Tell the account its transfer landed — but only on the step that actually moved it into a
+ * terminal state, so a client polling every two seconds is not a notification firehose.
+ * Fire-and-forget: `notify` never throws and is never awaited by the request.
+ */
+function notifyTransferSettled(
+  sender: PushSender | undefined,
+  before: Operation,
+  after: OperationStatus,
+): void {
+  if (!sender || before.status === after) return;
+  if (after === 'completed') {
+    const notification =
+      before.kind === 'anchor_withdraw'
+        ? anchorWithdrawCompleted(before)
+        : anchorDepositCompleted(before);
+    void sender.notify(before.accountId, notification);
+    return;
+  }
+  if (after === 'failed') {
+    void sender.notify(before.accountId, anchorTransferFailed(before));
+  }
+}
 
 function jwtFromSession(
   sessions: AnchorSessionStore,
@@ -34,6 +65,7 @@ export function registerAnchorRoutes(
   anchor: TrMockAnchorAdapter,
   sessions: AnchorSessionStore,
   operations: OperationStore,
+  pushSender?: PushSender,
 ): void {
   app.get('/api/v1/anchor/session', async () => ({
     domain: env.TR_ANCHOR_DOMAIN,
@@ -223,6 +255,7 @@ export function registerAnchorRoutes(
           status: mapped,
           externalRefs: { ...existing?.externalRefs, anchorTransferId: id },
         });
+        if (existing) notifyTransferSettled(pushSender, existing, mapped);
       } else {
         const linked = await operations.findByExternalRef('anchorTransferId', id);
         if (linked && status) {
@@ -236,6 +269,7 @@ export function registerAnchorRoutes(
             status: mapped,
             externalRefs: { ...linked.externalRefs, anchorTransferId: id },
           });
+          notifyTransferSettled(pushSender, linked, mapped);
         }
       }
       return { transfer: tx };

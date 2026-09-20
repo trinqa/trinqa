@@ -20,16 +20,55 @@ usable — every step fails soft.
 
 ## What the backend sends
 
-| Event | Who gets it |
-|-------|-------------|
-| USDC arrives in an account | the account holder |
-| An anchor deposit completes | the account that deposited |
-| An anchor withdrawal is paid out | the account that withdrew |
-| Money starts earning | the account that deposited into the vault |
+| Event | Title | Opens | Fires with the app closed |
+|-------|-------|-------|---------------------------|
+| USDC arrives in an account | `Money arrived` | `/activity` | yes |
+| An anchor deposit completes | `Money added` | `/activity` | no |
+| An anchor withdrawal is paid out | `Money sent` | `/activity` | no |
+| An anchor transfer fails | `Deposit/Withdrawal didn’t go through` | `/activity` | no |
+| A yield deposit executes | `Your money started earning` | `/earn` | no |
+| A multi-step payment finishes | `Payment sent` | `/activity` | no |
 
-Incoming payments and anchor transfers are observed by background watchers, because the
-backend is otherwise request-driven and would never notice an event that lands while the app
-is closed. The watchers only run for accounts that have a registered token.
+Every payload carries `data.route`, one of the deep links the app allows.
+
+### The watcher
+
+The backend is request-driven, so anything that happens while the app is closed is invisible
+to it. The one thing that is always observable is the ledger, so
+`IncomingPaymentWatcher` polls Horizon for **incoming** USDC payments to every account that
+has a registered device, and notifies that account. Payments an account sent to itself, and
+payments in any other asset, are ignored.
+
+This also covers a completed anchor deposit, because the anchor credits the USDC on chain.
+The anchor's own SEP-6 status is *not* polled in the background: reading it needs the user's
+SEP-10 session, which only exists for the duration of a request.
+
+A per-account Horizon paging cursor lives next to the other JSON state
+(`horizon-cursors.json` in `OPERATIONS_DATA_DIR`), so a restart does not replay old payments.
+The first time the watcher sees an account it pins the cursor to the account's newest payment
+and notifies nothing, so a device that registers today never gets a burst about last month.
+
+A Horizon outage, a bad cursor or an Expo error leaves a log line and the cursor untouched;
+the window is simply retried on the next tick. Nothing the watcher does can fail a request.
+
+### The other events
+
+The remaining five are request-time hooks, fired where the backend learns the status while
+serving a call — the anchor transfer-status handler, `POST /api/v1/yield/execute`, and the
+last step of `POST /api/v1/payments/execute-step`. Each compares against the stored status and
+fires only on a genuine transition into a terminal state, so a client polling every two
+seconds gets at most one notification. Because they ride on a request, they only fire while
+someone is using the app.
+
+### Configuration
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PUSH_WATCHER_ENABLED` | `true` (`false` under `NODE_ENV=test`) | Runs the Horizon watcher |
+| `PUSH_WATCHER_INTERVAL_MS` | `15000` | Milliseconds between passes, minimum 1000 |
+
+The watcher is off under tests, which drive a single `tick()` directly. It is stopped on the
+Fastify `onClose` hook, so `SIGINT`/`SIGTERM` shut it down cleanly.
 
 ## Setup needed once, per platform
 
