@@ -106,6 +106,19 @@ each account's seed is `HMAC(master, walletKey)`, so accounts survive redeploys.
 | POST | `/api/v1/demo/trustline/usdc` | Add USDC trustline for the demo account |
 | POST | `/api/v1/demo/contacts` | Accounts for the seeded demo contacts (`{ ids }` → funded account per id, idempotent) |
 
+## Notifications (testnet only)
+
+Device-scoped like the demo routes: same `x-demo-token` gate, and `x-wallet-key` decides
+whose account the token belongs to. There is no env-demo fallback here — without a wallet
+key the token would land on the shared demo account.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/notifications/devices` | `{ expoPushToken, platform }` → registers the device for the wallet's account |
+| DELETE | `/api/v1/notifications/devices` | `{ expoPushToken }` → drops that device |
+
+Sending goes through Expo's push service; see [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md).
+
 ## Transactions
 
 | Method | Path | Description |
