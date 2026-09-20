@@ -1,18 +1,39 @@
 import { Button, Form, Group, Picker, Section, Text, Toggle, VStack } from '@expo/ui/swift-ui';
 import { frame, padding, pickerStyle, scrollContentBackground, tag } from '@expo/ui/swift-ui/modifiers';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { currenciesFor } from '@/data/capabilities';
+import { usePushPermission } from '@/features/notifications/useNotifications';
+import type { PushPermission } from '@/services/pushNotifications';
 import { setDisplayCurrency, setSecurityEnabled, useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, spacing } from '@/theme';
 import type { CurrencyCode } from '@/types';
 
+/**
+ * Plain status only: once someone denies notifications the OS owns that choice, so a
+ * toggle here would be a switch that does nothing.
+ */
+function notificationStatusLine(permission: PushPermission): string {
+  const settingsApp = Platform.OS === 'ios' ? 'iOS Settings' : 'your device settings';
+  switch (permission) {
+    case 'granted':
+      return 'Notifications are on for this device.';
+    case 'denied':
+      return `Notifications are off. You can turn them back on for Trinqa in ${settingsApp}.`;
+    case 'undetermined':
+      return 'Trinqa has not asked to send you notifications yet.';
+    case 'unavailable':
+      return 'Notifications are not available on this device.';
+  }
+}
+
 export function SettingsScreen() {
   const router = useRouter();
   const { account, settings } = useMockAppState();
+  const pushPermission = usePushPermission();
   const displayCurrencies = currenciesFor('display');
   const showRiskAndLegal = () => {
     Alert.alert(
@@ -54,6 +75,12 @@ export function SettingsScreen() {
               onIsOnChange={setSecurityEnabled}
             />
           </Section>
+          {/* Hidden until the first check answers, so the line never flips under the user. */}
+          {pushPermission ? (
+            <Section title="Notifications">
+              <Text>{notificationStatusLine(pushPermission)}</Text>
+            </Section>
+          ) : null}
           <Section title="Transfers">
             <Button
               label="Anchor directory"
