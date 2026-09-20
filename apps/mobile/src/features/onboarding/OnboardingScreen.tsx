@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FlowErrorState } from '@/components/FlowStates';
 import { FlowScreenShell } from '@/components/FlowScreenShell';
-import { WelcomeHero } from '@/features/onboarding/WelcomeHero';
+import {
+  useWelcomeDeck,
+  WelcomeDeckMedia,
+  WelcomeDeckText,
+  WelcomeDots,
+} from '@/features/onboarding/WelcomeCarousel';
 import { welcomePalette as palette } from '@/features/onboarding/welcomePalette';
 import { errorMessage } from '@/services/apiErrors';
 import { bootstrapAccount, setAccountBootstrap, useMockAppState } from '@/state/mockAppState';
@@ -21,7 +26,7 @@ function WelcomeButton({
 }: {
   label: string;
   onPress: () => void;
-  tone: 'light' | 'ghost';
+  tone: 'accent' | 'ghost';
 }) {
   return (
     <Pressable
@@ -30,11 +35,11 @@ function WelcomeButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        tone === 'light' ? styles.buttonLight : styles.buttonGhost,
+        tone === 'accent' ? styles.buttonAccent : styles.buttonGhost,
         pressed && styles.buttonPressed,
       ]}
     >
-      <Text style={[styles.buttonLabel, tone === 'light' ? styles.buttonLabelDark : null]}>{label}</Text>
+      <Text style={styles.buttonLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -44,6 +49,7 @@ export function OnboardingScreen() {
   const { accountBootstrap } = useMockAppState();
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const isCreating = accountBootstrap === 'creating';
+  const deck = useWelcomeDeck();
 
   useEffect(() => {
     if (accountBootstrap !== 'creating') return;
@@ -82,42 +88,50 @@ export function OnboardingScreen() {
     );
   }
 
+  if (isCreating) {
+    return (
+      <View style={styles.root}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+          <View style={styles.creating}>
+            <Text style={styles.title}>Creating your account</Text>
+            <Text style={styles.body}>Getting your Trinqa account ready.</Text>
+          </View>
+          <View style={styles.foot}>
+            <ActivityIndicator color={palette.action} size="large" />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {/* Hero and foot split so the headline's centre lands on the middle of the screen. */}
-        <View style={styles.heroSlot}>
-          <WelcomeHero logo={LOGO} isCreating={isCreating} />
-        </View>
+        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+
+        <WelcomeDeckMedia index={deck.index} />
 
         <View style={styles.foot}>
-          <Text style={styles.title}>
-            {isCreating ? 'Creating your account' : 'Your money should work until you need it.'}
-          </Text>
-          <Text style={styles.sub}>
-            {isCreating
-              ? 'Getting your Trinqa account ready.'
-              : 'Trinqa keeps your idle balance earning, then frees up only what you need.'}
-          </Text>
+          <WelcomeDeckText index={deck.index} />
 
-          <View style={styles.actions}>
-            {isCreating ? (
-              <ActivityIndicator color={palette.action} size="large" />
-            ) : (
-              <>
-                <WelcomeButton
-                  label="Start earning"
-                  tone="light"
-                  onPress={() => setAccountBootstrap('creating')}
-                />
-                <WelcomeButton
-                  label="I already have an account"
-                  tone="ghost"
-                  onPress={() => setAccountBootstrap('creating')}
-                />
-              </>
-            )}
+          <View style={styles.controls}>
+            <WelcomeDots index={deck.index} onSelect={deck.goTo} />
           </View>
+
+          <WelcomeButton
+            label={deck.slide.cta}
+            tone="accent"
+            onPress={() => (deck.isLast ? setAccountBootstrap('creating') : deck.advance())}
+          />
+
+          {deck.isLast ? (
+            <WelcomeButton
+              label="I already have an account"
+              tone="ghost"
+              onPress={() => setAccountBootstrap('creating')}
+            />
+          ) : null}
         </View>
       </SafeAreaView>
     </View>
@@ -133,31 +147,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.background,
   },
-  heroSlot: {
-    flex: 0.8,
+  logo: {
+    width: 34,
+    height: 34,
+    marginLeft: 22,
+    marginTop: 4,
+  },
+  creating: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 22,
   },
   foot: {
-    flex: 1,
     paddingHorizontal: 22,
     paddingBottom: 12,
+    gap: 9,
+  },
+  controls: {
+    height: 34,
+    justifyContent: 'center',
   },
   title: {
     color: palette.title,
     fontSize: 29,
-    lineHeight: 34,
+    lineHeight: 35,
     fontWeight: '700',
     letterSpacing: -0.7,
   },
-  sub: {
+  body: {
     color: palette.body,
     fontSize: 14.5,
     lineHeight: 21,
     marginTop: 11,
-  },
-  actions: {
-    marginTop: 'auto',
-    gap: 9,
-    alignItems: 'stretch',
   },
   button: {
     height: componentTokens.actionButton.height,
@@ -165,8 +186,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonLight: {
-    backgroundColor: palette.title,
+  buttonAccent: {
+    backgroundColor: palette.action,
   },
   buttonGhost: {
     borderWidth: 1,
@@ -179,8 +200,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: palette.title,
-  },
-  buttonLabelDark: {
-    color: palette.background,
   },
 });
