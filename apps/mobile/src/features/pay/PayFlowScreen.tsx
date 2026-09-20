@@ -52,6 +52,11 @@ import {
 } from '@/data/mocks/pay';
 import { liveCurrenciesFor, payoutBlockedReason } from '@/data/capabilities';
 import { describeCode, errorMessage } from '@/services/apiErrors';
+import {
+  useRecipientAccount,
+  type RecipientAccount,
+  type RecipientAccountState,
+} from '@/services/contacts';
 import { executePay, quotePay, type PayLiveQuote } from '@/services/flows';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
@@ -93,6 +98,11 @@ function formatPaymentAmount(
     minimumFractionDigits: decimals ? 2 : 0,
     maximumFractionDigits: decimals ? 2 : 0,
   })} ${CURRENCY_SYMBOLS[currency]}`;
+}
+
+/** Stellar accounts are 56 characters; the ends are enough to check against an explorer. */
+function shortAccount(account: string) {
+  return `${account.slice(0, 6)}…${account.slice(-6)}`;
 }
 
 // Debits and fees are USDC, presented as USD across the app.
@@ -331,12 +341,16 @@ function PaymentAmountSummary({
   intent,
   quote,
   quoteState,
+  recipientLabel,
+  recipientState,
   onAddMoney,
   blockedReason,
 }: {
   intent: PaymentIntent;
   quote: PaymentQuote;
   quoteState: LiveQuoteState<PayLiveQuote>;
+  recipientLabel: string;
+  recipientState: RecipientAccountState;
   onAddMoney: () => void;
   blockedReason: string | null;
 }) {
@@ -353,7 +367,7 @@ function PaymentAmountSummary({
           ]}
         >
           <Text modifiers={[font({ size: typography.footnote, weight: 'medium' }), foregroundStyle(colors.textSecondary)]}>
-            {intent.recipient.name} receives
+            {recipientLabel} receives
           </Text>
           <Text modifiers={[font({ size: typography.sectionTitle, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
             {formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency)}
@@ -382,6 +396,19 @@ function PaymentAmountSummary({
           symbol="exclamationmark.circle"
           title={`${intent.receiveCurrency} payouts aren’t live yet`}
           subtitle={describeCode(blockedReason)}
+        />
+      ) : recipientState.loading ? (
+        <FlowInlineState
+          symbol="clock"
+          title={`Preparing ${intent.recipient.name}’s account`}
+          subtitle="This can take a few seconds the first time."
+        />
+      ) : recipientState.error ? (
+        <FlowInlineState
+          symbol="exclamationmark.circle"
+          tone="danger"
+          title={`We could not prepare ${intent.recipient.name}’s account`}
+          subtitle={recipientState.error}
         />
       ) : quoteState.error ? (
         <VStack spacing={8}>
@@ -465,6 +492,9 @@ function ReviewStep({
   onBack,
   onConfirm,
   quote,
+  recipient,
+  settlementAmount,
+  settlementAsset,
   error,
   isSubmitting,
 }: {
@@ -472,10 +502,15 @@ function ReviewStep({
   onBack: () => void;
   onConfirm: () => void;
   quote: PaymentQuote;
+  recipient: RecipientAccount | null;
+  settlementAmount: string | null;
+  settlementAsset: string | null;
   error?: string | null;
   isSubmitting: boolean;
 }) {
-  const receiveAmount = formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
+  // Show what the backend quoted as moving; the picked currency is only the user's unit.
+  const sendingAmount =
+    settlementAmount ?? formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
 
   return (
     <FlowStepLayout
@@ -483,7 +518,7 @@ function ReviewStep({
       onBack={onBack}
       primaryLabel="Confirm"
       onPrimaryPress={onConfirm}
-      isPrimaryDisabled={quote.status !== 'ready'}
+      isPrimaryDisabled={quote.status !== 'ready' || !recipient}
       isPrimaryBusy={isSubmitting}
     >
       <VStack
@@ -508,7 +543,7 @@ function ReviewStep({
                     foregroundStyle(colors.textPrimary),
                   ]}
                 >
-                  {receiveAmount}
+                  {sendingAmount}
                 </Text>
               </VStack>
               <Spacer />
@@ -523,9 +558,25 @@ function ReviewStep({
             </HStack>
 
             <Divider />
-            <FlowInfoRow label="To" value={intent.recipient.name} emphasized />
+            {recipient === null ? (
+              <FlowInfoRow label="To" value="—" emphasized />
+            ) : recipient.overridden ? (
+              <FlowInfoRow label="To" value={shortAccount(recipient.account)} emphasized />
+            ) : (
+              <VStack alignment="leading" spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>
+                <FlowInfoRow label="To" value={intent.recipient.name} emphasized />
+                <FlowInfoRow label="Stellar account" value={shortAccount(recipient.account)} />
+              </VStack>
+            )}
             <Divider />
-            <FlowInfoRow label={`${intent.recipient.name} receives`} value={receiveAmount} />
+            <FlowInfoRow
+              label={
+                recipient?.overridden
+                  ? 'The test account receives'
+                  : `${intent.recipient.name} receives`
+              }
+              value={sendingAmount}
+            />
             <FlowInfoRow label="You’ll pay" value={formatTry(quote.debitAmount)} />
             <FlowInfoRow label="Fee" value={formatTry(quote.fee)} />
             <FlowInfoRow label="Estimated arrival" value={quote.estimatedArrival} />
@@ -543,11 +594,27 @@ function ReviewStep({
           </VStack>
         </FlowCard>
 
-        <FlowNotice
-          symbol="arrow.triangle.branch"
-          title="Fast & routed automatically"
-          subtitle="Trinqa uses the live Stellar USDC rail when it is available."
-        />
+        {recipient?.overridden ? (
+          <FlowNotice
+            symbol="exclamationmark.triangle"
+            title={`Not going to ${intent.recipient.name}`}
+            subtitle="This build sends every payment to one fixed test account."
+          />
+        ) : null}
+        {settlementAsset ? (
+          <FlowNotice
+            symbol="arrow.triangle.branch"
+            title={`Sent as ${settlementAsset} on Stellar`}
+            subtitle={`You picked ${intent.receiveCurrency}. On Stellar the money moves as ${settlementAsset}.`}
+          />
+        ) : null}
+        {recipient ? null : (
+          <FlowInlineState
+            symbol="exclamationmark.circle"
+            title={`We could not prepare ${intent.recipient.name}’s account`}
+            subtitle="The payment is blocked until the account is ready."
+          />
+        )}
         {error ? (
           <FlowInlineState symbol="exclamationmark.circle" tone="danger" title="Payment failed" subtitle={error} />
         ) : null}
@@ -567,6 +634,8 @@ export function PayFlowScreen() {
   const [earnApprovalPresented, setEarnApprovalPresented] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Snapshot of what the confirmed quote actually moved, so success cannot name a different asset.
+  const [sentAmount, setSentAmount] = useState<string | null>(null);
   const paymentId = useMemo(
     () => `payment-${recipient.id}-${currency.toLowerCase()}-${amount}`,
     [amount, currency, recipient.id]
@@ -580,13 +649,35 @@ export function PayFlowScreen() {
     [amount, currency, recipient],
   );
   const blocked = payoutBlockedReason(currency, capabilities);
+  // Seeding the contacts is slow once, so start as soon as the screen opens.
+  const recipientState = useRecipientAccount(recipient.id);
+  const recipientAccountId = recipientState.data?.account ?? null;
   const liveQuote = useLiveQuote(
-    `${account.id}:${currency}:${amount}`,
-    amount > 0 && !blocked,
-    () => quotePay({ accountId: account.id, amount, currency }),
+    `${account.id}:${recipientAccountId ?? 'unresolved'}:${currency}:${amount}`,
+    amount > 0 && !blocked && Boolean(recipientAccountId),
+    () =>
+      quotePay({
+        // quotePay refuses an empty recipient, so an unresolved contact can never fall back to the sender.
+        accountId: account.id,
+        recipientAccount: recipientAccountId ?? '',
+        amount,
+        currency,
+      }),
   );
   const quote = useMemo(() => toPaymentQuote(intent, liveQuote.data), [intent, liveQuote.data]);
   const receiveAmount = formatPaymentAmount(intent.receiveAmount, intent.receiveCurrency);
+  // The backend quotes and settles USDC; the picked currency is only how the user typed the amount.
+  const settlementAsset = liveQuote.data?.quote.receiveCurrency ?? null;
+  const settlementAmount = liveQuote.data
+    ? `${Number(liveQuote.data.quote.receiveAmount).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} ${liveQuote.data.quote.receiveCurrency}`
+    : null;
+  const recipientLabel = recipientState.data?.overridden
+    ? shortAccount(recipientState.data.account)
+    : recipient.name;
+  const successAmount = sentAmount ?? receiveAmount;
 
   const updateAmount = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -651,7 +742,7 @@ export function PayFlowScreen() {
     {
       id: 'completed',
       title: 'Recipient credited',
-      subtitle: recipient.name,
+      subtitle: recipientLabel,
       state: processingRowState(paymentStatus, 'completed'),
     },
   ] as const;
@@ -693,7 +784,12 @@ export function PayFlowScreen() {
           amountText={amountText}
           currencySymbol={CURRENCY_SYMBOLS[currency]}
           formatQuickAmount={(value) => formatPaymentAmount(value, currency, false)}
-          isContinueDisabled={amount <= 0 || !quote.hasSufficientTotal || quote.status === 'unavailable'}
+          isContinueDisabled={
+            amount <= 0 ||
+            !recipientAccountId ||
+            !quote.hasSufficientTotal ||
+            quote.status === 'unavailable'
+          }
           onAmountChange={updateAmount}
           onBack={goBack}
           onContinue={() => {
@@ -709,6 +805,8 @@ export function PayFlowScreen() {
               intent={intent}
               quote={quote}
               quoteState={liveQuote}
+              recipientLabel={recipientLabel}
+              recipientState={recipientState}
               onAddMoney={() => router.push('/add-money')}
               blockedReason={blocked}
             />
@@ -726,15 +824,19 @@ export function PayFlowScreen() {
           isSubmitting={isSubmitting}
           onConfirm={() => {
             const live = liveQuote.data;
-            if (!live || isSubmitting) return;
+            const resolved = recipientState.data;
+            // No recipient, no payment: it must never fall back to the sender's own account.
+            if (!live || !resolved || isSubmitting) return;
             setSubmitError(null);
             setIsSubmitting(true);
+            setSentAmount(settlementAmount);
             setPaymentStatus('initiated');
             setStep('processing');
             void (async () => {
               try {
                 await executePay({
                   accountId: account.id,
+                  recipientAccount: resolved.account,
                   live,
                   amount,
                   currency,
@@ -753,6 +855,9 @@ export function PayFlowScreen() {
             })();
           }}
           quote={quote}
+          recipient={recipientState.data}
+          settlementAmount={settlementAmount}
+          settlementAsset={settlementAsset}
         />
       ) : null}
 
@@ -770,15 +875,15 @@ export function PayFlowScreen() {
 
       {step === 'success' ? (
         <FlowSuccessState
-          amount={receiveAmount}
-          noticeSubtitle={`${recipient.name} received ${receiveAmount}.`}
+          amount={successAmount}
+          noticeSubtitle={`${recipientLabel} received ${successAmount}.`}
           noticeSymbol="checkmark.circle.fill"
           noticeTitle="Payment completed"
           onClose={finishAtHome}
           onDone={finishAtHome}
           onSecondaryPress={viewTransaction}
           secondaryLabel="View transaction"
-          supportingText={recipient.name}
+          supportingText={recipientLabel}
           title="Payment sent"
         />
       ) : null}

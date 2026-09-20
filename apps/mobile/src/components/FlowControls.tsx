@@ -603,3 +603,27 @@ export function FlowNotice({ symbol, title, subtitle }: FlowNoticeProps) {
     </HStack>
   );
 }
+
+/** Small heading inside a card, for a group that is not a label/value row. */
+export function FlowCardLabel({ text }: { text: string }) {
+  return (
+    <Text modifiers={[font({ size: typography.footnote, weight: 'semibold' }), foregroundStyle(colors.textPrimary)]}>
+      {text}
+    </Text>
+  );
+}
+
+/** Wrapping secondary line inside a card, for sentences a label/value row cannot hold. */
+export function FlowCardNote({ text }: { text: string }) {
+  return (
+    <Text
+      modifiers={[
+        font({ size: typography.footnote, weight: 'medium' }),
+        foregroundStyle(colors.textSecondary),
+        frame({ maxWidth: Infinity, alignment: 'leading' }),
+      ]}
+    >
+      {text}
+    </Text>
+  );
+}

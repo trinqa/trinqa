@@ -54,6 +54,13 @@ export function SettingsScreen() {
               onIsOnChange={setSecurityEnabled}
             />
           </Section>
+          <Section title="Transfers">
+            <Button
+              label="Anchor directory"
+              systemImage="building.columns"
+              onPress={() => router.push('/anchors')}
+            />
+          </Section>
           <Section title="Help & legal">
             <Button label="Risk & legal" systemImage="doc.text" onPress={showRiskAndLegal} />
             <Button label="Support" systemImage="headphones" onPress={showSupport} />

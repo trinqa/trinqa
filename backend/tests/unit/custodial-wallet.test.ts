@@ -138,3 +138,51 @@ describe('demo routes with a wallet key', () => {
     await app.close();
   });
 });
+
+describe('demo contacts', () => {
+  const stellar = fakeStellar();
+  const wallets = CustodialWallets.fromConfig({ DEMO_SIGNER_SECRET: DEMO_SECRET }, stellar)!;
+
+  it('gives every contact a stable account of its own', () => {
+    const ana = wallets.contactSigner('ana-souza').publicKey;
+    expect(wallets.contactSigner('ana-souza').publicKey).toBe(ana);
+    expect(wallets.contactSigner('maria').publicKey).not.toBe(ana);
+  });
+
+  it('keeps contact accounts out of the device wallet namespace', () => {
+    const key = wallets.newWalletKey();
+    expect(wallets.contactSigner('maria').publicKey).not.toBe(wallets.signerFor(key).publicKey);
+  });
+
+  it('rejects ids that are not contact slugs', () => {
+    expect(() => wallets.contactSigner('Ana Souza')).toThrow();
+    expect(() => wallets.contactSigner('not/a/slug')).toThrow();
+  });
+
+  it('provisions each requested contact and reports its account', async () => {
+    const s = fakeStellar({ accountExists: vi.fn().mockResolvedValue(false) });
+    const w = CustodialWallets.fromConfig({ DEMO_SIGNER_SECRET: DEMO_SECRET }, s)!;
+    const app = Fastify();
+    registerDemoRoutes(app, s, {} as TrMockAnchorAdapter, new AnchorSessionStore(), w);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/demo/contacts',
+      payload: { ids: ['ana-souza', 'maria'] },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().contacts).toEqual([
+      { id: 'ana-souza', account: w.contactSigner('ana-souza').publicKey, created: true, trustlineAdded: true },
+      { id: 'maria', account: w.contactSigner('maria').publicKey, created: true, trustlineAdded: true },
+    ]);
+
+    const bad = await app.inject({
+      method: 'POST',
+      url: '/api/v1/demo/contacts',
+      payload: { ids: ['Ana Souza'] },
+    });
+    expect(bad.statusCode).toBe(400);
+
+    await app.close();
+  });
+});
