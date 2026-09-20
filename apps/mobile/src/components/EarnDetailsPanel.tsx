@@ -83,6 +83,7 @@ export function EarnDetailsPanel({
                 footerTrailingColor={colors.action}
                 onFooterPress={onPress}
                 onPress={onPress}
+                hint={item.action === 'manage-strategy' ? 'Opens the plan.' : undefined}
               />
             );
           })}

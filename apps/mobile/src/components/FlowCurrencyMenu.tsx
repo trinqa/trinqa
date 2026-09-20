@@ -1,6 +1,5 @@
 import { Button, HStack, Image, Menu, Text } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -13,6 +12,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 interface FlowCurrencyMenuProps<Option extends string> {
   accessibilityName: string;
@@ -63,7 +63,13 @@ export function FlowCurrencyMenu<Option extends string>({
       }
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(`${accessibilityName}, ${value}`),
+        ...hitTargetModifiers({
+          label: `${accessibilityName}, ${value}`,
+          hint: 'Choose a currency.',
+          minSize: true,
+          shape: 'roundedRectangle',
+          cornerRadius: componentTokens.surface.controlRadius,
+        }),
       ]}
     >
       {options.map((option) => (

@@ -13,7 +13,6 @@ import {
   ZStack,
 } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -58,7 +57,8 @@ import {
 } from '@/services/flows';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
-import { colors, screenTokens, spacing, typography } from '@/theme';
+import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import type { AddMoneyQuote, AddMoneySourceId, AddMoneyStep, CurrencyCode, NetworkCapability } from '@/types';
 
 /** Maps the anchor's SEP-38 quote onto the review model; USDC is presented as USD across the app. */
@@ -380,7 +380,11 @@ function NetworkStep({
             onPress={() => onSelect(network)}
             modifiers={[
               buttonStyle('plain'),
-              accessibilityLabel(`${network.displayName}, mock supported network`),
+              ...hitTargetModifiers({
+                label: `${network.displayName}, mock supported network`,
+                shape: 'roundedRectangle',
+                cornerRadius: componentTokens.surface.cardRadius,
+              }),
               frame({ width: screenTokens.addMoney.contentWidth, height: 60 }),
               background(colors.surface, shapes.roundedRectangle({ cornerRadius: 14 })),
               clipShape('roundedRectangle', 14),

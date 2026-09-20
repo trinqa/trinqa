@@ -41,6 +41,7 @@ import {
 } from '@/domain/transactionPresentation';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, homeTokens, screenTokens, spacing, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 /**
  * A titled white panel. Same recipe as Home's Recent card, so the two screens
@@ -191,7 +192,17 @@ function TrayAction({
   const radius = componentTokens.surface.cardRadius;
 
   return (
-    <Button onPress={onPress} modifiers={[buttonStyle('plain'), accessibilityLabel(label)]}>
+    <Button
+      onPress={onPress}
+      modifiers={[
+        buttonStyle('plain'),
+        ...hitTargetModifiers({
+          label,
+          shape: 'roundedRectangle',
+          cornerRadius: radius,
+        }),
+      ]}
+    >
       <HStack
         alignment="center"
         spacing={6}
@@ -311,6 +322,7 @@ export function PortfolioScreen() {
           modifiers={[
             buttonStyle('plain'),
             labelStyle('iconOnly'),
+            ...hitTargetModifiers({ label: 'Back to Home', shape: 'circle' }),
             frame({
               width: componentTokens.headerControl.size,
               height: componentTokens.headerControl.size,

@@ -1,6 +1,5 @@
 import { Button, HStack, Image, Menu, Text, VStack } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -14,6 +13,7 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { AddMoneySourceSheet } from '@/features/add-money/AddMoneySourceSheet';
 import { colors, componentTokens, homeTokens, shortcutShadow, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 interface ShortcutButtonProps {
   label: string;
@@ -69,6 +69,11 @@ function ShortcutButton({ label, symbol, onPress, isSheetAnchor = false }: Short
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
+        ...hitTargetModifiers({
+          label,
+          shape: 'roundedRectangle',
+          cornerRadius: componentTokens.surface.controlRadius,
+        }),
         ...cardModifiers,
       ]}
     >
@@ -97,7 +102,16 @@ export function ShortcutRow({
       <ShortcutButton label="Pay" symbol="arrow.up.circle" onPress={onPay} />
       <Menu
         label={<ShortcutButton label="More" symbol="ellipsis.circle" isSheetAnchor />}
-        modifiers={[buttonStyle('plain'), accessibilityLabel('More')]}
+        modifiers={[
+          buttonStyle('plain'),
+          ...hitTargetModifiers({
+            label: 'More',
+            hint: 'Withdraw or receive money.',
+            shape: 'roundedRectangle',
+            cornerRadius: componentTokens.surface.controlRadius,
+          }),
+          frame({ width: homeTokens.shortcuts.width, height: homeTokens.shortcuts.height }),
+        ]}
       >
         <Button label="Withdraw" systemImage="arrow.down.to.line" onPress={onWithdraw} />
         <Button label="Receive" systemImage="arrow.down.circle" onPress={onReceive} />

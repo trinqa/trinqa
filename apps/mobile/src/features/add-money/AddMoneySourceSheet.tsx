@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 import { BottomSheet, Button, Group, HStack, Image, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -21,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { SecondaryActionButton } from '@/components/FlowControls';
 import { addMoneySources } from '@/data/mocks/addMoney';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import type { AddMoneySourceId, AddMoneySourceOption } from '@/types';
 
 interface AddMoneySourceSheetProps {
@@ -41,7 +41,11 @@ function SourceSelectionRow({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(`${option.title}. ${option.subtitle}`),
+        ...hitTargetModifiers({
+          label: `${option.title}. ${option.subtitle}`,
+          shape: 'roundedRectangle',
+          cornerRadius: row.radius,
+        }),
         frame({ width: screenTokens.addMoney.contentWidth, height: row.height }),
         background(colors.surface, shapes.roundedRectangle({ cornerRadius: row.radius })),
         clipShape('roundedRectangle', row.radius),
@@ -112,7 +116,14 @@ export function AddMoneySourceSheet({ anchor }: AddMoneySourceSheetProps) {
       anchor={
         <Button
           onPress={() => setIsPresented(true)}
-          modifiers={[buttonStyle('plain'), accessibilityLabel('Add Money')]}
+          modifiers={[
+            buttonStyle('plain'),
+            ...hitTargetModifiers({
+              label: 'Add money',
+              shape: 'roundedRectangle',
+              cornerRadius: componentTokens.surface.controlRadius,
+            }),
+          ]}
         >
           {anchor}
         </Button>

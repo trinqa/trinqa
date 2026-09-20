@@ -10,7 +10,6 @@ import {
   ZStack,
 } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -34,7 +33,7 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { colors, componentTokens, screenTokens, shortcutShadow, typography, spacing } from '@/theme';
-import { cardChromeModifiers } from '@/theme/swiftUi';
+import { cardChromeModifiers, hitTargetModifiers } from '@/theme/swiftUi';
 
 interface FlowButtonProps {
   label: string;
@@ -78,7 +77,12 @@ export function PrimaryActionButton({
         buttonStyle('plain'),
         disabled(isBlocked),
         opacity(isDisabled ? action.disabledOpacity : 1),
-        accessibilityLabel(isBusy ? `${label}, in progress` : label),
+        ...hitTargetModifiers({
+          label: isBusy ? `${label}, in progress` : label,
+          shape: 'roundedRectangle',
+          cornerRadius: action.radius,
+        }),
+        frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
       ]}
     >
       <ZStack
@@ -170,7 +174,12 @@ export function FlowQuickAmountButton({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(`Set amount to ${label}`),
+        ...hitTargetModifiers({
+          label: `Set amount to ${label}`,
+          minSize: true,
+          shape: 'roundedRectangle',
+          cornerRadius: componentTokens.surface.controlRadius,
+        }),
         frame({ width: buttonWidth, height: flow.quickAmountHeight }),
         // Selected = cyan border on white surface only; no blue fill.
         background(
@@ -421,6 +430,7 @@ export function FlowSuccessState({
           modifiers={[
             buttonStyle('plain'),
             labelStyle('iconOnly'),
+            ...hitTargetModifiers({ label: 'Close', shape: 'circle' }),
             frame({ width: componentTokens.headerControl.size, height: componentTokens.headerControl.size }),
             background(colors.surface, shapes.circle()),
             strokeBorder({
@@ -497,7 +507,11 @@ export function SecondaryActionButton({ label, onPress, isDisabled = false }: Fl
         buttonStyle('plain'),
         disabled(isDisabled),
         opacity(isDisabled ? action.disabledOpacity : 1),
-        accessibilityLabel(label),
+        ...hitTargetModifiers({
+          label,
+          shape: 'roundedRectangle',
+          cornerRadius: action.radius,
+        }),
         frame({ width: screenTokens.addMoney.contentWidth, height: action.height }),
         background(colors.surface, shapes.roundedRectangle({ cornerRadius: action.radius })),
         clipShape('roundedRectangle', action.radius),

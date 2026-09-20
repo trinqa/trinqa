@@ -1,6 +1,5 @@
 import { Button, HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   font,
@@ -14,6 +13,7 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { PrimaryActionButton, SecondaryActionButton } from '@/components/FlowControls';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 export function FlowInlineState({
   symbol,
@@ -61,7 +61,12 @@ export function FlowInlineState({
           onPress={onRetry}
           modifiers={[
             buttonStyle('plain'),
-            accessibilityLabel(retryLabel),
+            ...hitTargetModifiers({
+              label: retryLabel,
+              minSize: true,
+              shape: 'roundedRectangle',
+              cornerRadius: componentTokens.surface.controlRadius,
+            }),
             padding({ horizontal: 12, vertical: 7 }),
             background(colors.surface, shapes.roundedRectangle({ cornerRadius: componentTokens.surface.controlRadius })),
             strokeBorder({

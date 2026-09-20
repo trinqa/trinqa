@@ -15,7 +15,6 @@ import {
 } from '@expo/ui/swift-ui';
 import {
   accessibilityAddTraits,
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -54,6 +53,7 @@ import { executePutToWork, type PutToWorkStage } from '@/services/flows';
 import { earnUnavailable, earnUnavailableReason } from '@/services/session';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import type {
   PutToWorkHorizon,
   PutToWorkHorizonId,
@@ -116,9 +116,11 @@ function StrategyOption({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(
-          `${profile.title}, ${profile.riskLabel}, ${profile.estimatedApy.toFixed(1)} percent yearly return`,
-        ),
+        ...hitTargetModifiers({
+          label: `${profile.title}, ${profile.riskLabel}, ${profile.estimatedApy.toFixed(1)} percent yearly return`,
+          shape: 'roundedRectangle',
+          cornerRadius: componentTokens.surface.cardRadius,
+        }),
         ...(selected ? [accessibilityAddTraits(['isSelected'])] : []),
         frame({ width: flow.contentWidth, height: flow.strategyRowHeight }),
         background(

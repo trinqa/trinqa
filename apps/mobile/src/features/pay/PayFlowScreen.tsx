@@ -14,7 +14,6 @@ import {
   ZStack,
 } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   font,
@@ -61,6 +60,7 @@ import { executePay, quotePay, type PayLiveQuote } from '@/services/flows';
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
   PaymentCurrency,
@@ -178,7 +178,11 @@ function RecipientRow({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(`Pay ${recipient.name}, ${recipient.detail}`),
+        ...hitTargetModifiers({
+          label: `Pay ${recipient.name}, ${recipient.detail}`,
+          shape: 'roundedRectangle',
+          cornerRadius: row.radius,
+        }),
         frame({ width: screenTokens.paymentFlow.contentWidth, height: row.height }),
         ...cardChromeModifiers(row.radius),
       ]}
@@ -236,7 +240,11 @@ function PaymentMethodButton({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(label),
+        ...hitTargetModifiers({
+          label,
+          shape: 'roundedRectangle',
+          cornerRadius: componentTokens.surface.controlRadius,
+        }),
         frame({ width, height: payment.methodHeight }),
         ...cardChromeModifiers(componentTokens.surface.controlRadius),
       ]}

@@ -12,6 +12,7 @@ import {
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { colors, componentTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 interface ScreenHeaderProps {
   showBack?: boolean;
@@ -38,6 +39,7 @@ function HeaderIconButton({
       modifiers={[
         buttonStyle('plain'),
         labelStyle('iconOnly'),
+        ...hitTargetModifiers({ label, shape: 'circle' }),
         frame({
           width: componentTokens.headerControl.size,
           height: componentTokens.headerControl.size,

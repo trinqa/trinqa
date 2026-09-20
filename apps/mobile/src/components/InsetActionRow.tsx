@@ -1,6 +1,5 @@
 import { Button, HStack, Image, Spacer, Text } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   font,
@@ -13,6 +12,7 @@ import {
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 export function InsetActionRow({
   label,
@@ -61,7 +61,14 @@ export function InsetActionRow({
   return (
     <Button
       onPress={onPress}
-      modifiers={[buttonStyle('plain'), accessibilityLabel(label)]}
+      modifiers={[
+        buttonStyle('plain'),
+        ...hitTargetModifiers({
+          label,
+          shape: 'roundedRectangle',
+          cornerRadius: componentTokens.surface.cardRadius,
+        }),
+      ]}
     >
       {content}
     </Button>

@@ -13,6 +13,7 @@ import {
 
 import { FlowInfoRow, SecondaryActionButton } from '@/components/FlowControls';
 import { colors, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import type { PutToWorkRiskProfile } from '@/types';
 
 export function StrategyDetailsSheet({ profile }: { profile: PutToWorkRiskProfile }) {
@@ -28,7 +29,7 @@ export function StrategyDetailsSheet({ profile }: { profile: PutToWorkRiskProfil
           label="What's the risk?"
           systemImage="info.circle"
           onPress={() => setIsPresented(true)}
-          modifiers={[buttonStyle('bordered')]}
+          modifiers={[buttonStyle('bordered'), ...hitTargetModifiers({ label: "What's the risk?" })]}
         />
       }
     >

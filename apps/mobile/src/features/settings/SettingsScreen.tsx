@@ -8,6 +8,7 @@ import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { currenciesFor } from '@/data/capabilities';
 import { setDisplayCurrency, setSecurityEnabled, useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, spacing } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import type { CurrencyCode } from '@/types';
 
 export function SettingsScreen() {
@@ -59,11 +60,22 @@ export function SettingsScreen() {
               label="Anchor directory"
               systemImage="building.columns"
               onPress={() => router.push('/anchors')}
+              modifiers={hitTargetModifiers({ label: 'Anchor directory' })}
             />
           </Section>
           <Section title="Help & legal">
-            <Button label="Risk & legal" systemImage="doc.text" onPress={showRiskAndLegal} />
-            <Button label="Support" systemImage="headphones" onPress={showSupport} />
+            <Button
+              label="Risk & legal"
+              systemImage="doc.text"
+              onPress={showRiskAndLegal}
+              modifiers={hitTargetModifiers({ label: 'Risk & legal' })}
+            />
+            <Button
+              label="Support"
+              systemImage="headphones"
+              onPress={showSupport}
+              modifiers={hitTargetModifiers({ label: 'Support' })}
+            />
           </Section>
         </Form>
       </VStack>

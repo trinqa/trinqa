@@ -1,6 +1,5 @@
 import { Button, Group, HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -16,6 +15,7 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 import { SurfacePanel } from '@/components/SurfacePanel';
 import { InsetLayer } from '@/components/InsetLayer';
 import { colors, componentTokens, screenTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 interface BalanceSummaryProps {
   currencySymbol?: string;
@@ -106,7 +106,14 @@ function BalanceAction({
   return (
     <Button
       onPress={onPress}
-      modifiers={[buttonStyle('plain'), accessibilityLabel(label)]}
+      modifiers={[
+        buttonStyle('plain'),
+        ...hitTargetModifiers({
+          label,
+          shape: 'roundedRectangle',
+          cornerRadius: radius,
+        }),
+      ]}
     >
       <HStack
         alignment="center"

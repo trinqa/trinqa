@@ -15,7 +15,6 @@ import {
   ZStack,
 } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -68,6 +67,7 @@ import type {
 import { useLiveQuote, type LiveQuoteState } from '@/services/useLiveQuote';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 import type {
   WithdrawalCurrency,
@@ -291,7 +291,11 @@ function DestinationRow({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(`${destination.name}, ${destination.detail}`),
+        ...hitTargetModifiers({
+          label: `${destination.name}, ${destination.detail}`,
+          shape: 'roundedRectangle',
+          cornerRadius: row.radius,
+        }),
         frame({ width: screenTokens.withdrawalFlow.contentWidth, height: row.height }),
         ...cardChromeModifiers(row.radius),
       ]}
@@ -392,7 +396,11 @@ function NewBankAccountSheet({
           onPress={() => setIsPresented(true)}
           modifiers={[
             buttonStyle('plain'),
-            accessibilityLabel('Add new bank account'),
+            ...hitTargetModifiers({
+              label: 'Add new bank account',
+              shape: 'roundedRectangle',
+              cornerRadius: componentTokens.surface.controlRadius,
+            }),
             frame({ width: flow.contentWidth, height: componentTokens.headerControl.size }),
             background(
               colors.surface,

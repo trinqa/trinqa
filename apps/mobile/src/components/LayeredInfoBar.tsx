@@ -1,6 +1,5 @@
 import { Button, HStack, Image, Spacer, Text } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   buttonStyle,
   font,
   foregroundStyle,
@@ -10,12 +9,14 @@ import {
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { colors, componentTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 interface LayeredInfoBarProps {
   leadingText: string;
   trailingText: string;
   leadingSymbol?: SFSymbol;
   onTrailingPress?: () => void;
+  trailingHint?: string;
   height?: number;
   horizontalPadding?: number;
   textSize?: number;
@@ -29,6 +30,7 @@ export function LayeredInfoBar({
   trailingText,
   leadingSymbol = 'checkmark.circle.fill',
   onTrailingPress,
+  trailingHint,
   height = componentTokens.transactionRow.footerHeight,
   horizontalPadding = componentTokens.transactionRow.horizontalPadding,
   textSize = typography.fine,
@@ -38,7 +40,18 @@ export function LayeredInfoBar({
   const resolvedLeadingColor = leadingColor ?? colors.textSecondary;
   const resolvedTrailingColor = trailingColor ?? (onTrailingPress ? colors.action : colors.textSecondary);
 
-  const content = (
+  const trailingLabel = (
+    <Text
+      modifiers={[
+        font({ size: textSize, weight: onTrailingPress ? 'semibold' : 'medium' }),
+        foregroundStyle(resolvedTrailingColor),
+      ]}
+    >
+      {trailingText}
+    </Text>
+  );
+
+  return (
     <HStack
       alignment="center"
       spacing={6}
@@ -59,29 +72,23 @@ export function LayeredInfoBar({
 
       <Spacer />
 
-      <Text
-        modifiers={[
-          font({ size: textSize, weight: onTrailingPress ? 'semibold' : 'medium' }),
-          foregroundStyle(resolvedTrailingColor),
-        ]}
-      >
-        {trailingText}
-      </Text>
+      {onTrailingPress ? (
+        <Button
+          onPress={onTrailingPress}
+          modifiers={[
+            buttonStyle('plain'),
+            ...hitTargetModifiers({
+              label: trailingText,
+              hint: trailingHint,
+              minSize: true,
+            }),
+          ]}
+        >
+          {trailingLabel}
+        </Button>
+      ) : (
+        trailingLabel
+      )}
     </HStack>
-  );
-
-  if (!onTrailingPress) return content;
-
-  return (
-    <Button
-      onPress={onTrailingPress}
-      modifiers={[
-        buttonStyle('plain'),
-        accessibilityLabel(trailingText),
-        frame({ maxWidth: Infinity, height }),
-      ]}
-    >
-      {content}
-    </Button>
   );
 }

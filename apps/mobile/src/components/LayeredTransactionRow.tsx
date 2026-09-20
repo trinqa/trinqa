@@ -1,6 +1,5 @@
 import { Button, HStack, Image, Text, VStack, ZStack } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   clipShape,
@@ -19,6 +18,7 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { LayeredInfoBar } from '@/components/LayeredInfoBar';
 import { colors, componentTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 interface LayeredTransactionRowProps {
   title: string;
@@ -32,6 +32,9 @@ interface LayeredTransactionRowProps {
   footerSymbol?: SFSymbol;
   onFooterPress?: () => void;
   onPress?: () => void;
+  /** VoiceOver hint for the card body. Footer uses `footerHint` when set. */
+  hint?: string;
+  footerHint?: string;
   iconBackgroundColor?: string;
   iconColor?: string;
   iconLetterColor?: string;
@@ -56,6 +59,8 @@ export function LayeredTransactionRow({
   footerSymbol,
   onFooterPress,
   onPress,
+  hint = 'Opens the details.',
+  footerHint,
   iconBackgroundColor = colors.surfaceLayer,
   iconColor = colors.textSecondary,
   iconLetterColor = colors.textSecondary,
@@ -161,7 +166,14 @@ export function LayeredTransactionRow({
       {onPress ? (
         <Button
           onPress={onPress}
-          modifiers={[buttonStyle('plain'), accessibilityLabel(`${title}, ${amount}, ${meta ?? subtitle}`), frame({ maxWidth: Infinity })]}
+          modifiers={[
+            buttonStyle('plain'),
+            ...hitTargetModifiers({
+              label: `${title}, ${amount}, ${meta ?? subtitle}`,
+              hint,
+            }),
+            frame({ maxWidth: Infinity }),
+          ]}
         >
           {body}
         </Button>
@@ -172,6 +184,7 @@ export function LayeredTransactionRow({
         trailingText={footerTrailingText}
         leadingSymbol={footerSymbol}
         onTrailingPress={onFooterPress}
+        trailingHint={footerHint}
         height={row.footerHeight}
         horizontalPadding={row.horizontalPadding}
         leadingColor={footerLeadingColor}

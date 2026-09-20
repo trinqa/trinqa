@@ -13,7 +13,6 @@ import {
   VStack,
 } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   buttonStyle,
   font,
   foregroundStyle,
@@ -41,6 +40,7 @@ import {
 } from '@/data/routeCopy';
 import type { RejectedRoute, RouteDecision, ScoredRoute } from '@/services/types';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import { cardChromeModifiers } from '@/theme/swiftUi';
 
 const flow = screenTokens.withdrawalFlow;
@@ -166,7 +166,12 @@ function PreviewRow({
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel(`${title}. ${subtitle}. Opens the details.`),
+        ...hitTargetModifiers({
+          label: `${title}. ${subtitle}`,
+          hint: 'Opens the details.',
+          shape: 'roundedRectangle',
+          cornerRadius: row.radius,
+        }),
         frame({ width: flow.contentWidth, height: row.height }),
         ...cardChromeModifiers(row.radius),
       ]}

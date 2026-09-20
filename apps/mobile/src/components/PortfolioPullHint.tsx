@@ -1,7 +1,5 @@
 import { Button, HStack, Image, Text } from '@expo/ui/swift-ui';
 import {
-  accessibilityHint,
-  accessibilityLabel,
   buttonStyle,
   font,
   foregroundStyle,
@@ -10,6 +8,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 
 import { colors, motion, screenTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 /**
  * The pull gesture is the nice way into Portfolio, but a gesture nobody is told
@@ -28,8 +27,11 @@ export function PortfolioPullHint({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       modifiers={[
         buttonStyle('plain'),
-        accessibilityLabel('Portfolio'),
-        accessibilityHint('Opens your portfolio. You can also pull down from the top of this screen.'),
+        ...hitTargetModifiers({
+          label: 'Portfolio',
+          hint: 'Opens your portfolio. You can also pull down from the top of this screen.',
+          minSize: true,
+        }),
       ]}
     >
       <HStack

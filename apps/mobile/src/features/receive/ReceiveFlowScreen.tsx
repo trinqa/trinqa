@@ -15,7 +15,6 @@ import {
   VStack,
 } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   buttonStyle,
   font,
   foregroundStyle,
@@ -35,6 +34,7 @@ import { currenciesFor } from '@/data/capabilities';
 import { formatMoney } from '@/domain/money';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, componentTokens, screenTokens, spacing, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 import type { CurrencyCode, ReceiveIntent, ReceivePresentation } from '@/types';
 
 type ReceiveStep = 'request' | 'code';
@@ -163,13 +163,19 @@ export function ReceiveFlowScreen() {
                 label="Share"
                 systemImage="square.and.arrow.up"
                 onPress={() => Share.share({ message: presentation.shareText })}
-                modifiers={[buttonStyle('borderedProminent'), accessibilityLabel('Share receive request')]}
+                modifiers={[
+                  buttonStyle('borderedProminent'),
+                  ...hitTargetModifiers({ label: 'Share receive request' }),
+                ]}
               />
               <Button
                 label={copied ? 'Copied' : 'Copy'}
                 systemImage={copied ? 'checkmark' : 'doc.on.doc'}
                 onPress={copyIdentifier}
-                modifiers={[buttonStyle('bordered'), accessibilityLabel('Copy receive identifier')]}
+                modifiers={[
+                  buttonStyle('bordered'),
+                  ...hitTargetModifiers({ label: 'Copy receive identifier' }),
+                ]}
               />
             </HStack>
             <Divider />

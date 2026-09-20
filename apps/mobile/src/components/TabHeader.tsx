@@ -1,6 +1,5 @@
 import { Button, HStack, Menu, Spacer, Text } from '@expo/ui/swift-ui';
 import {
-  accessibilityLabel,
   background,
   buttonStyle,
   font,
@@ -13,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 
 import { colors, componentTokens, typography } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 interface TabHeaderProps {
   title: string;
@@ -52,12 +52,30 @@ export function TabHeader({ title }: TabHeaderProps) {
           <Button
             label="Profile"
             systemImage="person.fill"
-            modifiers={[buttonStyle('plain'), labelStyle('iconOnly')]}
+            modifiers={[
+              buttonStyle('plain'),
+              labelStyle('iconOnly'),
+              ...hitTargetModifiers({
+                label: 'Profile',
+                hint: 'Account details and settings.',
+                minSize: true,
+                shape: 'circle',
+              }),
+              frame({
+                width: componentTokens.headerControl.size,
+                height: componentTokens.headerControl.size,
+              }),
+            ]}
           />
         }
         modifiers={[
           buttonStyle('plain'),
-          accessibilityLabel('Profile'),
+          ...hitTargetModifiers({
+            label: 'Profile',
+            hint: 'Account details and settings.',
+            minSize: true,
+            shape: 'circle',
+          }),
           frame({
             width: componentTokens.headerControl.size,
             height: componentTokens.headerControl.size,

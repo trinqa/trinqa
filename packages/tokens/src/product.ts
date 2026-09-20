@@ -60,6 +60,13 @@ export const componentTokens = {
     symbolSize: 17,
     gap: 8,
   },
+  /**
+   * Apple HIG minimum hit box. When the visible control is smaller, grow the
+   * hit area with padding or frame — do not enlarge the glyph or label.
+   */
+  tapTarget: {
+    size: 44,
+  },
   dateSectionDivider: {
     labelToLineGap: 8,
     labelWidths: {

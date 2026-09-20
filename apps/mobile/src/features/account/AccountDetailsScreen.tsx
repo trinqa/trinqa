@@ -10,6 +10,7 @@ import { FlowScreenShell } from '@/components/FlowScreenShell';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useMockAppState } from '@/state/mockAppState';
 import { colors, screenTokens, typography, spacing } from '@/theme';
+import { hitTargetModifiers } from '@/theme/swiftUi';
 
 export function AccountDetailsScreen() {
   const router = useRouter();
@@ -40,7 +41,12 @@ export function AccountDetailsScreen() {
                   await Clipboard.setStringAsync(account.publicReceiveIdentifier ?? '');
                   setCopied(true);
                 }}
-                modifiers={[buttonStyle('bordered')]}
+                modifiers={[
+                  buttonStyle('bordered'),
+                  ...hitTargetModifiers({
+                    label: copied ? 'Copied' : 'Copy receive identifier',
+                  }),
+                ]}
               />
             </VStack>
           </FlowCard>
