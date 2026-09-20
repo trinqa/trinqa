@@ -18,18 +18,39 @@
     return;
   }
 
+  var pending = [];
+
+  function show(el) {
+    el.classList.add('tq-in');
+    observer.unobserve(el);
+    var at = pending.indexOf(el);
+    if (at !== -1) pending.splice(at, 1);
+  }
+
   var observer = new IntersectionObserver(
     function (entries) {
       entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('tq-in');
-        observer.unobserve(entry.target);
+        if (entry.isIntersecting) show(entry.target);
       });
     },
     // Fire slightly before the element is fully on screen; a reveal that starts
     // at the exact edge reads as late on a long scroll.
     { rootMargin: '0px 0px -12% 0px', threshold: 0.01 }
   );
+
+  /**
+   * A fast scroll — a wheel flick, a jump to an anchor — can carry an element
+   * past the viewport between two frames, and the observer never reports it.
+   * Whatever the viewport has already reached is shown, so scrolling back up
+   * never lands on invisible text.
+   */
+  function sweep() {
+    if (!pending.length) return;
+    var limit = window.innerHeight * 0.92;
+    for (var i = pending.length - 1; i >= 0; i--) {
+      if (pending[i].getBoundingClientRect().top < limit) show(pending[i]);
+    }
+  }
 
   /**
    * Prepare elements for reveal.
@@ -59,9 +80,11 @@
       el.setAttribute('data-tq-reveal', opts.type || 'up');
       var delay = base + step * i;
       if (delay) el.style.setProperty('--tq-delay', delay + 'ms');
+      pending.push(el);
       observer.observe(el);
     });
 
+    sweep();
     return list;
   }
 
@@ -110,6 +133,11 @@
   }
 
   root.classList.add('tq-motion');
+
+  // The sweep runs on the shared scroll tick and once more on load, when late
+  // images and fonts have settled the layout.
+  onScroll(sweep);
+  window.addEventListener('load', sweep);
 
   window.tqMotion = {
     reveal: reveal,
