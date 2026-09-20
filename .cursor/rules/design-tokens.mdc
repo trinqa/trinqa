@@ -10,7 +10,7 @@ Source of truth: Home, Portfolio, Earn, Activity. Wallet tab is gone.
 
 - Import `typography`, `spacing`, `radius`, `colors`, `motion` from `@/theme` or `@trinqa/tokens`.
 - Visible UI is `@expo/ui/swift-ui`. Do not invent RN layout for these screens.
-- Type roles: `pageTitle 30` (tab titles Home/Earn/Activity), `amountHero 32` (defined, unused on Home), `amountDisplay 25`, `amountCurrency 22` (Home total / Earn headline), `sectionTitle 17` (flow header / primary CTA), `kicker 16` (section name), `label 15` (row title, list amount, currency beside 22), `body 14` (supporting sentence), `caption 13`, `footnote 12` (metric label, date, shortcut), `fine 11` (status), `micro 10`.
+- Type roles: `pageTitle 30` (tab titles Home/Earn/Activity), `amountHero 32` (defined, unused on Home), `amountDisplay 25`, `amountCurrency 22` (Home total / Earn headline), `sectionTitle 17` (flow header / primary CTA), `kicker 16` (section name), `label 15` (row title, list amount, currency beside 22), `body 14` (supporting sentence), `caption 13`, `footnote 12` (metric label, date), `fine 11` (status), `micro 10` (shortcut).
 - Weights: medium / semibold / bold only. RN StyleSheet uses `typeWeightRn` (`500/600/700`). Do not use regular/400.
 - Tab chrome is `TabHeader`: left `pageTitle` bold, right 44 profile circle. Profile `Menu` owns Account details + Settings. No support/notification icons. Flow screens keep `ScreenHeader` (back button + `sectionTitle`); the two are not interchangeable.
 - One content width per screen: `windowWidth - spacing.screenHorizontal * 2`. Do not give a screen a second gutter by framing a child at a different fixed width.
